@@ -1,0 +1,12 @@
+{
+  "fixture_id": "ner_incident_sample",
+  "text": "INCIDENT-1042 affected Recommendation API on 2026-07-09.",
+  "entity_spans": [
+    {"text": "INCIDENT-1042", "label": "Incident", "start": 0, "end": 13},
+    {"text": "Recommendation API", "label": "System", "start": 23, "end": 41},
+    {"text": "2026-07-09", "label": "Date", "start": 45, "end": 55}
+  ],
+  "triples": [],
+  "relations": [],
+  "metadata": {"review_status": "human_reviewed"}
+}

@@ -1,0 +1,2045 @@
+{
+  "category_counts": {
+    "enrichment": 24,
+    "evaluation": 2,
+    "extractor": 20,
+    "graph_builder": 3,
+    "graph_store": 8,
+    "hybrid": 8,
+    "llm": 1,
+    "loader": 20,
+    "mapper": 22,
+    "production": 9,
+    "resolution": 16,
+    "schema": 8,
+    "validation": 9
+  },
+  "method_type_counts": {
+    "deterministic": 44,
+    "embedding": 8,
+    "evaluation": 3,
+    "human": 7,
+    "hybrid": 1,
+    "llm": 14,
+    "ml": 23,
+    "nlp": 5,
+    "observability": 1,
+    "ontology": 13,
+    "privacy": 1,
+    "reproducibility": 1,
+    "resilience": 4,
+    "rules": 25
+  },
+  "report_date": "2026-07-14",
+  "report_files": [
+    "reports/current_repo_capability_summary.md",
+    "reports/current_registry_summary.json",
+    "reports/current_registry_matrix.csv"
+  ],
+  "status_counts": {
+    "adapter": 17,
+    "implemented": 104,
+    "stub": 29
+  },
+  "support_level_counts": {
+    "experimental": 16,
+    "optional_adapter": 29,
+    "planned": 29,
+    "stable": 76
+  },
+  "support_levels": [
+    {
+      "description": "Safe to use now with the documented API and normal test coverage.",
+      "label": "Stable",
+      "level": "stable"
+    },
+    {
+      "description": "Works when the required dependency, model, service, or project wiring is configured.",
+      "label": "Optional adapter",
+      "level": "optional_adapter"
+    },
+    {
+      "description": "Implemented for research/prototyping, but API, scoring, or model behavior may change.",
+      "label": "Experimental",
+      "level": "experimental"
+    },
+    {
+      "description": "Registered as a roadmap extension point, but not implemented for normal use.",
+      "label": "Planned",
+      "level": "planned"
+    }
+  ],
+  "techniques_by_category": {
+    "enrichment": [
+      {
+        "adapter": "GraphAnalyticsEnricher",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "graph_analytics_enricher",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ExternalKGLinkEnricher",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "external_kg_link_enricher",
+        "notes": "",
+        "priority": 28,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "CommunityDetectionEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "community_detection_enricher",
+        "notes": "",
+        "priority": 30,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "ConnectedComponentsEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "connected_components_enricher",
+        "notes": "",
+        "priority": 30,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "PageRankEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "pagerank_enricher",
+        "notes": "",
+        "priority": 30,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "TemporalEventEnricher",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "temporal_event_enricher",
+        "notes": "",
+        "priority": 30,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "GraphTrainValidationSplitter",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "graph_train_validation_splitter",
+        "notes": "",
+        "priority": 34,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "ChunkEmbeddingEnricher",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "chunk_embedding_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "EntityEmbeddingEnricher",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "entity_embedding_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "LinkPredictionEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "jaccard_link_prediction",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "LinkPredictionEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "link_prediction_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "NodeEmbeddingEnricher",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "node_embedding_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "LinkPredictionEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "resource_allocation_link_prediction",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "NodeEmbeddingEnricher",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "spectral_node_embedding_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "NodeEmbeddingEnricher",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "structural_hash_node_embedding_enricher",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "KnowledgeGraphEmbeddingAdapter",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "knowledge_graph_embedding_adapter",
+        "notes": "",
+        "priority": 36,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "Node2VecEmbeddingAdapter",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "node2vec_embedding_adapter",
+        "notes": "",
+        "priority": 36,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "LinkPredictionEnricher",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "hybrid_topology_embedding_link_prediction",
+        "notes": "",
+        "priority": 37,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "GraphSageLinkPredictionTrainer",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "graphsage_link_prediction_trainer",
+        "notes": "",
+        "priority": 38,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "PyTorchGeometricGraphSAGEAdapter",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "graphsage_pyg_adapter",
+        "notes": "",
+        "priority": 38,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "LargeGraphAnalyticsBackend",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "large_graph_analytics_backend",
+        "notes": "",
+        "priority": 38,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": []
+      },
+      {
+        "adapter": "GraphRetrievalBenchmark",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "graph_retrieval_benchmark",
+        "notes": "",
+        "priority": 39,
+        "status": "implemented",
+        "support_label": "Experimental",
+        "support_level": "experimental",
+        "tags": [
+          "experimental"
+        ]
+      },
+      {
+        "adapter": "CommunitySummaryEnricher",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "community_summary_enricher",
+        "notes": "",
+        "priority": 45,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "EntitySummaryEnricher",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "entity_summary_enricher",
+        "notes": "",
+        "priority": 45,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      }
+    ],
+    "evaluation": [
+      {
+        "adapter": "BenchmarkRunner",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "benchmark_runner",
+        "notes": "",
+        "priority": 60,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ConstructionMetricsEvaluator",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "construction_metrics_evaluator",
+        "notes": "",
+        "priority": 60,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "extractor": [
+      {
+        "adapter": "GazetteerEntityExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "rules",
+        "name": "gazetteer_entity_extractor",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RegexEntityExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "rules",
+        "name": "regex_entity_extractor",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DependencyPatternRelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "rules",
+        "name": "dependency_pattern_relation_extractor",
+        "notes": "",
+        "priority": 22,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SpacyEntityRulerExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "rules",
+        "name": "spacy_entity_ruler_extractor",
+        "notes": "",
+        "priority": 22,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "PosTaggingAdapter",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "nlp",
+        "name": "pos_tagging_adapter",
+        "notes": "",
+        "priority": 25,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SentenceSplitterAdapter",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "nlp",
+        "name": "sentence_splitter_adapter",
+        "notes": "",
+        "priority": 25,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SpacyNerExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "nlp",
+        "name": "spacy_ner_extractor",
+        "notes": "",
+        "priority": 25,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "CoreferenceAdapter",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "nlp",
+        "name": "coreference_adapter",
+        "notes": "",
+        "priority": 26,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "OpenIERelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "nlp",
+        "name": "openie_relation_extractor",
+        "notes": "",
+        "priority": 28,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "GlinerEntityExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "gliner_entity_extractor",
+        "notes": "",
+        "priority": 30,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "TransformerNerExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "transformer_ner_extractor",
+        "notes": "",
+        "priority": 30,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "JointEntityRelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "joint_entity_relation_extractor",
+        "notes": "",
+        "priority": 32,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "PairwiseRelationClassifierAdapter",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "pairwise_relation_classifier_adapter",
+        "notes": "",
+        "priority": 32,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "RebelRelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "rebel_relation_extractor",
+        "notes": "",
+        "priority": 32,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "SupervisedRelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "supervised_relation_extractor",
+        "notes": "",
+        "priority": 32,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "TransformerRelationExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "ml",
+        "name": "transformer_relation_extractor",
+        "notes": "",
+        "priority": 32,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "GlinerOllamaRelationTypingExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "hybrid",
+        "name": "gliner_ollama_relation_typing_extractor",
+        "notes": "",
+        "priority": 40,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "OllamaGraphExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "llm",
+        "name": "ollama_graph_extractor",
+        "notes": "",
+        "priority": 40,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "OllamaGraphExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "llm",
+        "name": "ollama_schema_guided_extraction",
+        "notes": "",
+        "priority": 40,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "OllamaGraphExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "llm",
+        "name": "ollama_schema_later_extraction",
+        "notes": "",
+        "priority": 42,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      }
+    ],
+    "graph_builder": [
+      {
+        "adapter": "EvidenceGraphBuilder",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "evidence_graph_builder",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "PropertyGraphBuilder",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "property_graph_builder",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RDFGraphBuilder",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "rdf_graph_builder",
+        "notes": "",
+        "priority": 15,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "graph_store": [
+      {
+        "adapter": "KuzuExporter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "kuzu_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "MemgraphExporter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "memgraph_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "Neo4jExporter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "neo4j_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "NetworkXExporter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "networkx_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RDFExporter",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "rdf_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RDFLibExporter",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "rdflib_exporter",
+        "notes": "",
+        "priority": 12,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "KuzuIngestionAdapter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "kuzu_ingestion_adapter",
+        "notes": "",
+        "priority": 14,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "Neo4jIngestionAdapter",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "neo4j_ingestion_adapter",
+        "notes": "",
+        "priority": 14,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      }
+    ],
+    "hybrid": [
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "hybrid_structured_then_text",
+        "notes": "",
+        "priority": 18,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "rules",
+        "name": "hybrid_rules_gazetteer_regex",
+        "notes": "",
+        "priority": 22,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "hybrid_rules_ml_ollama",
+        "notes": "",
+        "priority": 35,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "hybrid_deterministic_then_llm_enrichment",
+        "notes": "",
+        "priority": 38,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "GlinerOllamaRelationTypingExtractor",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "llm",
+        "name": "hybrid_gliner_then_ollama_relations",
+        "notes": "",
+        "priority": 38,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "hybrid_ollama_schema_then_gliner",
+        "notes": "",
+        "priority": 38,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "hybrid_openie_then_ollama_canonicalization",
+        "notes": "",
+        "priority": 38,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "human",
+        "name": "hybrid_human_reviewed_schema",
+        "notes": "",
+        "priority": 50,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      }
+    ],
+    "llm": [
+      {
+        "adapter": "OllamaProvider",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "ollama_provider",
+        "notes": "",
+        "priority": 40,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      }
+    ],
+    "loader": [
+      {
+        "adapter": "CsvLoader",
+        "input_types": [
+          "csv"
+        ],
+        "method_type": "deterministic",
+        "name": "csv_loader",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "JsonLoader",
+        "input_types": [
+          "json"
+        ],
+        "method_type": "deterministic",
+        "name": "json_loader",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "MarkdownLoader",
+        "input_types": [
+          "markdown"
+        ],
+        "method_type": "deterministic",
+        "name": "markdown_loader",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "TextLoader",
+        "input_types": [
+          "text",
+          "long_form_document"
+        ],
+        "method_type": "deterministic",
+        "name": "text_loader",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "APIResponseLoader",
+        "input_types": [
+          "api_response"
+        ],
+        "method_type": "deterministic",
+        "name": "api_response_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DataWarehouseExportLoader",
+        "input_types": [
+          "warehouse"
+        ],
+        "method_type": "deterministic",
+        "name": "data_warehouse_export_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "EventPayloadLoader",
+        "input_types": [
+          "event_payload"
+        ],
+        "method_type": "deterministic",
+        "name": "event_payload_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ExcelLoader",
+        "input_types": [
+          "excel"
+        ],
+        "method_type": "deterministic",
+        "name": "excel_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "JSONLDLoader",
+        "input_types": [
+          "jsonld"
+        ],
+        "method_type": "ontology",
+        "name": "jsonld_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "LogLoader",
+        "input_types": [
+          "logs"
+        ],
+        "method_type": "rules",
+        "name": "log_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SQLDatabaseLoader",
+        "input_types": [
+          "sql",
+          "relational_table"
+        ],
+        "method_type": "deterministic",
+        "name": "sql_database_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "XMLLoader",
+        "input_types": [
+          "xml"
+        ],
+        "method_type": "deterministic",
+        "name": "xml_loader",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "StructuredAPILoader",
+        "input_types": [
+          "api"
+        ],
+        "method_type": "deterministic",
+        "name": "structured_api_loader",
+        "notes": "",
+        "priority": 14,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "HTMLLoader",
+        "input_types": [
+          "html"
+        ],
+        "method_type": "rules",
+        "name": "html_loader",
+        "notes": "",
+        "priority": 16,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ChatTranscriptLoader",
+        "input_types": [
+          "chat_transcript"
+        ],
+        "method_type": "rules",
+        "name": "chat_transcript_loader",
+        "notes": "",
+        "priority": 18,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "EmailLoader",
+        "input_types": [
+          "email"
+        ],
+        "method_type": "rules",
+        "name": "email_loader",
+        "notes": "",
+        "priority": 18,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "PDFLoader",
+        "input_types": [
+          "pdf"
+        ],
+        "method_type": "rules",
+        "name": "pdf_loader",
+        "notes": "",
+        "priority": 18,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ReportLoader",
+        "input_types": [
+          "report"
+        ],
+        "method_type": "rules",
+        "name": "report_loader",
+        "notes": "",
+        "priority": 18,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "WebPageLoader",
+        "input_types": [
+          "webpage"
+        ],
+        "method_type": "rules",
+        "name": "webpage_loader",
+        "notes": "",
+        "priority": 18,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ScientificPaperLoader",
+        "input_types": [
+          "scientific_paper"
+        ],
+        "method_type": "rules",
+        "name": "scientific_paper_loader",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "mapper": [
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "column_to_property_mapping",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "column_type_inference",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [
+          "csv",
+          "sql",
+          "excel"
+        ],
+        "method_type": "deterministic",
+        "name": "direct_table_mapper",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "foreign_key_to_edge_mapping",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "primary_key_to_id_mapping",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "row_to_entity_mapping",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "schema_profiling",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "table_to_node_mapping",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "APIResponseMapper",
+        "input_types": [
+          "api_response"
+        ],
+        "method_type": "deterministic",
+        "name": "api_response_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "CSVWMapper",
+        "input_types": [
+          "csv"
+        ],
+        "method_type": "ontology",
+        "name": "csvw_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "EventGraphMapper",
+        "input_types": [
+          "event_payload",
+          "logs"
+        ],
+        "method_type": "deterministic",
+        "name": "event_graph_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "JSONLDMapper",
+        "input_types": [
+          "jsonld"
+        ],
+        "method_type": "ontology",
+        "name": "jsonld_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "JsonPathMapper",
+        "input_types": [
+          "json"
+        ],
+        "method_type": "deterministic",
+        "name": "jsonpath_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "LogEventMapper",
+        "input_types": [
+          "logs"
+        ],
+        "method_type": "rules",
+        "name": "log_event_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "R2RMLMapper",
+        "input_types": [
+          "sql"
+        ],
+        "method_type": "ontology",
+        "name": "r2rml_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RMLMapper",
+        "input_types": [
+          "csv",
+          "json",
+          "xml"
+        ],
+        "method_type": "ontology",
+        "name": "rml_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "XMLPathMapper",
+        "input_types": [
+          "xml"
+        ],
+        "method_type": "deterministic",
+        "name": "xmlpath_mapper",
+        "notes": "",
+        "priority": 12,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "DottedPathJsonMapper",
+        "input_types": [
+          "json"
+        ],
+        "method_type": "deterministic",
+        "name": "dotted_path_json_mapper",
+        "notes": "",
+        "priority": 13,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "incremental_watermark_sync",
+        "notes": "",
+        "priority": 14,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "OBDAVirtualGraphMapper",
+        "input_types": [
+          "sql"
+        ],
+        "method_type": "ontology",
+        "name": "obda_virtual_graph_mapper",
+        "notes": "",
+        "priority": 14,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DirectTableMapper",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "relationship_inference_from_keys",
+        "notes": "",
+        "priority": 14,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "HTMLMetadataMapper",
+        "input_types": [
+          "html",
+          "webpage"
+        ],
+        "method_type": "rules",
+        "name": "html_metadata_mapper",
+        "notes": "",
+        "priority": 16,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "production": [
+      {
+        "adapter": "RunManifestWriter",
+        "input_types": [],
+        "method_type": "reproducibility",
+        "name": "run_manifest_writer",
+        "notes": "",
+        "priority": 5,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "StructuredLogger",
+        "input_types": [],
+        "method_type": "observability",
+        "name": "structured_logging",
+        "notes": "",
+        "priority": 5,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "BatchRetryPolicy",
+        "input_types": [],
+        "method_type": "resilience",
+        "name": "batch_retry_policy",
+        "notes": "",
+        "priority": 6,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DeadLetterQueue",
+        "input_types": [],
+        "method_type": "resilience",
+        "name": "dead_letter_queue",
+        "notes": "",
+        "priority": 6,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "PIIRedactionPolicy",
+        "input_types": [],
+        "method_type": "privacy",
+        "name": "pii_redaction_policy",
+        "notes": "",
+        "priority": 6,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "DeadLetterReplayTool",
+        "input_types": [],
+        "method_type": "resilience",
+        "name": "dead_letter_replay_tool",
+        "notes": "",
+        "priority": 7,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "ErrorQuarantine",
+        "input_types": [],
+        "method_type": "resilience",
+        "name": "error_quarantine",
+        "notes": "",
+        "priority": 8,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "IncrementalSyncPolicy",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "incremental_sync_policy",
+        "notes": "",
+        "priority": 8,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "WatermarkStore",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "watermark_store",
+        "notes": "",
+        "priority": 8,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "resolution": [
+      {
+        "adapter": "ExactKeyEntityResolver",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "exact_key_entity_resolver",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "AliasTableResolver",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "alias_table_resolver",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "NormalizedStringResolver",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "normalized_string_resolver",
+        "notes": "",
+        "priority": 20,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RapidFuzzResolver",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "fuzzy_string_resolver",
+        "notes": "",
+        "priority": 22,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "RapidFuzzResolver",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "rapidfuzz_resolver",
+        "notes": "",
+        "priority": 22,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "BlockingResolver",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "blocking_resolver",
+        "notes": "",
+        "priority": 24,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "DBpediaLinker",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "dbpedia_linker",
+        "notes": "",
+        "priority": 28,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "WikidataLinker",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "wikidata_linker",
+        "notes": "",
+        "priority": 28,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "SplinkProbabilisticResolver",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "probabilistic_linkage_resolver",
+        "notes": "",
+        "priority": 30,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "SplinkProbabilisticResolver",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "splink_probabilistic_resolver",
+        "notes": "",
+        "priority": 30,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "DedupeActiveLearningResolver",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "dedupe_active_learning_resolver",
+        "notes": "",
+        "priority": 32,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "EmbeddingResolver",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "embedding_resolver",
+        "notes": "",
+        "priority": 35,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "CrossEncoderResolver",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "cross_encoder_resolver",
+        "notes": "",
+        "priority": 36,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      },
+      {
+        "adapter": "GraphNeighborhoodResolver",
+        "input_types": [],
+        "method_type": "ml",
+        "name": "graph_neighborhood_resolver",
+        "notes": "",
+        "priority": 36,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "HumanReviewResolver",
+        "input_types": [],
+        "method_type": "human",
+        "name": "human_review_resolver",
+        "notes": "",
+        "priority": 50,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "OpenRefineReconciler",
+        "input_types": [],
+        "method_type": "human",
+        "name": "openrefine_reconciler",
+        "notes": "",
+        "priority": 50,
+        "status": "implemented",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": [
+          "optional_adapter"
+        ]
+      }
+    ],
+    "schema": [
+      {
+        "adapter": "InMemorySchemaRegistry",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "in_memory_schema_registry",
+        "notes": "",
+        "priority": 15,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "OwlOntologyLoader",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "owl_ontology_loader",
+        "notes": "",
+        "priority": 16,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "ollama_entity_label_proposal",
+        "notes": "",
+        "priority": 45,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "ollama_ontology_proposal",
+        "notes": "",
+        "priority": 45,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "llm",
+        "name": "ollama_relationship_type_proposal",
+        "notes": "",
+        "priority": 45,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "human",
+        "name": "schema_promotion_workflow",
+        "notes": "",
+        "priority": 50,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "human",
+        "name": "schema_proposal_workflow",
+        "notes": "",
+        "priority": 50,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaProposalWorkflow",
+        "input_types": [],
+        "method_type": "human",
+        "name": "schema_quarantine_namespace",
+        "notes": "",
+        "priority": 50,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ],
+    "validation": [
+      {
+        "adapter": "EvidenceRequiredValidator",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "evidence_required_validator",
+        "notes": "",
+        "priority": 10,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "JSONSchemaValidator",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "json_schema_validator",
+        "notes": "",
+        "priority": 12,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "ConfidenceThresholdValidator",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "confidence_threshold_validator",
+        "notes": "",
+        "priority": 15,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaRegistryValidator",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "schema_registry_validator",
+        "notes": "",
+        "priority": 15,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "EvidenceRequiredValidator",
+        "input_types": [],
+        "method_type": "rules",
+        "name": "hallucination_filter",
+        "notes": "",
+        "priority": 16,
+        "status": "adapter",
+        "support_label": "Optional adapter",
+        "support_level": "optional_adapter",
+        "tags": []
+      },
+      {
+        "adapter": "PropertyGraphValidator",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "property_graph_validator",
+        "notes": "",
+        "priority": 16,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaDriftValidator",
+        "input_types": [],
+        "method_type": "deterministic",
+        "name": "schema_drift_validator",
+        "notes": "",
+        "priority": 16,
+        "status": "stub",
+        "support_label": "Planned",
+        "support_level": "planned",
+        "tags": []
+      },
+      {
+        "adapter": "ShaclValidator",
+        "input_types": [],
+        "method_type": "ontology",
+        "name": "shacl_validator",
+        "notes": "",
+        "priority": 16,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "HumanReviewQueue",
+        "input_types": [],
+        "method_type": "human",
+        "name": "human_review_queue",
+        "notes": "",
+        "priority": 50,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      }
+    ]
+  },
+  "total_registered_techniques": 150
+}

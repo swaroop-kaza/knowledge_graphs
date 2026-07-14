@@ -1,0 +1,18 @@
+[
+  {
+    "id": "svc-1",
+    "name": "Recommendation API",
+    "owner": {
+      "team": "Platform"
+    },
+    "runtime": "python"
+  },
+  {
+    "id": "svc-2",
+    "name": "Feature Store",
+    "owner": {
+      "team": "ML"
+    },
+    "runtime": "java"
+  }
+]

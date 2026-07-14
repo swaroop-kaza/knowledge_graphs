@@ -1,0 +1,9 @@
+From: Asha Rao <asha@example.com>
+To: Platform Team <platform@example.com>
+Subject: INCIDENT-1042 Recommendation API follow-up
+Date: Thu, 09 Jul 2026 10:20:00 +0000
+Message-ID: <incident-1042@example.com>
+Content-Type: text/plain; charset="utf-8"
+
+INCIDENT-1042 affected Recommendation API on 2026-07-09.
+Please coordinate with ML Platform before the next release window.

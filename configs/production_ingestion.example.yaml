@@ -1,0 +1,31 @@
+production_ingestion:
+  retry:
+    max_attempts: 3
+    initial_delay_seconds: 0.25
+    backoff_multiplier: 2.0
+    max_delay_seconds: 5.0
+
+  dead_letter:
+    path: data/processed/graph_ingestion_dead_letters.jsonl
+
+  neo4j:
+    uri: bolt://localhost:7687
+    user: neo4j
+    password_env: NEO4J_PASSWORD
+    database: neo4j
+    batch_size: 500
+    ensure_constraints: true
+
+  kuzu:
+    database_path: data/processed/kuzu_graph
+    node_table: KGNode
+    edge_table: KGEdge
+    batch_size: 500
+    create_schema: true
+    use_manual_transactions: true
+    checkpoint_after_write: false
+
+  replay:
+    command_examples:
+      - kg-construction-replay-deadletters --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl --store neo4j_ingestion_adapter --dry-run
+      - kg-construction-replay-deadletters --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl --store kuzu_ingestion_adapter --kuzu-database data/processed/kuzu_graph

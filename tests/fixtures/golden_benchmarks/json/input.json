@@ -1,0 +1,20 @@
+[
+  {
+    "id": "svc-001",
+    "name": "Recommendation API",
+    "owner": {
+      "team": "Platform Team",
+      "email": "platform@example.com"
+    },
+    "dependencies": [
+      {
+        "system": "Feature Store",
+        "version": "3.1.0"
+      }
+    ],
+    "last_incident": {
+      "id": "INCIDENT-1042",
+      "date": "2026-07-09"
+    }
+  }
+]

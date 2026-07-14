@@ -1,0 +1,3 @@
+id,name,manager_id,department,email
+1,Recommendation API,,Platform,platform@example.com
+2,Feature Store,1,ML,ml@example.com

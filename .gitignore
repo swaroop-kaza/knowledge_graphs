@@ -1,0 +1,21 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.egg-info/
+*.log
+build/
+dist/
+htmlcov/
+
+# Generated KG construction outputs
+data/external/experiment_datasets/
+data/processed/*
+!data/processed/README.md
+reports/experiment_datasets/
+reports/part_1_*

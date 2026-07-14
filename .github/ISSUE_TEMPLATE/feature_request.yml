@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a new capability or improvement.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What capability should be added?
+      description: Describe the technique, pipeline stage, or integration.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Loader
+        - Mapper
+        - Extractor
+        - Entity resolution / linking
+        - Ontology / schema
+        - Validation
+        - Graph store / ingestion
+        - Evaluation
+        - Graph ML / retrieval
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Suggested design
+      description: Mention algorithms, libraries, standards, or configs if known.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What tests or examples would prove this is working?

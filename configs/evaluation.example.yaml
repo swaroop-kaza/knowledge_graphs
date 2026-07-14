@@ -1,0 +1,46 @@
+evaluation:
+  run_all_applicable_techniques: true
+  force_all_techniques: false
+  gold_dataset_path: null
+  human_review_sample_size: 100
+  bootstrap_iterations: 1000
+  allow_external_services: false
+  deterministic_runtime: true
+  fixed_latency_seconds: 0.0
+  fixed_throughput: 1000.0
+  fixed_memory_peak_mb: 0.0
+  fixed_graph_write_time_seconds: 0.0
+  fixed_ollama_prompt_tokens: 0
+  fixed_ollama_output_tokens: 0
+  fixed_ollama_cost_proxy: 0.0
+
+applicability_threshold: 0.40
+
+weights:
+  accuracy: 0.25
+  validation: 0.20
+  coverage: 0.15
+  entity_resolution: 0.10
+  retrieval: 0.10
+  scalability: 0.08
+  cost_efficiency: 0.07
+  maintainability: 0.05
+
+penalties:
+  unsupported_extraction: 0.25
+  schema_violation: 0.20
+  latency: 0.10
+  human_review: 0.05
+
+production_thresholds:
+  evidence_coverage: 0.95
+  schema_validity: 0.95
+  unsupported_extraction_rate: 0.02
+  validation_failure_rate: 0.05
+
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: llama3.1
+  temperature: 0
+  structured_output: true

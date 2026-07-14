@@ -1,0 +1,10 @@
+{
+  "incident": {
+    "id": "INCIDENT-1042",
+    "system": "Recommendation API",
+    "severity": "high"
+  },
+  "owner": {
+    "team": "Platform Team"
+  }
+}

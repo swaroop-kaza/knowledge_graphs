@@ -1,0 +1,170 @@
+version: 1
+description: Registry-to-notebook coverage map. Implemented and adapter techniques
+  must appear in coverage; stubs can appear under extension_points.
+coverage:
+  01_data_loading_and_profiling.ipynb:
+  - csv_loader
+  - excel_loader
+  - sql_database_loader
+  - structured_api_loader
+  - json_loader
+  - xml_loader
+  - api_response_loader
+  - text_loader
+  - markdown_loader
+  - pdf_loader
+  - report_loader
+  - email_loader
+  - chat_transcript_loader
+  02_structured_schema_mapping_rdf.ipynb:
+  - direct_table_mapper
+  - table_to_node_mapping
+  - row_to_entity_mapping
+  - primary_key_to_id_mapping
+  - foreign_key_to_edge_mapping
+  - column_to_property_mapping
+  - schema_profiling
+  - column_type_inference
+  - relationship_inference_from_keys
+  - in_memory_schema_registry
+  - schema_proposal_workflow
+  - schema_quarantine_namespace
+  - schema_promotion_workflow
+  - evidence_required_validator
+  - schema_registry_validator
+  - confidence_threshold_validator
+  - shacl_validator
+  - hallucination_filter
+  - property_graph_builder
+  - rdf_graph_builder
+  - evidence_graph_builder
+  03_jsonpath_xml_semistructured_mapping.ipynb:
+  - jsonpath_mapper
+  - dotted_path_json_mapper
+  04_text_extraction_gliner_ollama_labels.ipynb:
+  - regex_entity_extractor
+  - gazetteer_entity_extractor
+  - gliner_entity_extractor
+  - ollama_graph_extractor
+  - ollama_provider
+  - hybrid_rules_gazetteer_regex
+  - hybrid_ollama_schema_then_gliner
+  05_evaluation_resolution_production_hardening.ipynb:
+  - exact_key_entity_resolver
+  - normalized_string_resolver
+  - fuzzy_string_resolver
+  - rapidfuzz_resolver
+  - alias_table_resolver
+  - human_review_queue
+  - construction_metrics_evaluator
+  - benchmark_runner
+  - structured_logging
+  - run_manifest_writer
+  - incremental_sync_policy
+  - watermark_store
+  - error_quarantine
+  - pii_redaction_policy
+  06_graph_ml_capabilities.ipynb:
+  - graph_analytics_enricher
+  - pagerank_enricher
+  - community_detection_enricher
+  - connected_components_enricher
+  - node_embedding_enricher
+  - spectral_node_embedding_enricher
+  - structural_hash_node_embedding_enricher
+  - link_prediction_enricher
+  - resource_allocation_link_prediction
+  - jaccard_link_prediction
+  - hybrid_topology_embedding_link_prediction
+  - graphsage_pyg_adapter
+  07_standards_mapping_and_virtual_kg.ipynb:
+  - r2rml_mapper
+  - rml_mapper
+  - csvw_mapper
+  - jsonld_mapper
+  - obda_virtual_graph_mapper
+  08_relation_extraction_and_entity_linking.ipynb:
+  - dependency_pattern_relation_extractor
+  - openie_relation_extractor
+  - gliner_ollama_relation_typing_extractor
+  - rebel_relation_extractor
+  - transformer_relation_extractor
+  - ollama_schema_guided_extraction
+  - ollama_schema_later_extraction
+  - embedding_resolver
+  - cross_encoder_resolver
+  - wikidata_linker
+  - dbpedia_linker
+  - openrefine_reconciler
+  - probabilistic_linkage_resolver
+  - splink_probabilistic_resolver
+  - dedupe_active_learning_resolver
+  - hybrid_gliner_then_ollama_relations
+  - hybrid_rules_ml_ollama
+  - hybrid_structured_then_text
+  - hybrid_openie_then_ollama_canonicalization
+  - hybrid_deterministic_then_llm_enrichment
+  - hybrid_human_reviewed_schema
+  09_enterprise_events_and_observability.ipynb:
+  - jsonld_loader
+  - html_loader
+  - webpage_loader
+  - log_loader
+  - event_payload_loader
+  - scientific_paper_loader
+  - event_graph_mapper
+  - log_event_mapper
+  - html_metadata_mapper
+  10_graph_store_ingestion_and_exports.ipynb:
+  - neo4j_exporter
+  - neo4j_ingestion_adapter
+  - memgraph_exporter
+  - kuzu_exporter
+  - kuzu_ingestion_adapter
+  - networkx_exporter
+  - rdf_exporter
+  - rdflib_exporter
+  - batch_retry_policy
+  - dead_letter_queue
+  - dead_letter_replay_tool
+  11_gold_benchmarks_and_retrieval.ipynb:
+  - graph_train_validation_splitter
+  - node2vec_embedding_adapter
+  - knowledge_graph_embedding_adapter
+  - large_graph_analytics_backend
+  - graphsage_link_prediction_trainer
+  - graph_retrieval_benchmark
+extension_points:
+  04_text_extraction_gliner_ollama_labels.ipynb:
+  - ollama_entity_label_proposal
+  07_standards_mapping_and_virtual_kg.ipynb:
+  - data_warehouse_export_loader
+  - xmlpath_mapper
+  - api_response_mapper
+  - incremental_watermark_sync
+  - owl_ontology_loader
+  08_relation_extraction_and_entity_linking.ipynb:
+  - spacy_entity_ruler_extractor
+  - sentence_splitter_adapter
+  - pos_tagging_adapter
+  - coreference_adapter
+  - spacy_ner_extractor
+  - transformer_ner_extractor
+  - pairwise_relation_classifier_adapter
+  - joint_entity_relation_extractor
+  - supervised_relation_extractor
+  - blocking_resolver
+  - graph_neighborhood_resolver
+  - human_review_resolver
+  - ollama_ontology_proposal
+  - ollama_relationship_type_proposal
+  - json_schema_validator
+  - property_graph_validator
+  - schema_drift_validator
+  11_gold_benchmarks_and_retrieval.ipynb:
+  - chunk_embedding_enricher
+  - entity_embedding_enricher
+  - external_kg_link_enricher
+  - entity_summary_enricher
+  - community_summary_enricher
+  - temporal_event_enricher

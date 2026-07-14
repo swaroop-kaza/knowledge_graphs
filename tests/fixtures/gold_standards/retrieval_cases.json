@@ -1,0 +1,101 @@
+{
+  "fixture_id": "human_reviewed_graphrag_retrieval_sample",
+  "contexts": [
+    {
+      "context_id": "ctx_incident_affected",
+      "text": "INCIDENT-1042 affected the Recommendation API system on 2026-07-09.",
+      "nodes": ["entity_incident_1042", "entity_recommendation_api"],
+      "edges": [
+        {
+          "source": "entity_incident_1042",
+          "relation_type": "AFFECTED",
+          "target": "entity_recommendation_api"
+        }
+      ],
+      "citation_ids": ["evidence_incident_affected"]
+    },
+    {
+      "context_id": "ctx_recommendation_owner",
+      "text": "The Recommendation API system is owned by Platform Team.",
+      "nodes": ["entity_recommendation_api", "entity_platform_team"],
+      "edges": [
+        {
+          "source": "entity_recommendation_api",
+          "relation_type": "OWNED_BY",
+          "target": "entity_platform_team"
+        }
+      ],
+      "citation_ids": ["evidence_recommendation_owner"]
+    },
+    {
+      "context_id": "ctx_incident_investigation",
+      "text": "Platform Team investigated INCIDENT-1042 after the incident alert.",
+      "nodes": ["entity_incident_1042", "entity_platform_team"],
+      "edges": [
+        {
+          "source": "entity_incident_1042",
+          "relation_type": "INVESTIGATED_BY",
+          "target": "entity_platform_team"
+        }
+      ],
+      "citation_ids": ["evidence_incident_investigation"]
+    },
+    {
+      "context_id": "ctx_noise_billing_deploy",
+      "text": "Billing API deployed version v2.4.1.",
+      "nodes": ["entity_billing_api"],
+      "edges": [],
+      "citation_ids": ["evidence_billing_deploy"]
+    }
+  ],
+  "cases": [
+    {
+      "query_id": "q_affected_system",
+      "query": "Which system did INCIDENT-1042 affect?",
+      "relevant_context_ids": ["ctx_incident_affected"],
+      "expected_answer_contains": ["Recommendation API"],
+      "expected_path": [
+        "entity_incident_1042",
+        "AFFECTED",
+        "entity_recommendation_api"
+      ],
+      "expected_citation_ids": ["evidence_incident_affected"]
+    },
+    {
+      "query_id": "q_owner_of_affected_system",
+      "query": "Which team owns the system affected by INCIDENT-1042?",
+      "relevant_context_ids": [
+        "ctx_incident_affected",
+        "ctx_recommendation_owner"
+      ],
+      "expected_answer_contains": ["Platform Team"],
+      "expected_path": [
+        "entity_incident_1042",
+        "AFFECTED",
+        "entity_recommendation_api",
+        "OWNED_BY",
+        "entity_platform_team"
+      ],
+      "expected_citation_ids": [
+        "evidence_incident_affected",
+        "evidence_recommendation_owner"
+      ]
+    },
+    {
+      "query_id": "q_investigating_team",
+      "query": "Which team investigated INCIDENT-1042?",
+      "relevant_context_ids": ["ctx_incident_investigation"],
+      "expected_answer_contains": ["Platform Team"],
+      "expected_path": [
+        "entity_incident_1042",
+        "INVESTIGATED_BY",
+        "entity_platform_team"
+      ],
+      "expected_citation_ids": ["evidence_incident_investigation"]
+    }
+  ],
+  "metadata": {
+    "review_status": "human_reviewed",
+    "retrieval_k": 2
+  }
+}

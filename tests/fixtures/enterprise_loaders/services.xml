@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services generated_at="2026-07-09T10:15:00Z">
+  <service id="svc-rec-api">
+    <name>Recommendation API</name>
+    <owner>Platform Team</owner>
+    <status>degraded</status>
+    <incident>INCIDENT-1042</incident>
+  </service>
+  <service id="svc-feature-store">
+    <name>Feature Store</name>
+    <owner>ML Platform</owner>
+    <status>healthy</status>
+  </service>
+</services>

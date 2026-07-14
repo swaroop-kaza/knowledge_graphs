@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this framework in research or a public project, please cite it."
+title: "Data-to-Knowledge Graph Construction Framework"
+authors:
+  - family-names: "Kaza"
+    given-names: "Swaroop"
+version: "0.1.0"
+date-released: "2026-07-13"
+license: "Apache-2.0"
+keywords:
+  - "knowledge graphs"
+  - "data-to-knowledge-graph"
+  - "GraphRAG"
+  - "RDF"
+  - "SHACL"
+  - "entity resolution"
+  - "information extraction"

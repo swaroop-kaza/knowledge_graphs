@@ -1,0 +1,23 @@
+integration_profiles:
+  neo4j_live:
+    enabled_env: KG_RUN_NEO4J_INTEGRATION
+    uri_env: NEO4J_URI
+    user_env: NEO4J_USER
+    password_env: NEO4J_PASSWORD
+    database_env: NEO4J_DATABASE
+    tests:
+      - write_property_graph_with_managed_transaction
+      - import_rdf_with_neosemantics_when_enabled
+
+  kuzu_live:
+    enabled_env: KG_RUN_KUZU_INTEGRATION
+    database_path: data/processed/integration/kuzu_graph
+    tests:
+      - write_property_graph
+      - bulk_import_large_property_graph
+
+  graph_store_batch_benchmark:
+    node_counts: [100, 1000, 10000]
+    edge_factor: 3
+    batch_sizes: [100, 500, 1000, 5000]
+    output: reports/graph_store_batch_benchmark.json

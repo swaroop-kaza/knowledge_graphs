@@ -1,0 +1,2 @@
+INCIDENT-1042 affected Recommendation API on 2026-07-09.
+Contact Platform Team at platform@example.com for escalation.

@@ -1,0 +1,156 @@
+pipeline:
+  name: complete_data_to_kg
+  graph_model: hybrid
+  evidence_required: true
+  validation_required: true
+  validation_policy: reject
+  schema_version: v1
+
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: llama3.1
+  temperature: 0
+  structured_output: true
+  evidence_required: true
+  retry_on_invalid_output: true
+  max_retries: 3
+  prompt_version: ollama_graph_extraction_v1
+
+loaders:
+  csv:
+    enabled: true
+  excel:
+    enabled: true
+  sql:
+    enabled: true
+  json:
+    enabled: true
+  xml:
+    enabled: true
+  pdf:
+    enabled: true
+  webpage:
+    enabled: true
+  email:
+    enabled: true
+  logs:
+    enabled: true
+
+mappers:
+  direct_table:
+    enabled: true
+  r2rml:
+    enabled: true
+  rml:
+    enabled: true
+  csvw:
+    enabled: true
+  jsonld:
+    enabled: true
+  obda_virtual:
+    enabled: true
+  jsonpath:
+    enabled: true
+
+extractors:
+  regex:
+    enabled: true
+  gazetteer:
+    enabled: true
+  spacy:
+    enabled: true
+  transformer_ner:
+    enabled: true
+  gliner:
+    enabled: true
+  openie:
+    enabled: true
+  rebel:
+    enabled: true
+  supervised_re:
+    enabled: true
+  ollama_graph:
+    enabled: true
+
+resolution:
+  exact:
+    enabled: true
+  fuzzy:
+    enabled: true
+  embedding:
+    enabled: true
+  cross_encoder:
+    enabled: true
+  graph_based:
+    enabled: true
+  human_review:
+    enabled: true
+
+validation:
+  json_schema:
+    enabled: true
+  schema_registry:
+    enabled: true
+  shacl:
+    enabled: true
+  property_graph:
+    enabled: true
+  evidence_required:
+    enabled: true
+
+graph_store:
+  neo4j:
+    enabled: true
+  rdf:
+    enabled: true
+  kuzu:
+    enabled: true
+  networkx:
+    enabled: true
+
+enrichment:
+  graph_analytics:
+    enabled: true
+  node_embeddings:
+    enabled: true
+  external_kg_linking:
+    enabled: true
+  pagerank:
+    enabled: true
+  community_detection:
+    enabled: true
+
+evaluation:
+  benchmark_runner:
+    enabled: true
+  construction_metrics:
+    enabled: true
+
+production:
+  structured_logging:
+    enabled: true
+    level: INFO
+    redact_pii: true
+  run_manifest:
+    enabled: true
+    output_dir: data/processed/manifests
+  incremental_sync:
+    enabled: false
+    watermark_path: data/processed/watermarks.json
+    watermark_field: updated_at
+  error_quarantine:
+    enabled: true
+    path: data/processed/quarantine.jsonl
+  human_review_queue:
+    enabled: true
+    path: data/processed/human_review_queue.json
+  pii_redaction:
+    enabled: true
+    replacement: "[REDACTED]"
+    redact_emails: true
+    redact_phone_numbers: true
+    redact_ssn: true
+    redact_ip_addresses: true
+    redact_api_keys: true
+  continue_on_error: false

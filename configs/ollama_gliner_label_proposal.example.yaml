@@ -1,0 +1,67 @@
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: llama3.1
+  temperature: 0
+  structured_output: true
+  evidence_required: true
+  retry_on_invalid_output: true
+  max_retries: 3
+  prompt_version: ollama_label_proposal_v1
+
+label_proposal:
+  allowed_label_count: 8
+  seed_labels:
+    - Person
+    - Organization
+    - System
+    - Incident
+    - Date
+    - ErrorCode
+  include_patterns: []
+  exclude_patterns:
+    - "^(thing|object|data|text|other|unknown)$"
+  min_confidence: 0.2
+  auto_approve: true
+  prompt_template: |
+    You are proposing entity labels for a GLiNER named entity recognition pass.
+
+    Return only valid JSON.
+    Do not extract entities yet.
+    Propose labels that are useful for knowledge graph construction from the text.
+    Prefer reusable graph labels such as Person, Organization, System, Incident, Date, Product, Location, Metric, Document, API, ErrorCode.
+    Avoid labels that are too broad, such as Thing, Object, Data, Text, Other, Unknown.
+    Return at most {allowed_label_count} labels.
+
+    Seed labels that may be useful:
+    {seed_labels}
+
+    Text:
+    {chunk_text}
+
+    Return:
+    {{
+      "labels": [
+        {{
+          "name": "System",
+          "description": "Software service, API, application, model, or platform component.",
+          "rationale": "Why this label is useful for this text.",
+          "confidence": 0.0
+        }}
+      ]
+    }}
+
+review:
+  approved_labels: []
+  rejected_labels: []
+
+gliner:
+  model_name: gliner-community/gliner_small-v2.5
+  threshold: 0.5
+  flat_ner: true
+  labels: []
+  schema_version: v1
+
+compare_regex: true
+compare_gazetteer: true
+compare_ollama_graph: false

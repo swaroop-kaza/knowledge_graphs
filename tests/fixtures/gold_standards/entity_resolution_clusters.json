@@ -1,0 +1,51 @@
+{
+  "fixture_id": "human_reviewed_entity_resolution_sample",
+  "records": [
+    {
+      "record_id": "svc_001",
+      "entity_type": "System",
+      "name": "Recommendation API",
+      "cluster_id": "system_recommendation_api"
+    },
+    {
+      "record_id": "svc_002",
+      "entity_type": "System",
+      "name": "recommendation api",
+      "cluster_id": "system_recommendation_api"
+    },
+    {
+      "record_id": "svc_003",
+      "entity_type": "System",
+      "name": "Rec API",
+      "cluster_id": "system_recommendation_api"
+    },
+    {
+      "record_id": "svc_004",
+      "entity_type": "System",
+      "name": "Feature Store",
+      "cluster_id": "system_feature_store"
+    },
+    {
+      "record_id": "svc_005",
+      "entity_type": "System",
+      "name": "Feature-store",
+      "cluster_id": "system_feature_store"
+    },
+    {
+      "record_id": "team_001",
+      "entity_type": "Team",
+      "name": "Platform Team",
+      "cluster_id": "team_platform"
+    },
+    {
+      "record_id": "team_002",
+      "entity_type": "Team",
+      "name": "Platform",
+      "cluster_id": "team_platform"
+    }
+  ],
+  "metadata": {
+    "review_status": "human_reviewed",
+    "gold_pair_count": 5
+  }
+}

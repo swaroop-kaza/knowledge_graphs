@@ -1,0 +1,33 @@
+relation_typing:
+  gliner:
+    model_name: gliner-community/gliner_small-v2.5
+    threshold: 0.5
+    flat_ner: true
+    labels: []
+    schema_version: v1
+  entity_labels:
+    - Incident
+    - System
+    - Service
+    - API
+    - Person
+    - Organization
+    - Date
+    - Product
+    - ErrorCode
+  allowed_relationship_types:
+    - AFFECTED
+    - CALLS
+    - CONTAINS
+    - CREATED
+    - DEPENDS_ON
+    - MANAGES
+    - MENTIONS
+    - OWNS
+    - PART_OF
+    - REPORTS_TO
+    - USES
+    - WORKS_AT
+    - RELATED_TO
+  min_confidence: 0.0
+  schema_version: v1

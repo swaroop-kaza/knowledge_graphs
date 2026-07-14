@@ -1,0 +1,24 @@
+{
+  "request_id": "req-2026-07-09-1042",
+  "generated_at": "2026-07-09T10:15:00Z",
+  "data": [
+    {
+      "service_id": "svc-rec-api",
+      "name": "Recommendation API",
+      "owner": "Platform Team",
+      "status": "degraded",
+      "incident_id": "INCIDENT-1042"
+    },
+    {
+      "service_id": "svc-feature-store",
+      "name": "Feature Store",
+      "owner": "ML Platform",
+      "status": "healthy",
+      "incident_id": null
+    }
+  ],
+  "pagination": {
+    "next": null,
+    "count": 2
+  }
+}

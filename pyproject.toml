@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kg-construction"
+version = "0.1.0"
+description = "Production-oriented Data-to-Knowledge Graph construction, evaluation, and technique selection framework."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Swaroop Kaza" }]
+keywords = [
+    "knowledge-graphs",
+    "data-to-kg",
+    "graph-rag",
+    "rdf",
+    "shacl",
+    "neo4j",
+    "entity-resolution",
+    "information-extraction",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.7",
+    "PyYAML>=6.0",
+    "jsonpath-ng>=1.7,<2",
+    "openpyxl>=3.1",
+    "SQLAlchemy>=2.0",
+    "pypdf>=6.0",
+    "rapidfuzz>=3.9",
+    "rdflib>=7.0",
+    "pyshacl>=0.26",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "twine>=5.0",
+    "types-PyYAML>=6.0",
+    "vulture>=2.11",
+]
+notebook = ["jupyter>=1.1", "ipykernel>=6.29", "nbformat>=5.10"]
+gliner = ["gliner>=0.2.16"]
+llm = ["langchain-ollama>=0.2.0", "langchain-core>=0.3.0", "langchain-neo4j>=0.4.0"]
+bert = ["transformers>=4.44", "torch>=2.2"]
+spacy = ["spacy>=3.7"]
+graph = ["networkx>=3.3", "neo4j>=5.20", "numpy>=1.26", "kuzu>=0.11.0"]
+rdf = ["rdflib>=7.0", "pyshacl>=0.26", "pyld>=2.0"]
+linking = ["sentence-transformers>=3.0"]
+dedup = ["datasketch>=1.6", "rapidfuzz>=3.9", "splink>=4.0", "dedupe>=3.0"]
+ml = ["numpy>=1.26", "torch>=2.2", "torch-geometric>=2.5", "pykeen>=1.10", "igraph>=0.11", "leidenalg>=0.10"]
+
+[project.scripts]
+kg-construction = "kg_construction.interfaces.cli.construct:main"
+kg-construction-benchmark = "kg_construction.interfaces.cli.benchmark:main"
+kg-construction-replay-deadletters = "kg_construction.interfaces.cli.replay_dead_letters:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+kg_construction = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "SIM", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.vulture]
+min_confidence = 80
+paths = ["src", "tests"]

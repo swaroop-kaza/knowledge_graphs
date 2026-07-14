@@ -1,0 +1,38 @@
+graph_ml:
+  enable_degree_features: true
+  enable_pagerank: true
+  enable_communities: true
+  enable_components: true
+  enable_embeddings: true
+  enable_link_prediction: true
+
+  pagerank:
+    alpha: 0.85
+    max_iter: 100
+    tol: 0.000001
+    property_name: pagerank
+
+  communities:
+    property_name: community_id
+    size_property_name: community_size
+    resolution: 1.0
+
+  components:
+    property_name: component_id
+    size_property_name: component_size
+
+  embeddings:
+    method: spectral
+    dimensions: 8
+    property_name: node_embedding
+    max_nodes_for_spectral: 500
+
+  link_prediction:
+    method: hybrid
+    max_predictions: 10
+    max_candidate_pairs: 5000
+    min_score: 0.0
+    only_with_common_neighbors: true
+    add_edges: false
+    edge_type: PREDICTED_LINK
+    embedding_property_name: node_embedding

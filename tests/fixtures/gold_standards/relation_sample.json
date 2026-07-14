@@ -1,0 +1,26 @@
+{
+  "fixture_id": "human_reviewed_relation_sample",
+  "text": "INCIDENT-1042 affected Recommendation API and was investigated by Platform Team.",
+  "entity_spans": [],
+  "triples": [],
+  "relations": [
+    {
+      "source": "entity_incident_1042",
+      "relation_type": "AFFECTED",
+      "target": "entity_recommendation_api"
+    },
+    {
+      "source": "entity_incident_1042",
+      "relation_type": "INVESTIGATED_BY",
+      "target": "entity_platform_team"
+    }
+  ],
+  "metadata": {
+    "review_status": "human_reviewed",
+    "entity_names": {
+      "entity_incident_1042": "INCIDENT-1042",
+      "entity_recommendation_api": "Recommendation API",
+      "entity_platform_team": "Platform Team"
+    }
+  }
+}

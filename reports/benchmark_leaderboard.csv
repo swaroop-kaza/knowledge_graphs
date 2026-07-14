@@ -1,0 +1,14 @@
+rank,dataset_type,dataset_path,source_type,technique,pipeline,entity_coverage,relation_coverage,evidence_coverage,validation_pass_rate,latency_seconds,memory_mb,throughput_items_per_second,resource_usage,quality_score,runtime_score,final_score,status,recommendation
+1,text,tests/fixtures/golden_benchmarks/text/input.txt,text,gazetteer_entity_extractor,gazetteer_rules,1.0,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.628929,0.148317,0.777245,implemented,best_for_fixture
+2,text,tests/fixtures/golden_benchmarks/text/input.txt,text,hybrid_rules_gazetteer_regex,hybrid_regex_plus_gazetteer,1.0,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.628929,0.148317,0.777245,implemented,compare_when_mixed_signals_matter
+3,text,tests/fixtures/golden_benchmarks/text/input.txt,text,regex_entity_extractor,regex_rules,1.0,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.628929,0.148317,0.777245,implemented,near_tie
+1,csv,tests/fixtures/golden_benchmarks/csv/input.csv,csv,direct_table_mapper,direct_mapping,0.214286,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.60377,0.148317,0.752087,implemented,best_for_fixture
+2,csv,tests/fixtures/golden_benchmarks/csv/input.csv,csv,jsonpath_mapper,jsonpath_mapping,0.214286,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.60377,0.148317,0.752087,implemented,near_tie
+1,json,tests/fixtures/golden_benchmarks/json/input.json,json,jsonpath_mapper,jsonpath_mapping,0.125,1.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.667188,0.148317,0.815504,implemented,best_for_fixture
+2,json,tests/fixtures/golden_benchmarks/json/input.json,json,direct_table_mapper,direct_mapping,0.0625,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.598772,0.148317,0.747089,implemented,use_when_inputs_match_strengths
+1,mixed,tests/fixtures/golden_benchmarks/mixed,auto,hybrid_rules_gazetteer_regex,hybrid_regex_plus_gazetteer,0.642857,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.615536,0.148317,0.763853,implemented,best_for_fixture
+2,mixed,tests/fixtures/golden_benchmarks/mixed,auto,gazetteer_entity_extractor,gazetteer_rules,0.357143,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.604821,0.148317,0.753138,implemented,use_when_inputs_match_strengths
+3,mixed,tests/fixtures/golden_benchmarks/mixed,auto,regex_entity_extractor,regex_rules,0.285714,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.602143,0.148317,0.75046,implemented,use_when_inputs_match_strengths
+4,mixed,tests/fixtures/golden_benchmarks/mixed,auto,hybrid_structured_then_text,hybrid_direct_mapping_plus_regex,0.428571,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.599653,0.148317,0.74797,adapter,compare_when_mixed_signals_matter
+5,mixed,tests/fixtures/golden_benchmarks/mixed,auto,jsonpath_mapper,jsonpath_mapping,0.214286,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.591257,0.148317,0.739574,implemented,use_when_inputs_match_strengths
+6,mixed,tests/fixtures/golden_benchmarks/mixed,auto,direct_table_mapper,direct_mapping,0.142857,0.0,1.0,1.0,0.01,0.25,1000.0,0.250 MB,0.575744,0.148317,0.724061,implemented,use_when_inputs_match_strengths

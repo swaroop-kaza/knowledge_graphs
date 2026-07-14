@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article article-type="research-article">
+  <front>
+    <journal-meta>
+      <journal-title-group>
+        <journal-title>Journal of Knowledge Graph Systems</journal-title>
+      </journal-title-group>
+    </journal-meta>
+    <article-meta>
+      <article-id pub-id-type="doi">10.1234/kg.2026.001</article-id>
+      <title-group>
+        <article-title>Evidence-backed Data-to-Knowledge Graph Construction</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name><surname>Rao</surname><given-names>Asha</given-names></name>
+        </contrib>
+        <contrib contrib-type="author">
+          <name><surname>Kaza</surname><given-names>Swaroop</given-names></name>
+        </contrib>
+      </contrib-group>
+      <pub-date><year>2026</year><month>07</month><day>09</day></pub-date>
+      <abstract>
+        <p>This paper describes evidence-backed construction of knowledge graphs from enterprise data.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec>
+      <title>Introduction</title>
+      <p>Enterprise data contains hidden graph-like structure across tables, APIs, logs, and documents.</p>
+    </sec>
+    <sec>
+      <title>Method</title>
+      <p>The method preserves evidence, validates candidates, and materializes property graph and RDF outputs.</p>
+    </sec>
+  </body>
+  <back>
+    <ref-list>
+      <ref id="R1">
+        <mixed-citation>Hogan et al. Knowledge Graphs. DOI: 10.1145/3447772.</mixed-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

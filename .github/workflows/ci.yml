@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.variant }} / py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: minimal
+            python-version: "3.11"
+            extras: "dev"
+          - variant: rdf
+            python-version: "3.11"
+            extras: "dev,rdf"
+          - variant: gliner
+            python-version: "3.11"
+            extras: "dev,gliner"
+          - variant: llm
+            python-version: "3.11"
+            extras: "dev,llm"
+          - variant: minimal
+            python-version: "3.12"
+            extras: "dev"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[${{ matrix.extras }}]"
+
+      - name: Quality
+        run: make quality
+
+      - name: Test
+        run: make verify
+
+  package:
+    name: package / build and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+
+      - name: Build source and wheel distributions
+        run: python -m build
+
+      - name: Validate package metadata
+        run: python -m twine check dist/*
+
+      - name: Upload package distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  wheel-install:
+    name: wheel install / py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: package
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Download package distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: package-dist
+          path: dist
+
+      - name: Install built wheel
+        run: |
+          python -m pip install --upgrade pip
+          wheels=(dist/*.whl)
+          if [ ! -e "${wheels[0]}" ]; then
+            echo "No wheel file found under dist/" >&2
+            exit 1
+          fi
+          python -m pip install "${wheels[0]}"
+
+      - name: Smoke installed console scripts
+        run: |
+          kg-construction doctor --skip-services --json
+          kg-construction \
+            --input examples/data_to_kg/sample.txt \
+            --source-type text \
+            --output "$RUNNER_TEMP/property_graph.json"
+          kg-construction-benchmark \
+            --input examples/data_to_kg/sample.txt \
+            --source-type text \
+            --config configs/evaluation.example.yaml \
+            --techniques regex_entity_extractor,hybrid_rules_gazetteer_regex \
+            --output "$RUNNER_TEMP/benchmark.md" \
+            --json-output "$RUNNER_TEMP/benchmark.json" \
+            --candidate-output-dir "$RUNNER_TEMP/candidates"
+
+      - name: Test installed wheel imports
+        run: python -m unittest tests.test_public_api tests.test_quickstart tests.test_doctor_cli -v

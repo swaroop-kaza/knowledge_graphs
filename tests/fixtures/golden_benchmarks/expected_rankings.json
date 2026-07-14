@@ -1,0 +1,31 @@
+{
+  "text": {
+    "ranking": [
+      "gazetteer_entity_extractor",
+      "hybrid_rules_gazetteer_regex",
+      "regex_entity_extractor"
+    ]
+  },
+  "csv": {
+    "ranking": [
+      "direct_table_mapper",
+      "jsonpath_mapper"
+    ]
+  },
+  "json": {
+    "ranking": [
+      "jsonpath_mapper",
+      "direct_table_mapper"
+    ]
+  },
+  "mixed": {
+    "ranking": [
+      "hybrid_rules_gazetteer_regex",
+      "gazetteer_entity_extractor",
+      "regex_entity_extractor",
+      "hybrid_structured_then_text",
+      "jsonpath_mapper",
+      "direct_table_mapper"
+    ]
+  }
+}

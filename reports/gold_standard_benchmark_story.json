@@ -1,0 +1,82 @@
+{
+  "details": {
+    "benchmark_count": 5,
+    "fixture_root": "tests/fixtures/gold_standards",
+    "generated_at": "2026-07-14",
+    "research_alignment": [
+      "NER span benchmarks usually score exact span and label matches.",
+      "Relation extraction benchmarks score typed source-relation-target predictions.",
+      "Triple benchmarks score subject-predicate-object exact matches.",
+      "Entity resolution benchmarks commonly use pairwise precision, recall, and F1.",
+      "GraphRAG retrieval checks combine context recall, path usefulness, citations, and faithfulness."
+    ],
+    "scope": "tiny human-reviewed fixtures for public correctness checks"
+  },
+  "rows": [
+    {
+      "benchmark_type": "NER span benchmark",
+      "details": "Scores exact text, label, start, and end offsets. TP=3, FP=0, FN=0.",
+      "f1": 1.0,
+      "fixture_id": "ner_incident_sample",
+      "fixture_path": "tests/fixtures/gold_standards/ner_spans.json",
+      "gold_unit": "exact entity spans with label, start, and end",
+      "precision": 1.0,
+      "predicted_unit": "regex Incident/Date spans plus gazetteer System spans",
+      "recall": 1.0,
+      "support": 3,
+      "technique": "hybrid_regex_gazetteer_span_extraction"
+    },
+    {
+      "benchmark_type": "Relation extraction benchmark",
+      "details": "Scores typed relation mentions by source name, relation type, and target name. TP=2, FP=0, FN=0.",
+      "f1": 1.0,
+      "fixture_id": "human_reviewed_relation_sample",
+      "fixture_path": "tests/fixtures/gold_standards/relation_sample.json",
+      "gold_unit": "human-reviewed source, relation type, and target mentions",
+      "precision": 1.0,
+      "predicted_unit": "dependency-style relation pattern candidates with evidence",
+      "recall": 1.0,
+      "support": 2,
+      "technique": "dependency_pattern_relation_extractor"
+    },
+    {
+      "benchmark_type": "Triple benchmark",
+      "details": "Scores RDF-style triples by exact subject, predicate, and object. TP=2, FP=0, FN=0.",
+      "f1": 1.0,
+      "fixture_id": "w3c_domain_triples_sample",
+      "fixture_path": "tests/fixtures/gold_standards/gold_triples.json",
+      "gold_unit": "subject-predicate-object triples",
+      "precision": 1.0,
+      "predicted_unit": "materialized GraphFact triples",
+      "recall": 1.0,
+      "support": 2,
+      "technique": "gold_triple_exact_match"
+    },
+    {
+      "benchmark_type": "Entity resolution benchmark",
+      "details": "Scores pairwise ER precision/recall/F1. Merge audit rows: 3.",
+      "f1": 1.0,
+      "fixture_id": "human_reviewed_entity_resolution_sample",
+      "fixture_path": "tests/fixtures/gold_standards/entity_resolution_clusters.json",
+      "gold_unit": "human-reviewed duplicate clusters converted to gold merge pairs",
+      "precision": 1.0,
+      "predicted_unit": "canonical clusters with merge audit metadata",
+      "recall": 1.0,
+      "support": 5,
+      "technique": "alias_table_resolver"
+    },
+    {
+      "benchmark_type": "GraphRAG/retrieval benchmark",
+      "details": "recall@2=0.750; path_relevance=0.667; citation_accuracy=0.667; faithfulness=1.000; multi_hop=0.000",
+      "f1": 0.706,
+      "fixture_id": "human_reviewed_graphrag_retrieval_sample",
+      "fixture_path": "tests/fixtures/gold_standards/retrieval_cases.json",
+      "gold_unit": "queries with relevant contexts, paths, citations, and answer hints",
+      "precision": 0.667,
+      "predicted_unit": "top-k graph contexts ranked by lexical query/context overlap",
+      "recall": 0.75,
+      "support": 4,
+      "technique": "lexical_graph_context_retriever_at_2"
+    }
+  ]
+}

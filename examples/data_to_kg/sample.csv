@@ -1,0 +1,4 @@
+id,name,email,manager_id,team
+1,Ada Lovelace,ada@example.com,,Research
+2,Grace Hopper,grace@example.com,1,Compiler
+3,Katherine Johnson,katherine@example.com,1,Flight

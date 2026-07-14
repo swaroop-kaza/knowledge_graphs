@@ -1,0 +1,19 @@
+{
+  "fixture_id": "w3c_domain_triples_sample",
+  "text": null,
+  "entity_spans": [],
+  "triples": [
+    {
+      "subject": "urn:kg:incident:INCIDENT-1042",
+      "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "object": "urn:kg:schema:Incident"
+    },
+    {
+      "subject": "urn:kg:incident:INCIDENT-1042",
+      "predicate": "urn:kg:schema:affectedSystem",
+      "object": "urn:kg:system:recommendation-api"
+    }
+  ],
+  "relations": [],
+  "metadata": {"review_status": "human_reviewed"}
+}
