@@ -1,7 +1,59 @@
-PYTHON ?= python3
+BASE_PYTHON ?= python3
+VENV ?= .venv
+
+# Use the project virtualenv interpreter when it exists, otherwise fall back to
+# BASE_PYTHON. This is re-evaluated on each use, so `make setup quickstart` in a
+# single command still picks up the venv created earlier in the same run, and CI
+# (which never creates .venv) keeps using its system python3 unchanged.
+# Override explicitly with `make PYTHON=/path/to/python <target>`.
+ifndef PYTHON
+PYTHON = $(shell [ -x "$(VENV)/bin/python" ] && echo "$(VENV)/bin/python" || echo "$(BASE_PYTHON)")
+endif
 PYTHONPATH ?= src
 
-.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark gold-benchmark-story notebook-check package-check quality registry-reports smoke test verify
+.DEFAULT_GOAL := help
+.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev notebook-check package-check quality quickstart registry-reports setup smoke test venv verify
+
+help:
+	@echo "kg-construction - common tasks"
+	@echo ""
+	@echo "  make setup         Create .venv, install the package, and run a health check"
+	@echo "  make install       Install the package (core, offline) into .venv"
+	@echo "  make install-dev   Install with dev, rdf, graph, and notebook extras"
+	@echo "  make doctor        Diagnose the install and optional services"
+	@echo "  make quickstart    Build sample graphs and print a summary"
+	@echo "  make test          Run the unit test suite"
+	@echo "  make smoke         Run construction + benchmark smoke flows"
+	@echo "  make verify        Run tests and smoke flows"
+	@echo "  make quality       Run ruff, mypy, vulture, config, and notebook checks"
+	@echo ""
+	@echo "First run (no virtualenv setup needed - 'setup' creates one for you):"
+	@echo "  make setup && make quickstart"
+
+# Create the project virtualenv on demand and upgrade pip inside it.
+$(VENV)/bin/python:
+	$(BASE_PYTHON) -m venv "$(VENV)"
+	"$(VENV)/bin/python" -m pip install --upgrade pip
+
+venv: $(VENV)/bin/python
+
+setup: install
+	@$(PYTHON) -m kg_construction.interfaces.cli.doctor --skip-services || true
+	@echo ""
+	@echo "Setup complete. Next:  make quickstart"
+	@echo "To use the kg-construction command directly:  source $(VENV)/bin/activate"
+
+install: venv
+	$(PYTHON) -m pip install -e .
+
+install-dev: venv
+	$(PYTHON) -m pip install -e ".[dev,rdf,graph,notebook]"
+
+doctor:
+	$(PYTHON) -m kg_construction.interfaces.cli.doctor
+
+quickstart:
+	$(PYTHON) examples/quickstart_60_second.py
 
 compile:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m compileall -q src tests

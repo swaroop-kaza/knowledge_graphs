@@ -2,6 +2,12 @@
 
 This guide combines the setup, running, configuration, notebook, and verification instructions for the repo.
 
+> **First time here, or nothing installed yet?** Start with
+> [`getting_started.md`](getting_started.md) for a from-zero walkthrough that
+> installs Python and the framework and sets up every optional service
+> (Ollama, Neo4j, Kuzu, GLiNER) step by step. This guide is the fuller
+> configuration and verification reference.
+
 ## 1. Prerequisites
 
 Required:

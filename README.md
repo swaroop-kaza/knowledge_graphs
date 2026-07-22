@@ -4,6 +4,21 @@ Repo status date: 2026-07-21
 
 `kg_construction` is an evidence-grounded, multi-source knowledge graph construction framework with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks.
 
+## Run it in under a minute
+
+You need Python 3.11 or 3.12 and `git`. From the repo root:
+
+```bash
+make setup       # creates .venv, installs the package (offline), runs a health check
+make quickstart  # builds sample CSV/JSON/text graphs and prints a summary
+```
+
+`make setup` creates the virtual environment for you — no manual `venv` or activation, and no PEP 668 "externally-managed-environment" errors on Homebrew/Debian Python. Run `make help` to list all tasks.
+
+To use the `kg-construction` command directly, activate the env first: `source .venv/bin/activate` (Windows: `.\.venv\Scripts\Activate.ps1`). After that, `kg-construction …` and `import kg_construction` work directly — you do **not** need `PYTHONPATH=src`. Prefer to manage your own environment? `python3 -m venv .venv && source .venv/bin/activate && pip install -e .` works too.
+
+Nothing installed yet? The from-zero walkthrough (macOS/Linux/Windows, plus Ollama/Neo4j/Kuzu/GLiNER setup) is **[docs/getting_started.md](docs/getting_started.md)**.
+
 It is built for teams that need to combine structured, semi-structured, and unstructured data without silently collapsing namesakes, discarding conflicting source claims, or selecting a graph pipeline from unverified proxy metrics.
 
 The core flow:
@@ -42,6 +57,11 @@ The research-backed architecture, domain portfolio, and phased implementation pl
 Enterprise data already contains relationships, but they are usually hidden across tables, JSON payloads, logs, documents, PDFs, emails, reports, and APIs. The same real entity may appear under different identifiers, while two unrelated entities may share a name. This repo preserves source evidence, creates traceable candidates and identity decisions, validates property/RDF/evidence graph outputs, and publishes the measurements needed to compare construction strategies honestly.
 
 ## 60-Second Data Scientist Quickstart
+
+> **New here, or have nothing installed yet?** Follow the complete from-zero
+> walkthrough in [docs/getting_started.md](docs/getting_started.md). It covers
+> installing Python and the framework, and step-by-step setup for every optional
+> service — Ollama (local LLM), Neo4j, Kuzu, and GLiNER — plus how to run each path.
 
 This path runs locally with the core install. It does not require Neo4j, Kuzu, Ollama, GLiNER, PyTorch, or graph ML extras.
 
@@ -361,6 +381,7 @@ For implementation coverage and current capability reports, see:
 
 ```text
 docs/README.md
+docs/getting_started.md
 docs/setup_running_configuration_guide.md
 docs/repo_implementation_inventory.md
 docs/next_stage_capabilities.md
