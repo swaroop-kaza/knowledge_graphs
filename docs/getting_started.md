@@ -119,6 +119,38 @@ The core install pulls only lightweight, pure-Python dependencies (pydantic,
 PyYAML, jsonpath-ng, openpyxl, SQLAlchemy, pypdf, rapidfuzz, rdflib, pyshacl).
 **No database, model, or internet service is required.**
 
+### Just the CLI, without cloning (advanced)
+
+If you only want the `kg-construction` command to run on **your own** files — and do
+not need the bundled examples, configs, or notebooks — you can install straight from
+GitHub without cloning, using [pipx](https://pipx.pypa.io) or
+[uv](https://docs.astral.sh/uv/):
+
+```bash
+# Install the CLI into its own isolated environment:
+pipx install "git+https://github.com/swaroop-kaza/knowledge_graphs.git"
+
+# ...or run it once without installing anything permanently:
+uvx --from "git+https://github.com/swaroop-kaza/knowledge_graphs.git" kg-construction doctor
+```
+
+Then point it at your data:
+
+```bash
+kg-construction --input /path/to/your.csv --output graph.json
+```
+
+Caveats:
+
+- This installs the **core** framework only. To include an optional extra, use a
+  PEP 508 direct reference, e.g.
+  `pipx install "kg-construction[graph] @ git+https://github.com/swaroop-kaza/knowledge_graphs.git"`.
+- The `examples/`, `configs/`, and `notebooks/` referenced throughout this guide ship
+  only in a clone, so the walkthrough commands that use them need `git clone`.
+- The repository must be publicly reachable (or your git credentials configured).
+- The package is **not yet published to PyPI**, so `pip install kg-construction` by
+  name does not work yet — use the git URL above.
+
 ---
 
 ## Step 3 — What you just installed
@@ -299,7 +331,7 @@ curl http://localhost:11434/api/tags
 Run a benchmark that includes an Ollama-backed technique using the example config:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
+kg-construction-benchmark \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --config configs/ollama_gliner_label_proposal.example.yaml \
@@ -383,7 +415,7 @@ Point commands at a database directory with `--kuzu-database`, e.g. dead-letter
 replay:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.replay_dead_letters \
+kg-construction-replay-deadletters \
   --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl \
   --store kuzu_ingestion_adapter \
   --kuzu-database data/processed/kuzu_graph \

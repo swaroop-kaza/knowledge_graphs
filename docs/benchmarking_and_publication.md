@@ -93,7 +93,7 @@ False merges should normally receive a stricter gate than false splits. A false 
 The benchmark CLI emits the same logical run in three forms:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
+kg-construction-benchmark \
   --input path/to/input \
   --config path/to/evaluation.yaml \
   --output reports/example.md \

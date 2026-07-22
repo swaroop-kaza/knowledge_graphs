@@ -45,7 +45,7 @@ Run the 60-second data scientist quickstart with core dependencies only:
 
 ```bash
 python -m pip install -e .
-PYTHONPATH=src python3 examples/quickstart_60_second.py
+python3 examples/quickstart_60_second.py
 ```
 
 This path covers:
@@ -167,7 +167,7 @@ This validates:
 From the repo root:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.construct \
+kg-construction \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --output data/processed/data_to_kg_text_property_graph.json \
@@ -222,7 +222,7 @@ Public top-level exports:
 ## 7. Run Technique Evaluation
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
+kg-construction-benchmark \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --config configs/evaluation.example.yaml \
@@ -290,7 +290,7 @@ make notebook-check
 Dry-run dead-letter replay:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.replay_dead_letters \
+kg-construction-replay-deadletters \
   --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl \
   --store kuzu_ingestion_adapter \
   --dry-run
@@ -299,7 +299,7 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.replay_dead_letters \
 Kuzu replay:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.replay_dead_letters \
+kg-construction-replay-deadletters \
   --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl \
   --store kuzu_ingestion_adapter \
   --kuzu-database data/processed/kuzu_graph
@@ -323,13 +323,13 @@ External public datasets are generated locally and ignored by Git.
 Download or create local experiment inputs:
 
 ```bash
-PYTHONPATH=src python3 scripts/download_experiment_datasets.py
+python3 scripts/download_experiment_datasets.py
 ```
 
 Run dataset experiments:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_experiment_datasets.py
+python3 scripts/run_experiment_datasets.py
 ```
 
 Generated locations:
