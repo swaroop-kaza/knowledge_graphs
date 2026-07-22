@@ -1,33 +1,45 @@
 # Data-to-Knowledge Graph Construction Framework
 
-Repo status date: 2026-07-14
+Repo status date: 2026-07-21
 
-`kg_construction` is a production-oriented Python framework for converting structured, semi-structured, and unstructured data into evidence-grounded knowledge graphs.
+`kg_construction` is an evidence-grounded, multi-source knowledge graph construction framework with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks.
 
-It is built for people who want to compare multiple graph construction techniques side by side instead of hard-coding one extraction path.
+It is built for teams that need to combine structured, semi-structured, and unstructured data without silently collapsing namesakes, discarding conflicting source claims, or selecting a graph pipeline from unverified proxy metrics.
 
 The core flow:
 
 ```text
-Data -> Evidence -> Entities -> Relations -> Validated Graph -> Evaluation -> Recommendation
+Sources -> Evidence -> Candidates -> Identity Decisions -> Canonical Graph -> Validation -> Benchmarks
 ```
 
-The framework is technique-centered, not use-case-centered. A dataset can be profiled, multiple applicable techniques can be run side by side, and the final recommendation is based on measured validation, coverage, runtime, cost, and weighted scoring.
+The default structured-data policy is deliberately conservative: source records receive source-scoped identity keys, and cross-source co-reference must be established by an explicit resolver. "Duplicate-resistant" does not mean that uncertain real-world identity can be solved without labels or evidence; it means that automatic merges, canonical claims, provenance, and benchmark decisions are designed to be auditable and testable.
 
-See the small committed benchmark leaderboard for a quick answer to “which technique should I try first?”:
+The framework remains technique-centered. A dataset can be profiled, multiple applicable techniques can be run side by side, and recommendations can be based on gold correctness, validation, duplicate-control, provenance, runtime, and cost measurements when those benchmark inputs are available.
+
+See the small committed smoke leaderboard for a reproducible pipeline comparison:
 
 - [reports/benchmark_leaderboard.md](reports/benchmark_leaderboard.md)
 - [reports/benchmark_leaderboard.csv](reports/benchmark_leaderboard.csv)
 
-See the gold-standard benchmark story for the small correctness proof behind the framework:
+See the gold-standard benchmark story for component-level correctness checks:
 
 - [reports/gold_standard_benchmark_story.md](reports/gold_standard_benchmark_story.md)
 - [reports/gold_standard_benchmark_story.csv](reports/gold_standard_benchmark_story.csv)
 - [reports/gold_standard_benchmark_story.json](reports/gold_standard_benchmark_story.json)
 
+See the versioned cross-source identity fixture for the duplicate-control baseline,
+including an intentional namesake and explicit false-merge gates:
+
+- [reports/cross_source_identity_benchmark.md](reports/cross_source_identity_benchmark.md)
+- [reports/cross_source_identity_benchmark.csv](reports/cross_source_identity_benchmark.csv)
+- [reports/cross_source_identity_benchmark.json](reports/cross_source_identity_benchmark.json)
+
+The research-backed architecture, domain portfolio, and phased implementation plan is
+[docs/multisource_kg_benchmark_plan.md](docs/multisource_kg_benchmark_plan.md).
+
 ## Why This Exists
 
-Enterprise data already contains relationships, but they are usually hidden across tables, JSON payloads, logs, documents, PDFs, emails, reports, and APIs. This repo turns those hidden relationships into traceable graph candidates, validates them, materializes them as property graph/RDF/evidence graph outputs, and ranks which construction strategy is safest for the data.
+Enterprise data already contains relationships, but they are usually hidden across tables, JSON payloads, logs, documents, PDFs, emails, reports, and APIs. The same real entity may appear under different identifiers, while two unrelated entities may share a name. This repo preserves source evidence, creates traceable candidates and identity decisions, validates property/RDF/evidence graph outputs, and publishes the measurements needed to compare construction strategies honestly.
 
 ## 60-Second Data Scientist Quickstart
 
@@ -38,7 +50,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-PYTHONPATH=src python examples/quickstart_60_second.py
+PYTHONPATH=src python3 examples/quickstart_60_second.py
 ```
 
 The same flow as Python:
@@ -80,6 +92,8 @@ print(networkx_payload["nodes"][:2])
 What this proves:
 
 - CSV rows can become graph nodes and RDF facts.
+- Heterogeneous directories route each source to its matching mapper or extractor.
+- Structured rows use conservative source-scoped identity keys by default.
 - Text can become evidence-backed entity candidates.
 - JSON can become graph candidates through JSONPath mapping.
 - Technique benchmarking can rank construction paths.
@@ -116,7 +130,8 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
   --config configs/evaluation.example.yaml \
   --techniques applicable \
   --output data/processed/data_to_kg_technique_evaluation_report.md \
-  --json-output data/processed/data_to_kg_technique_evaluation_report.json
+  --json-output data/processed/data_to_kg_technique_evaluation_report.json \
+  --csv-output data/processed/data_to_kg_technique_evaluation_report.csv
 ```
 
 Use the Python API in notebooks or scripts:
@@ -228,7 +243,8 @@ See `docs/support_levels.md` and `reports/current_registry_matrix.csv` for the c
 - REBEL/transformer relation extraction adapter with injectable Hugging Face-style pipeline.
 - Ollama provider with structured JSON retry/repair.
 - Ollama graph extractor that returns candidates only and never writes directly to a graph.
-- Exact, normalized string, RapidFuzz, and alias-table auditable entity resolution.
+- Source-scoped exact-name fallback plus explicit global-name, normalized string, RapidFuzz, and alias-table auditable entity-resolution paths.
+- Transitive canonical-ID handling and referential-integrity checks across sequential resolvers.
 - Wikidata, DBpedia, OpenRefine, embedding, and cross-encoder entity linking/resolution.
 - Splink and Dedupe adapter surfaces for probabilistic and active-learning entity resolution.
 - Evidence-required, schema-registry, confidence, and pySHACL validation.
@@ -238,12 +254,13 @@ See `docs/support_levels.md` and `reports/current_registry_matrix.csv` for the c
 - Production ingestion extensions: live Neo4j/Kuzu integration profiles, graph-store batch benchmark fixtures, RDF-to-Neo4j neosemantics import, and Kuzu bulk import.
 - Graph ML enrichment: train/validation splits, degree features, PageRank, communities, connected components, node2vec, KG embeddings, node embeddings, link prediction, retrieval benchmarks, large-graph backends, and optional GraphSAGE adapter.
 - Gold benchmark fixtures and evaluator for NER spans, RDF triples, human-reviewed relation extraction, entity resolution clusters, and GraphRAG/retrieval cases.
+- Versioned benchmark manifests and committed Markdown/CSV/JSON reports for reproducible publication.
 - Technique registry covering internal statuses and public support levels.
 - Dataset profiling and applicability scoring.
 - Weighted mathematical technique ranking.
 - Deterministic benchmark mode with explicit tie-breaking policy.
 - Best single, best hybrid, production-safe, high-recall, low-cost, and GraphRAG-ready recommendations.
-- JSON and Markdown benchmark reports.
+- Summary-safe JSON, Markdown, and CSV benchmark reports with explicit publication gates.
 - Gold-standard benchmark story for NER spans, relation extraction, triples, entity resolution, and GraphRAG/retrieval.
 - Production hardening: structured logging, run manifests, config validation, watermarks, quarantine, retry, dead-letter replay, human review queue, PII redaction, CI optional-extra matrix.
 
@@ -269,6 +286,7 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
   --techniques applicable \
   --output data/processed/data_to_kg_technique_evaluation_report.md \
   --json-output data/processed/data_to_kg_technique_evaluation_report.json \
+  --csv-output data/processed/data_to_kg_technique_evaluation_report.csv \
   --candidate-output-dir data/processed/data_to_kg_candidates
 ```
 
@@ -281,7 +299,11 @@ The benchmark command:
 - computes accuracy, validation, coverage, entity-resolution, retrieval, runtime, cost, and confidence metrics
 - ranks techniques with configurable weights and penalties
 - writes candidate graph outputs separately
-- produces JSON and Markdown reports explaining why a technique won or failed
+- produces summary-safe JSON, Markdown, and CSV reports explaining why a technique won or failed
+
+JSON reports omit candidate batches and source-derived graphs by default. Candidate
+graph export is opt-in and can contain raw values or evidence; review it before
+publishing. Use `--include-sensitive-json-artifacts` only for controlled local output.
 
 ## Dead-Letter Replay CLI
 
@@ -344,6 +366,9 @@ docs/repo_implementation_inventory.md
 docs/next_stage_capabilities.md
 docs/graph_ml_capabilities.md
 docs/production_ingestion.md
+docs/benchmarking_and_publication.md
+docs/multisource_kg_benchmark_plan.md
+docs/identity_v2_migration.md
 docs/packaging_and_notebook_policy.md
 notebooks/README.md
 reports/current_repo_capability_summary.md
@@ -372,6 +397,8 @@ make quality
 make verify
 make package-check
 make benchmark-leaderboard
+make gold-benchmark-story
+make cross-source-identity-benchmark
 ```
 
 `make config-check` validates every YAML config example.
@@ -383,6 +410,10 @@ make benchmark-leaderboard
 `make package-check` builds source/wheel distributions with `python -m build` and validates them with `python -m twine check dist/*`.
 
 `make benchmark-leaderboard` regenerates the small committed technique leaderboard from tiny golden fixtures.
+
+`make cross-source-identity-benchmark` regenerates the versioned multi-source identity
+Markdown, CSV, and JSON publication. It is a small synthetic correctness fixture, not
+a production-scale or universal de-duplication claim.
 
 `make notebook-check` verifies that notebooks are output-free, execution-count-free, path-portable, free of stale generated-artifact references, and cover every implemented or adapter technique in the registry.
 

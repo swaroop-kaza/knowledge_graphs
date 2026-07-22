@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from kg_construction.application.benchmark_runner import (
+    BenchmarkHardGateSettings,
     BenchmarkRunMetadata,
     CandidateGraphResult,
     EvaluationSettings,
+    GoldDatasetManifest,
+    GoldEvaluationSummary,
+    HardGateResult,
     TechniqueEvaluationConfig,
     TechniqueEvaluationReport,
     TechniqueEvaluationRunner,
@@ -64,6 +68,7 @@ from kg_construction.application.workflow import ConstructionResult, Constructio
 
 __all__ = [
     "ApplicabilityResult",
+    "BenchmarkHardGateSettings",
     "BenchmarkRunMetadata",
     "CandidateGraphResult",
     "ConstructionResult",
@@ -76,6 +81,9 @@ __all__ = [
     "ExtractionComparisonRow",
     "GraphMLWorkflow",
     "GraphMLWorkflowConfig",
+    "GoldDatasetManifest",
+    "GoldEvaluationSummary",
+    "HardGateResult",
     "HybridGlinerExtractionResult",
     "HybridGlinerPipelineConfig",
     "HumanReviewQueueSettings",

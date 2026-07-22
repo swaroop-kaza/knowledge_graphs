@@ -1,6 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this framework in research or a public project, please cite it."
 title: "Data-to-Knowledge Graph Construction Framework"
+url: "https://github.com/swaroop-kaza/knowledge_graphs"
+repository-code: "https://github.com/swaroop-kaza/knowledge_graphs"
 authors:
   - family-names: "Kaza"
     given-names: "Swaroop"
@@ -15,3 +17,5 @@ keywords:
   - "SHACL"
   - "entity resolution"
   - "information extraction"
+  - "data quality"
+  - "record linkage"

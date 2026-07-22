@@ -14,6 +14,10 @@ from kg_construction.application.registry import default_registry
 from kg_construction.application.workflow import ConstructionWorkflow
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
+from kg_construction.infrastructure.mapping.direct_table_mapper import (
+    DirectTableMapper,
+    DirectTableMappingConfig,
+)
 from kg_construction.infrastructure.ontology.validation import (
     EvidenceRequiredValidator,
     ValidationFinding,
@@ -29,6 +33,7 @@ from kg_construction.infrastructure.production import (
     WatermarkStore,
     configure_structured_logging,
 )
+from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
 
 
 class FailingExtractor:
@@ -54,6 +59,7 @@ class ProductionHardeningTests(unittest.TestCase):
         self.assertEqual(redacted.records[0]["email"], "[REDACTED]")
         self.assertEqual(redacted.records[0]["phone"], "[REDACTED]")
         self.assertEqual(redacted.metadata["owner"], "[REDACTED]")
+        self.assertTrue(redacted.metadata["_pii_redaction"]["applied"])
 
         stream = io.StringIO()
         logger = configure_structured_logging(
@@ -66,6 +72,96 @@ class ProductionHardeningTests(unittest.TestCase):
 
         self.assertEqual(payload["event"], "pii_test")
         self.assertEqual(payload["contact"], "[REDACTED]")
+
+    def test_redacted_configured_identity_columns_do_not_false_merge(self) -> None:
+        source = SourceRecord.from_rows(
+            [
+                {"email": "one@example.com", "department": "Research"},
+                {"email": "two@example.com", "department": "Research"},
+            ],
+            source_type="csv",
+            source_name="memory://pii-identities",
+        )
+        redacted = PIIRedactionPolicy().redact_source_record(source)
+        batch = DirectTableMapper(
+            DirectTableMappingConfig(
+                node_type="Person",
+                id_columns=["email"],
+            )
+        ).map_source(redacted)
+
+        self.assertEqual(len(batch.entities), 2)
+        self.assertEqual(
+            len({entity.properties["identity_key"] for entity in batch.entities}),
+            2,
+        )
+
+    def test_missing_configured_identity_values_do_not_false_merge(self) -> None:
+        source = SourceRecord.from_rows(
+            [
+                {"external_id": None, "name": "First unknown"},
+                {"external_id": "", "name": "Second unknown"},
+            ],
+            source_type="csv",
+            source_name="unknown-identities.csv",
+        )
+        mapped = DirectTableMapper(
+            DirectTableMappingConfig(
+                node_type="Person",
+                id_columns=["external_id"],
+                name_column="name",
+            )
+        ).map_source(source)
+        resolved = ExactKeyEntityResolver().resolve(mapped)
+
+        self.assertEqual(
+            len(
+                {
+                    entity.properties["canonical_entity_id"]
+                    for entity in resolved.entities
+                }
+            ),
+            2,
+        )
+        self.assertEqual(
+            [entity.name for entity in mapped.entities],
+            ["First unknown", "Second unknown"],
+        )
+
+    def test_row_fallback_identity_is_stable_when_source_rows_reorder(self) -> None:
+        rows = [
+            {"name": "Ada", "department": "Research"},
+            {"name": "Grace", "department": "Platform"},
+        ]
+        mapper = DirectTableMapper(DirectTableMappingConfig(node_type="Person"))
+        forward = ExactKeyEntityResolver().resolve(
+            mapper.map_source(
+                SourceRecord.from_rows(
+                    rows,
+                    source_type="csv",
+                    source_name="people.csv",
+                )
+            )
+        )
+        reversed_batch = ExactKeyEntityResolver().resolve(
+            mapper.map_source(
+                SourceRecord.from_rows(
+                    list(reversed(rows)),
+                    source_type="csv",
+                    source_name="people.csv",
+                )
+            )
+        )
+
+        forward_ids = {
+            entity.name: entity.properties["canonical_entity_id"]
+            for entity in forward.entities
+        }
+        reversed_ids = {
+            entity.name: entity.properties["canonical_entity_id"]
+            for entity in reversed_batch.entities
+        }
+        self.assertEqual(forward_ids, reversed_ids)
 
     def test_watermark_store_filters_and_commits_incremental_sources(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -90,6 +186,47 @@ class ProductionHardeningTests(unittest.TestCase):
         self.assertEqual(len(first.eligible_sources), 1)
         self.assertEqual(len(second.skipped_sources), 1)
         self.assertEqual(len(third.eligible_sources), 1)
+
+    def test_content_hash_fallback_detects_change_without_ordering_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = WatermarkStore(Path(tmpdir) / "watermarks.json")
+            policy = IncrementalSyncPolicy()
+            first_source = SourceRecord.from_text(
+                "snapshot one",
+                source_name="memory://hash-sync",
+            )
+            changed_source = SourceRecord.from_text(
+                "snapshot two",
+                source_name="memory://hash-sync",
+            )
+
+            first = policy.apply([first_source], store)
+            policy.commit(first.eligible_sources, store)
+            replay = policy.apply([first_source], store)
+            changed = policy.apply([changed_source], store)
+
+        self.assertEqual(len(replay.skipped_sources), 1)
+        self.assertEqual(len(changed.eligible_sources), 1)
+
+    def test_numeric_watermarks_use_numeric_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = WatermarkStore(Path(tmpdir) / "numeric-watermarks.json")
+            policy = IncrementalSyncPolicy(watermark_field="sequence")
+            ninth = SourceRecord.from_text(
+                "ninth",
+                source_name="memory://numeric-watermark",
+                metadata={"sequence": "9"},
+            )
+            tenth = SourceRecord.from_text(
+                "tenth",
+                source_name="memory://numeric-watermark",
+                metadata={"sequence": "10"},
+            )
+            policy.commit([ninth], store)
+
+            result = policy.apply([tenth], store)
+
+        self.assertEqual(len(result.eligible_sources), 1)
 
     def test_quarantine_and_human_review_queue_persist_validation_findings(self) -> None:
         finding = ValidationFinding(

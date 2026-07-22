@@ -39,7 +39,7 @@ Run the 60-second data scientist quickstart with core dependencies only:
 
 ```bash
 python -m pip install -e .
-PYTHONPATH=src python examples/quickstart_60_second.py
+PYTHONPATH=src python3 examples/quickstart_60_second.py
 ```
 
 This path covers:

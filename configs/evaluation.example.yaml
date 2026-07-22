@@ -1,8 +1,13 @@
 evaluation:
+  # Reserved compatibility setting; CLI selection and force_all_techniques are
+  # the currently executable technique-selection controls.
   run_all_applicable_techniques: true
   force_all_techniques: false
   gold_dataset_path: null
+  # Reserved for the planned adjudicated human-review workflow.
   human_review_sample_size: 100
+  # Reserved for planned confidence intervals; uncertainty is currently
+  # reported as not_estimated.
   bootstrap_iterations: 1000
   allow_external_services: false
   deterministic_runtime: true
@@ -37,6 +42,24 @@ production_thresholds:
   schema_validity: 0.95
   unsupported_extraction_rate: 0.02
   validation_failure_rate: 0.05
+
+# A candidate may still be ranked when a gate fails, but it is not marked as
+# publication-eligible. Set require_gold_dataset to false only for smoke tests.
+hard_gates:
+  require_gold_dataset: true
+  maximum_dangling_edge_rate: 0.0
+  maximum_duplicate_edge_rate: 0.0
+  minimum_evidence_coverage: 0.95
+  maximum_validation_failure_rate: 0.05
+  maximum_false_merge_rate: 0.02
+  minimum_entity_f1: 0.80
+  minimum_span_f1: 0.80
+  minimum_relation_f1: 0.80
+  minimum_triple_exact_match: 0.80
+  minimum_pairwise_er_recall: 0.80
+  minimum_er_record_id_coverage: 1.0
+  minimum_retrieval_recall_at_k: 0.70
+  minimum_retrieval_prediction_completeness: 1.0
 
 llm:
   provider: ollama

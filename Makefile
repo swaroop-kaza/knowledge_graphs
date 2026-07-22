@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH ?= src
 
-.PHONY: benchmark-leaderboard clean compile config-check gold-benchmark-story notebook-check package-check quality registry-reports smoke test verify
+.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark gold-benchmark-story notebook-check package-check quality registry-reports smoke test verify
 
 compile:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m compileall -q src tests
@@ -24,6 +24,7 @@ smoke:
 		--techniques applicable \
 		--output data/processed/data_to_kg_technique_evaluation_report.md \
 		--json-output data/processed/data_to_kg_technique_evaluation_report.json \
+		--csv-output data/processed/data_to_kg_technique_evaluation_report.csv \
 		--candidate-output-dir data/processed/data_to_kg_candidates
 
 config-check:
@@ -41,6 +42,9 @@ benchmark-leaderboard:
 
 gold-benchmark-story:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_gold_standard_benchmark_story.py
+
+cross-source-identity-benchmark:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_cross_source_identity_benchmark.py
 
 package-check:
 	rm -rf build dist

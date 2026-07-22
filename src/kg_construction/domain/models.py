@@ -6,8 +6,12 @@ import hashlib
 import json
 import re
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
+from decimal import Decimal
+from enum import Enum
+from pathlib import Path
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,6 +44,41 @@ def content_hash(value: str, *, length: int = 32, normalize: bool = True) -> str
     if length <= 0 or length > len(digest):
         return digest
     return digest[:length]
+
+
+def _canonical_json_default(value: object) -> object:
+    """Return deterministic JSON-compatible values for common source types."""
+
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (Path, UUID)):
+        return str(value)
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, (set, frozenset)):
+        return sorted(value, key=canonical_json)
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    return str(value)
+
+
+def canonical_json(value: object) -> str:
+    """Serialize JSON-like data canonically for hashing and comparisons.
+
+    Object keys are sorted recursively and insignificant whitespace is removed.
+    This deliberately preserves array order; callers that model an unordered row
+    collection must sort the individually serialized rows before hashing.
+    """
+
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=_canonical_json_default,
+    )
 
 
 def stable_id(prefix: str, *parts: object, length: int = 20) -> str:
@@ -75,7 +114,16 @@ class SourceRecord(StrictModel):
         source_name: str = "memory://text",
         metadata: JsonDict | None = None,
     ) -> SourceRecord:
-        source_id = stable_id("source", source_type, source_name, content_hash(text))
+        # Source snapshots are byte/text-content identities, not matching keys.
+        # Case and whitespace changes can alter offsets and meaning, so they
+        # must produce a new snapshot even though normalized matching may later
+        # treat some extracted values as equivalent.
+        source_id = stable_id(
+            "source",
+            source_type,
+            source_name,
+            content_hash(text, normalize=False),
+        )
         return cls(
             source_id=source_id,
             source_type=source_type,
@@ -93,7 +141,11 @@ class SourceRecord(StrictModel):
         source_name: str,
         metadata: JsonDict | None = None,
     ) -> SourceRecord:
-        row_hash = content_hash(repr(sorted(rows, key=repr)), normalize=False)
+        # A table snapshot is treated as a collection of rows.  Canonicalize
+        # every row before sorting so dictionary insertion order cannot alter
+        # the content-addressed source ID.
+        canonical_rows = sorted(canonical_json(row) for row in rows)
+        row_hash = content_hash(canonical_json(canonical_rows), normalize=False)
         source_id = stable_id("source", source_type, source_name, row_hash)
         return cls(
             source_id=source_id,
@@ -112,9 +164,15 @@ class SourceRecord(StrictModel):
         metadata: JsonDict | None = None,
     ) -> SourceRecord:
         records = payload if isinstance(payload, list) else []
-        content = None if isinstance(payload, list) else json.dumps(payload, sort_keys=True)
+        canonical_payload = canonical_json(payload)
+        content = None if isinstance(payload, list) else canonical_payload
         source_metadata = {**(metadata or {}), "json_payload": payload}
-        source_id = stable_id("source", "json", source_name, content_hash(repr(payload), normalize=False))
+        source_id = stable_id(
+            "source",
+            "json",
+            source_name,
+            content_hash(canonical_payload, normalize=False),
+        )
         return cls(
             source_id=source_id,
             source_type="json",
@@ -152,7 +210,7 @@ class EvidenceRef(StrictModel):
             source.source_id,
             source.source_type,
             source.source_name,
-            sorted(evidence_location.items()),
+            canonical_json(evidence_location),
             text or "",
         )
         return cls(
@@ -225,7 +283,15 @@ class EntityCandidate(StrictModel):
         provenance_metadata: JsonDict | None = None,
     ) -> EntityCandidate:
         evidence_ids = tuple(sorted(item.evidence_id for item in evidence))
-        candidate_id = stable_id("entity", entity_type, normalize_text(name), evidence_ids, extractor_name)
+        candidate_id = stable_id(
+            "entity",
+            entity_type,
+            normalize_text(name),
+            evidence_ids,
+            extractor_name,
+            canonical_json(properties or {}),
+            canonical_json(provenance_metadata or {}),
+        )
         return cls(
             candidate_id=candidate_id,
             entity_type=entity_type,
@@ -272,7 +338,16 @@ class RelationCandidate(StrictModel):
         provenance_metadata: JsonDict | None = None,
     ) -> RelationCandidate:
         evidence_ids = tuple(sorted(item.evidence_id for item in evidence))
-        candidate_id = stable_id("relation", source, relation_type, target, evidence_ids, extractor_name)
+        candidate_id = stable_id(
+            "relation",
+            source,
+            relation_type,
+            target,
+            evidence_ids,
+            extractor_name,
+            canonical_json(properties or {}),
+            canonical_json(provenance_metadata or {}),
+        )
         return cls(
             candidate_id=candidate_id,
             source=source,
@@ -322,7 +397,16 @@ class GraphFact(StrictModel):
         provenance_metadata: JsonDict | None = None,
     ) -> GraphFact:
         evidence_ids = tuple(sorted(item.evidence_id for item in evidence))
-        fact_id = stable_id("fact", subject, predicate, object, evidence_ids, extractor_name)
+        fact_id = stable_id(
+            "fact",
+            subject,
+            predicate,
+            object,
+            evidence_ids,
+            extractor_name,
+            canonical_json(properties or {}),
+            canonical_json(provenance_metadata or {}),
+        )
         return cls(
             fact_id=fact_id,
             subject=subject,
@@ -351,8 +435,16 @@ class ConstructionBatch(StrictModel):
     def merged(self, other: ConstructionBatch) -> ConstructionBatch:
         """Return a new batch containing objects from both batches."""
 
+        # Source IDs are content-addressed snapshot identities.  Pipeline
+        # stages commonly return the source they consumed, so concatenating
+        # batches must be idempotent for source records even when the same
+        # snapshot appears in both operands.
+        source_records_by_id: dict[str, SourceRecord] = {}
+        for source_record in [*self.source_records, *other.source_records]:
+            source_records_by_id.setdefault(source_record.source_id, source_record)
+
         return ConstructionBatch(
-            source_records=[*self.source_records, *other.source_records],
+            source_records=list(source_records_by_id.values()),
             entities=[*self.entities, *other.entities],
             relations=[*self.relations, *other.relations],
             facts=[*self.facts, *other.facts],

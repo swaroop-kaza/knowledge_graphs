@@ -43,15 +43,15 @@ Recently added for GitHub readiness:
    - Switch to MIT only if you want the simplest permissive license and do not need Apache-style patent terms.
 
 2. Create the GitHub repository metadata.
-   - Description: `Production-oriented Data-to-Knowledge Graph construction, evaluation, and technique selection framework.`
-   - Topics: `knowledge-graphs`, `graph-rag`, `rdf`, `shacl`, `neo4j`, `entity-resolution`, `information-extraction`, `llm`, `gliner`, `data-engineering`.
+   - Description: `Evidence-grounded multi-source knowledge graph construction with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks.`
+   - Topics: `knowledge-graphs`, `graph-rag`, `rdf`, `shacl`, `neo4j`, `entity-resolution`, `record-linkage`, `data-quality`, `information-extraction`, `data-engineering`.
    - Enable Issues.
    - Enable Discussions.
    - Add a social preview image later.
 
-3. Update repository URLs after the remote exists.
-   - Add `[project.urls]` in `pyproject.toml`.
-   - Update `CITATION.cff` with the repository URL.
+3. Keep repository URLs synchronized with the remote.
+   - `[project.urls]` in `pyproject.toml` points to the repository, documentation, benchmarks, and issues.
+   - `CITATION.cff` contains the repository URL.
    - Update issue template security contact link.
 
 4. Enable GitHub security features.

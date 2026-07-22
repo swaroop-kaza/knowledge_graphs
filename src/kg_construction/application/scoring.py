@@ -73,6 +73,10 @@ class TechniqueScore(BaseModel):
     metrics: dict[str, float] = Field(default_factory=dict)
     applicability_score: float = 0.0
     confidence_interval: tuple[float, float] = (0.0, 0.0)
+    confidence_interval_method: str = "not_estimated"
+    confidence_interval_note: str = (
+        "No statistical confidence interval was estimated for the weighted score."
+    )
     recommendation: str = ""
 
 
@@ -173,12 +177,43 @@ class ScoringEngine:
             penalties=penalties,
             metrics=metrics,
             applicability_score=applicability_score,
-            confidence_interval=(max(0.0, final_score - 0.05), min(1.0, final_score + 0.05)),
+            # Keep the legacy field for downstream JSON compatibility. A
+            # degenerate interval is deliberately not presented as statistical
+            # uncertainty; callers must inspect confidence_interval_method.
+            confidence_interval=(final_score, final_score),
+            confidence_interval_method="not_estimated",
             recommendation=self._recommendation(final_score, dimensions, penalties),
         )
 
     @staticmethod
     def _accuracy_score(metrics: dict[str, float]) -> float:
+        gold_values: list[float] = []
+        if metrics.get("gold_entities_evaluated", 0.0) > 0.0:
+            gold_values.extend(
+                [
+                    bounded_metric(metrics, "entity_f1"),
+                    bounded_metric(metrics, "span_f1"),
+                ]
+            )
+        if metrics.get("gold_relations_evaluated", 0.0) > 0.0:
+            gold_values.append(bounded_metric(metrics, "relation_f1"))
+        if metrics.get("gold_triples_evaluated", 0.0) > 0.0:
+            gold_values.append(bounded_metric(metrics, "triple_exact_match"))
+        if metrics.get("gold_entity_resolution_evaluated", 0.0) > 0.0:
+            gold_values.append(bounded_metric(metrics, "pairwise_er_f1"))
+        if metrics.get("gold_retrieval_evaluated", 0.0) > 0.0:
+            gold_values.extend(
+                [
+                    bounded_metric(metrics, "retrieval_recall_at_k"),
+                    bounded_metric(metrics, "retrieval_prediction_completeness"),
+                ]
+            )
+        if gold_values:
+            # Zero is a measured failure here, not a missing value. Do not add
+            # estimated_precision, which would otherwise conceal failed gold
+            # extraction behind a provenance-derived proxy.
+            return sum(gold_values) / len(gold_values)
+
         values = [
             bounded_metric(metrics, "entity_f1"),
             bounded_metric(metrics, "relation_f1"),

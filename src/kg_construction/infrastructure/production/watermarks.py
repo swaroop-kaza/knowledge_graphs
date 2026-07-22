@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +101,17 @@ class IncrementalSyncPolicy:
             value = self.watermark_value(source)
             values[source_key] = value
             current_state = store.get(source_key)
-            if current_state is None or _compare_watermarks(value, current_state.high_watermark) > 0:
+            if current_state is None:
+                eligible.append(source)
+            elif self.has_explicit_watermark(source):
+                if _compare_watermarks(value, current_state.high_watermark) > 0:
+                    eligible.append(source)
+                else:
+                    skipped.append(source)
+            elif current_state.source_id != source.source_id:
+                # A content hash is an equality fingerprint, not a monotonic
+                # cursor. Any changed snapshot must be processed regardless of
+                # the hashes' lexicographic order.
                 eligible.append(source)
             else:
                 skipped.append(source)
@@ -134,12 +145,25 @@ class IncrementalSyncPolicy:
             return source.source_id
         return "0"
 
+    def has_explicit_watermark(self, source: SourceRecord) -> bool:
+        """Return whether the source carries an ordered watermark value."""
+
+        return source.metadata.get(self.watermark_field) not in (None, "")
+
 
 def _compare_watermarks(left: str, right: str) -> int:
     left_dt = _parse_datetime(left)
     right_dt = _parse_datetime(right)
     if left_dt is not None and right_dt is not None:
         return (left_dt > right_dt) - (left_dt < right_dt)
+    try:
+        left_number = Decimal(left)
+        right_number = Decimal(right)
+    except InvalidOperation:
+        pass
+    else:
+        if left_number.is_finite() and right_number.is_finite():
+            return (left_number > right_number) - (left_number < right_number)
     return (left > right) - (left < right)
 
 

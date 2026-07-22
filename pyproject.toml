@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kg-construction"
 version = "0.1.0"
-description = "Production-oriented Data-to-Knowledge Graph construction, evaluation, and technique selection framework."
+description = "Evidence-grounded multi-source knowledge graph construction with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -19,6 +19,8 @@ keywords = [
     "neo4j",
     "entity-resolution",
     "information-extraction",
+    "data-quality",
+    "record-linkage",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -31,6 +33,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
+
 dependencies = [
     "pydantic>=2.7",
     "PyYAML>=6.0",
@@ -42,6 +45,13 @@ dependencies = [
     "rdflib>=7.0",
     "pyshacl>=0.26",
 ]
+
+[project.urls]
+Homepage = "https://github.com/swaroop-kaza/knowledge_graphs"
+Repository = "https://github.com/swaroop-kaza/knowledge_graphs"
+Documentation = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/docs"
+Benchmarks = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/reports"
+Issues = "https://github.com/swaroop-kaza/knowledge_graphs/issues"
 
 [project.optional-dependencies]
 dev = [

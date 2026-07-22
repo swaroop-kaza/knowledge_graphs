@@ -2207,6 +2207,9 @@ Current `docs/` content:
 - `docs/production_ingestion.md`
 - `docs/packaging_and_notebook_policy.md`
 - `docs/github_open_source_readiness_plan.md`
+- `docs/benchmarking_and_publication.md`
+- `docs/identity_v2_migration.md`
+- `docs/multisource_kg_benchmark_plan.md`
 
 ## 33. Current implementation proof points
 
@@ -2220,7 +2223,7 @@ Code proof:
 - 16 public Experimental techniques.
 - 29 public Planned techniques.
 - Strict Pydantic models for domain, schema, config, metrics, manifests, review, and quarantine.
-- 107 unit tests cover loaders, mapping, extraction, relation extraction, validation, RDF/SHACL, entity linking/resolution, graph ML, production ingestion, CLI, doctor diagnostics, benchmark leaderboard reproducibility, gold-standard benchmark story reproducibility, registry support levels, and evaluation.
+- 151 unit tests cover loaders, mapping, extraction, relation extraction, validation, RDF/SHACL, duplicate-resistant entity resolution, canonical graph construction, graph ML, production ingestion, CLI, doctor diagnostics, benchmark artifact reproducibility, publication hard gates, registry support levels, and evaluation.
 
 Runtime/report proof:
 
@@ -2229,6 +2232,7 @@ Runtime/report proof:
 - `reports/current_registry_matrix.csv` stores the registry in tabular form with both internal status and public support level.
 - `reports/benchmark_leaderboard.md` and `.csv` provide a small deterministic fixture benchmark for technique selection.
 - `reports/gold_standard_benchmark_story.md`, `.csv`, and `.json` provide a small public correctness story for NER spans, relation extraction, triples, entity resolution, and GraphRAG/retrieval.
+- `reports/cross_source_identity_benchmark.md`, `.csv`, and `.json` publish the versioned cross-source identity gold-candidate benchmark and its executable gates.
 - `data/processed/README.md` documents the generated smoke-output workspace.
 - `reports/README.md` documents the report artifact policy.
 
@@ -2290,7 +2294,7 @@ Implemented and usable now:
 - Tie-breaking policy.
 - Recommendation slots.
 - Runtime/cost/provenance/coverage/validation/entity-resolution/retrieval metrics.
-- JSON/Markdown report generation.
+- Safe-by-default JSON, Markdown, and CSV report generation.
 - Structured logging.
 - Run manifests.
 - Incremental sync/watermarks.

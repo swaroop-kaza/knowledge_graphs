@@ -16,6 +16,10 @@ class RecommendationDecision(BaseModel):
     technique_name: str | None = None
     final_score: float = 0.0
     confidence_interval: tuple[float, float] = (0.0, 0.0)
+    confidence_interval_method: str = "not_estimated"
+    confidence_interval_note: str = (
+        "No statistical confidence interval was estimated for the weighted score."
+    )
     reason: str
 
 
@@ -32,6 +36,8 @@ class RecommendationSummary(BaseModel):
     graphrag_ready_technique: RecommendationDecision
     fallback_recommendation: str | None = None
     limitations: list[str] = Field(default_factory=list)
+    evaluated_gold_tasks: list[str] = Field(default_factory=list)
+    publication_eligible_techniques: list[str] = Field(default_factory=list)
 
 
 class RecommendationEngine:
@@ -40,8 +46,16 @@ class RecommendationEngine:
     def __init__(self, thresholds: ProductionThresholds | None = None) -> None:
         self.thresholds = thresholds or ProductionThresholds()
 
-    def recommend(self, scores: list[TechniqueScore]) -> RecommendationSummary:
+    def recommend(
+        self,
+        scores: list[TechniqueScore],
+        *,
+        publication_eligible_techniques: set[str] | None = None,
+        evaluated_gold_tasks: set[str] | None = None,
+    ) -> RecommendationSummary:
         ranked = list(scores)
+        gold_tasks = sorted(evaluated_gold_tasks or set())
+        eligible_names = sorted(publication_eligible_techniques or set())
         if not ranked:
             empty = RecommendationDecision(
                 name="unavailable",
@@ -56,9 +70,16 @@ class RecommendationEngine:
                 graphrag_ready_technique=empty,
                 fallback_recommendation="deterministic mapping + rules + Ollama for low-confidence cases + human review",
                 limitations=["No executable candidates were available."],
+                evaluated_gold_tasks=gold_tasks,
+                publication_eligible_techniques=eligible_names,
             )
 
-        best_single = self._decision("best_single_technique", ranked[0], "Highest final weighted score.")
+        best_single = self._decision(
+            "best_ranked_or_smoke_result",
+            ranked[0],
+            "Highest final weighted score. This ranking is a smoke/best-ranked result "
+            "unless the same technique is publication-eligible.",
+        )
         hybrids = [score for score in ranked if score.category == "hybrid" or "hybrid" in score.pipeline_name]
         best_hybrid = (
             self._decision("best_hybrid_technique", hybrids[0], "Highest final score among hybrid pipelines.")
@@ -69,7 +90,10 @@ class RecommendationEngine:
                 reason="No hybrid pipeline was executable for this dataset.",
             )
         )
-        production_safe = self._production_safe(ranked)
+        production_safe = self._production_safe(
+            ranked,
+            publication_eligible_techniques=publication_eligible_techniques,
+        )
         high_recall = max(ranked, key=lambda item: item.metrics.get("entity_recall", item.dimensions.get("coverage", 0.0)))
         low_cost = max(ranked, key=lambda item: item.dimensions.get("cost_efficiency", 0.0))
         graphrag = max(
@@ -87,8 +111,13 @@ class RecommendationEngine:
         if production_safe.technique_name is None:
             fallback = "deterministic mapping + rules + GLiNER/Ollama only for low-confidence cases + human review"
             limitations.append("No technique satisfied all production-safe thresholds.")
-        if all(score.metrics.get("entity_f1", 0.0) == 0.0 for score in ranked):
+        if not gold_tasks:
             limitations.append("No gold labels were supplied, so accuracy is estimated from graph quality and coverage.")
+        elif all(score.dimensions.get("accuracy", 0.0) == 0.0 for score in ranked):
+            limitations.append(
+                "Gold tasks were evaluated, but every candidate received zero in the "
+                "gold-backed accuracy dimension."
+            )
 
         return RecommendationSummary(
             best_single_technique=best_single,
@@ -99,10 +128,22 @@ class RecommendationEngine:
             graphrag_ready_technique=self._decision("graphrag_ready_technique", graphrag, "Best GraphRAG weighted evidence/retrieval/latency balance."),
             fallback_recommendation=fallback,
             limitations=limitations,
+            evaluated_gold_tasks=gold_tasks,
+            publication_eligible_techniques=eligible_names,
         )
 
-    def _production_safe(self, ranked: list[TechniqueScore]) -> RecommendationDecision:
+    def _production_safe(
+        self,
+        ranked: list[TechniqueScore],
+        *,
+        publication_eligible_techniques: set[str] | None = None,
+    ) -> RecommendationDecision:
         for score in ranked:
+            if (
+                publication_eligible_techniques is not None
+                and score.technique_name not in publication_eligible_techniques
+            ):
+                continue
             metrics = score.metrics
             unsupported_extraction_rate = metrics.get(
                 "unsupported_extraction_rate",
@@ -117,12 +158,20 @@ class RecommendationEngine:
                 return self._decision(
                     "production_safe_technique",
                     score,
-                    "Satisfies production thresholds for evidence, schema validity, unsupported extraction, and validation failure rate.",
+                    "Satisfies production thresholds and all configured benchmark publication gates.",
                 )
+        gate_reason = (
+            " No candidate passed all benchmark publication gates."
+            if publication_eligible_techniques is not None
+            else ""
+        )
         return RecommendationDecision(
             name="production_safe_technique",
             technique_name=None,
-            reason="No technique satisfied the configured production-safe thresholds.",
+            reason=(
+                "No technique satisfied the configured production-safe thresholds."
+                f"{gate_reason}"
+            ),
         )
 
     @staticmethod
@@ -132,6 +181,8 @@ class RecommendationEngine:
             technique_name=score.technique_name,
             final_score=score.final_score,
             confidence_interval=score.confidence_interval,
+            confidence_interval_method=score.confidence_interval_method,
+            confidence_interval_note=score.confidence_interval_note,
             reason=f"{reason} {score.recommendation}",
         )
 

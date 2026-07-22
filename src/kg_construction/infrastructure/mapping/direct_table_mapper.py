@@ -13,6 +13,7 @@ from kg_construction.domain.models import (
     EntityCandidate,
     RelationCandidate,
     SourceRecord,
+    canonical_json,
     stable_id,
 )
 
@@ -105,20 +106,50 @@ class DirectTableMapper:
         relations: list[RelationCandidate] = []
         row_entity_ids: dict[int, str] = {}
         target_indexes = self._build_target_indexes(records)
+        row_occurrences: Counter[str] = Counter()
 
         for row_index, row in enumerate(records):
             evidence = [row_evidence(source, row_index, row)]
-            name = self._row_name(row, row_index)
+            row_signature = canonical_json(row)
+            duplicate_ordinal = row_occurrences[row_signature]
+            row_occurrences[row_signature] += 1
+            redaction_metadata = source.metadata.get("_pii_redaction", {})
+            redaction_replacement = (
+                str(redaction_metadata.get("replacement"))
+                if isinstance(redaction_metadata, dict)
+                and redaction_metadata.get("applied")
+                else None
+            )
+            row_key = self._row_key(
+                row,
+                row_index,
+                duplicate_ordinal=duplicate_ordinal,
+                redaction_replacement=redaction_replacement,
+            )
+            stable_row_id = stable_id(
+                "row",
+                source.source_type,
+                source.source_name,
+                self.config.table_name,
+                row_key,
+            )
+            name = self._row_name(row, row_index, stable_row_id=stable_row_id)
             properties = self._row_properties(row)
             properties.update(
                 {
                     "_source_table": self.config.table_name,
                     "_row_index": row_index,
-                    "_stable_row_id": stable_id(
-                        "row",
-                        source.source_id,
-                        self.config.table_name,
-                        self._row_key(row, row_index),
+                    "_stable_row_id": stable_row_id,
+                    # This is deliberately source-scoped. A display name, email,
+                    # or source-local integer ID is not sufficient evidence that
+                    # rows from different systems represent the same real entity.
+                    # Cross-source co-reference must be established by an explicit
+                    # resolver and can later replace this conservative identity.
+                    "identity_key": f"source_record:{stable_row_id}",
+                    "identity_scope": source.source_name,
+                    "identity_key_status": self._identity_key_status(
+                        row,
+                        redaction_replacement=redaction_replacement,
                     ),
                 }
             )
@@ -172,20 +203,59 @@ class DirectTableMapper:
             },
         )
 
-    def _row_key(self, row: JsonDict, row_index: int) -> tuple[object, ...]:
+    def _row_key(
+        self,
+        row: JsonDict,
+        row_index: int,
+        *,
+        duplicate_ordinal: int = 0,
+        redaction_replacement: str | None = None,
+    ) -> tuple[object, ...]:
+        _ = row_index
+        row_signature = canonical_json(row)
         if self.config.id_columns:
-            return tuple(row.get(column) for column in self.config.id_columns)
-        return (row_index, repr(sorted(row.items())))
+            values = tuple(row.get(column) for column in self.config.id_columns)
+            key_is_incomplete = any(value in (None, "") for value in values)
+            key_was_redacted = redaction_replacement is not None and any(
+                str(value) == redaction_replacement for value in values
+            )
+            if key_is_incomplete or key_was_redacted:
+                # Missing composite-key parts and constant redaction markers
+                # are not identifiers. Keep rows separate and reviewable
+                # instead of collapsing every unknown value into one entity.
+                reason = "redacted-key" if key_was_redacted else "incomplete-key"
+                return (reason, row_signature, duplicate_ordinal)
+            return values
+        return ("row-content", row_signature, duplicate_ordinal)
 
-    def _row_name(self, row: JsonDict, row_index: int) -> str:
+    def _identity_key_status(
+        self,
+        row: JsonDict,
+        *,
+        redaction_replacement: str | None,
+    ) -> str:
+        if not self.config.id_columns:
+            return "source_scoped_row_content_fallback"
+        values = tuple(row.get(column) for column in self.config.id_columns)
+        if any(value in (None, "") for value in values):
+            return "source_scoped_incomplete_key_fallback"
+        if redaction_replacement is not None and any(
+            str(value) == redaction_replacement for value in values
+        ):
+            return "source_scoped_redacted_key_fallback"
+        return "source_scoped_configured_key"
+
+    def _row_name(self, row: JsonDict, row_index: int, *, stable_row_id: str) -> str:
         if self.config.name_column and row.get(self.config.name_column):
             return str(row[self.config.name_column])
-        if self.config.id_columns:
+        if self.config.id_columns and all(
+            row.get(column) not in (None, "") for column in self.config.id_columns
+        ):
             return "|".join(str(row.get(column, "")) for column in self.config.id_columns)
-        for column in ("name", "title", "id", "email"):
+        for column in ("name", "title", "id"):
             if row.get(column):
                 return str(row[column])
-        return f"{self.config.node_type}:{row_index}"
+        return f"{self.config.node_type}:{stable_row_id.rsplit('_', 1)[-1][:12]}"
 
     def _row_properties(self, row: JsonDict) -> JsonDict:
         if self.config.property_columns:

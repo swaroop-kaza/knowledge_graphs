@@ -81,11 +81,20 @@ class PIIRedactionPolicy(BaseModel):
     def redact_source_record(self, source: SourceRecord) -> SourceRecord:
         """Return a source record with content, rows, and metadata redacted."""
 
+        metadata = self.redact_mapping(source.metadata)
+        if self.enabled:
+            # Mappers use this marker to avoid treating a shared replacement
+            # value as an authoritative key. It contains no original PII.
+            metadata["_pii_redaction"] = {
+                "applied": True,
+                "replacement": self.replacement,
+                "identity_policy": "redacted_keys_require_row_scoped_fallback",
+            }
         return source.model_copy(
             update={
                 "content": self.redact_text(source.content) if source.content is not None else None,
                 "records": [self.redact_mapping(row) for row in source.records],
-                "metadata": self.redact_mapping(source.metadata),
+                "metadata": metadata,
             }
         )
 

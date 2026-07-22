@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from kg_construction.infrastructure.resolution.common import reconcile_entity_references
 from kg_construction.infrastructure.resolution.entity_resolution import (
     AliasTableResolver,
     AliasTableResolverConfig,
@@ -63,6 +64,7 @@ __all__ = [
     "ProbabilisticLinkageResolver",
     "RapidFuzzResolver",
     "RapidFuzzResolverConfig",
+    "reconcile_entity_references",
     "SplinkProbabilisticResolver",
     "SplinkResolverConfig",
     "WikidataLinker",

@@ -185,7 +185,7 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
         "Regenerate with:",
         "",
         "```bash",
-        "PYTHONPATH=src python scripts/generate_benchmark_leaderboard.py",
+        "make benchmark-leaderboard",
         "```",
         "",
         "| Dataset type | Rank | Technique | Entity coverage | Relation coverage | Evidence coverage | Validation pass rate | Latency | Memory/resource | Final score |",

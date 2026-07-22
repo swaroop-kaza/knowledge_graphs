@@ -16,7 +16,7 @@ from kg_construction.application.dataset_profiler import DatasetProfile, Dataset
 from kg_construction.application.production import build_production_services
 from kg_construction.application.registry import PluginRegistry, default_registry
 from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
-from kg_construction.domain.models import SourceRecord
+from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
 from kg_construction.infrastructure.loaders import (
     APIResponseLoader,
@@ -250,6 +250,14 @@ def default_workflow_for_source_type(
         **(production_kwargs or {}),
     }
 
+    if normalized_type == "mixed":
+        return ConstructionWorkflow(
+            mappers=[_DefaultSourceMapperRouter()],
+            extractors=[_DefaultSourceExtractorRouter()],
+            resolvers=resolvers,
+            validators=validators,
+            **common_kwargs,
+        )
     if normalized_type in {"csv", "excel", "sql", "structured_api", "xml", "chat_transcript"}:
         return ConstructionWorkflow(
             mappers=[DirectTableMapper()],
@@ -371,9 +379,90 @@ def _primary_source_type(sources: list[SourceRecord], source_type: str | None) -
     source_types = {_normalize_source_type(source.source_type) or source.source_type for source in sources}
     if len(source_types) == 1:
         return next(iter(source_types))
-    if any(source.records for source in sources):
-        return "csv"
-    return "text"
+    return "mixed"
+
+
+class _DefaultSourceMapperRouter:
+    """Dispatch each source in a heterogeneous batch to its matching mapper."""
+
+    name = "default_source_mapper_router"
+    technique = "source_type_routed_mapping"
+
+    def __init__(self) -> None:
+        direct = DirectTableMapper()
+        self._delegates: dict[str, Any] = {
+            "api_response": JsonPathMapper(),
+            "chat_transcript": direct,
+            "csv": direct,
+            "event_payload": EventGraphMapper(),
+            "excel": direct,
+            "html": HTMLMetadataMapper(),
+            "json": JsonPathMapper(),
+            "jsonld": JSONLDMapper(),
+            "logs": LogEventMapper(),
+            "sql": direct,
+            "structured_api": direct,
+            "webpage": HTMLMetadataMapper(),
+            "xml": direct,
+        }
+
+    def map_source(self, source: SourceRecord) -> ConstructionBatch:
+        source_type = _normalize_source_type(source.source_type) or source.source_type
+        delegate = self._delegates.get(source_type)
+        if delegate is None:
+            return ConstructionBatch(
+                source_records=[source],
+                metadata={"mapper_router": self.name, "mapper_route": "none"},
+            )
+        result = delegate.map_source(source)
+        return result.model_copy(
+            update={
+                "metadata": {
+                    **result.metadata,
+                    "mapper_router": self.name,
+                    "mapper_route": delegate.name,
+                }
+            }
+        )
+
+
+class _DefaultSourceExtractorRouter:
+    """Run text extraction only for source types with meaningful text content."""
+
+    name = "default_source_extractor_router"
+    technique = "source_type_routed_extraction"
+
+    _TEXT_SOURCE_TYPES = {
+        "email",
+        "html",
+        "markdown",
+        "pdf",
+        "report",
+        "scientific_paper",
+        "text",
+        "webpage",
+    }
+
+    def __init__(self) -> None:
+        self._delegate = RegexEntityExtractor()
+
+    def extract(self, source: SourceRecord) -> ConstructionBatch:
+        source_type = _normalize_source_type(source.source_type) or source.source_type
+        if source_type not in self._TEXT_SOURCE_TYPES:
+            return ConstructionBatch(
+                source_records=[source],
+                metadata={"extractor_router": self.name, "extractor_route": "none"},
+            )
+        result = self._delegate.extract(source)
+        return result.model_copy(
+            update={
+                "metadata": {
+                    **result.metadata,
+                    "extractor_router": self.name,
+                    "extractor_route": self._delegate.name,
+                }
+            }
+        )
 
 
 def _data_config(config: ConfigInput) -> DataToKGConfig:

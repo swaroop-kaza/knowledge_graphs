@@ -467,7 +467,7 @@ def _write_markdown(rows: list[dict[str, Any]], details: dict[str, Any], path: P
         "Regenerate with:",
         "",
         "```bash",
-        "PYTHONPATH=src python scripts/generate_gold_standard_benchmark_story.py",
+        "make gold-benchmark-story",
         "```",
         "",
         "## Summary",

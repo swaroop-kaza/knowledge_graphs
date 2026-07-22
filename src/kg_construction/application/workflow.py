@@ -9,6 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from kg_construction.domain.graph_objects import PropertyGraph, RDFGraph
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.evaluation.metrics import ConstructionMetricsEvaluator
+from kg_construction.infrastructure.evaluation.validation_metrics import (
+    validation_failure_metrics,
+)
 from kg_construction.infrastructure.graph_builders import (
     EvidenceGraphBuilder,
     PropertyGraphBuilder,
@@ -17,6 +20,7 @@ from kg_construction.infrastructure.graph_builders import (
 from kg_construction.infrastructure.ontology.validation import (
     CompositeValidator,
     EvidenceRequiredValidator,
+    ReferentialIntegrityValidator,
     ValidationReport,
 )
 from kg_construction.infrastructure.production import (
@@ -31,6 +35,7 @@ from kg_construction.infrastructure.production import (
     StructuredLogger,
     WatermarkStore,
 )
+from kg_construction.infrastructure.resolution.common import reconcile_entity_references
 
 
 class ConstructionResult(BaseModel):
@@ -78,7 +83,13 @@ class ConstructionWorkflow:
         self.mappers = mappers or []
         self.extractors = extractors or []
         self.resolvers = resolvers or []
-        self.validator = CompositeValidator(validators or [EvidenceRequiredValidator()])
+        configured_validators = list(validators or [EvidenceRequiredValidator()])
+        if not any(
+            isinstance(validator, ReferentialIntegrityValidator)
+            for validator in configured_validators
+        ):
+            configured_validators.append(ReferentialIntegrityValidator())
+        self.validator = CompositeValidator(configured_validators)
         self.property_graph_builder = property_graph_builder or PropertyGraphBuilder()
         self.rdf_graph_builder = rdf_graph_builder or RDFGraphBuilder()
         self.evidence_graph_builder = evidence_graph_builder or EvidenceGraphBuilder()
@@ -156,6 +167,8 @@ class ConstructionWorkflow:
                     if not self.continue_on_error:
                         raise
 
+            batch = reconcile_entity_references(batch)
+
             validation_report = self.validator.validate(batch)
             if self.quarantine is not None:
                 quarantine_records.extend(
@@ -174,10 +187,7 @@ class ConstructionWorkflow:
             rdf_graph = self.rdf_graph_builder.build(batch, validation_report=validation_report)
             evidence_graph = self.evidence_graph_builder.build(batch)
             metrics = self.evaluator.evaluate(batch)
-            metrics["validation_failure_rate"] = (
-                len(validation_report.findings)
-                / max(1, validation_report.checked_count)
-            )
+            metrics.update(validation_failure_metrics(batch, validation_report))
             metrics["quarantine_record_count"] = float(len(quarantine_records))
             metrics["human_review_queue_count"] = float(len(human_review_items))
             metrics["skipped_source_count"] = float(len(skipped_sources))

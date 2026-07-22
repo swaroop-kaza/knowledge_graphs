@@ -65,6 +65,43 @@ class PublicAPITests(unittest.TestCase):
         self.assertEqual(result.batch.source_records[0].source_name, "memory://preloaded")
         self.assertGreater(len(result.batch.entities), 0)
 
+    def test_construct_kg_routes_each_source_in_a_mixed_directory(self) -> None:
+        result = construct_kg("tests/fixtures/golden_benchmarks/mixed")
+
+        self.assertEqual(len(result.batch.source_records), 3)
+        self.assertEqual(
+            {source.source_type for source in result.batch.source_records},
+            {"csv", "json", "text"},
+        )
+        self.assertIn("Record", {entity.entity_type for entity in result.batch.entities})
+        self.assertIn("JSONRecord", {entity.entity_type for entity in result.batch.entities})
+        self.assertIn("Identifier", {entity.entity_type for entity in result.batch.entities})
+
+    def test_default_structured_identity_is_source_scoped_after_redaction(self) -> None:
+        sources = [
+            SourceRecord.from_rows(
+                [{"email": "one@example.com", "department": "Research"}],
+                source_type="csv",
+                source_name="memory://source-a",
+            ),
+            SourceRecord.from_rows(
+                [{"email": "two@example.com", "department": "Research"}],
+                source_type="csv",
+                source_name="memory://source-b",
+            ),
+        ]
+
+        result = construct_kg(sources)
+        canonical_ids = {
+            str(entity.properties["canonical_entity_id"])
+            for entity in result.batch.entities
+        }
+
+        self.assertEqual(len(result.batch.entities), 2)
+        self.assertEqual(len(canonical_ids), 2)
+        self.assertEqual(len(result.property_graph.nodes), 2)
+        self.assertTrue(all(entity.name != "[REDACTED]" for entity in result.batch.entities))
+
     def test_evaluate_techniques_from_path(self) -> None:
         report = evaluate_techniques(
             Path("examples/data_to_kg/sample.txt"),

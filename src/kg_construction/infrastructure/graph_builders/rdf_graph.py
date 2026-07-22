@@ -181,6 +181,7 @@ class RDFGraphBuilder:
                 "triple_count": len(triples),
                 "quad_count": len(quads),
                 "graph_model": "rdf",
+                "identity_policy_version": "kg-identity-v2",
                 "data_graph": self.data_graph,
                 "evidence_graph": self.evidence_graph,
                 "rdflib_serializable": True,

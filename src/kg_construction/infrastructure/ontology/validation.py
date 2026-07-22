@@ -98,6 +98,80 @@ class EvidenceRequiredValidator:
         )
 
 
+class ReferentialIntegrityValidator:
+    """Require materialized relationship endpoints to reference current entity IDs."""
+
+    name = "referential_integrity_validator"
+
+    def __init__(self, policy: ValidationPolicy = "reject") -> None:
+        self.policy = policy
+
+    def validate(self, batch: ConstructionBatch) -> ValidationReport:
+        current_entity_ids = {
+            str(entity.properties.get("canonical_entity_id", entity.candidate_id))
+            for entity in batch.entities
+        }
+        known_entity_references = {
+            entity.candidate_id
+            for entity in batch.entities
+        } | current_entity_ids
+        aliases = batch.metadata.get("entity_resolution_aliases", {})
+        if isinstance(aliases, dict):
+            known_entity_references.update(str(alias) for alias in aliases)
+            known_entity_references.update(str(target) for target in aliases.values())
+
+        findings: list[ValidationFinding] = []
+        checked_count = 0
+        for relation in batch.relations:
+            for role, endpoint in (("source", relation.source), ("target", relation.target)):
+                checked_count += 1
+                if endpoint not in current_entity_ids:
+                    findings.append(
+                        ValidationFinding(
+                            object_id=relation.candidate_id,
+                            object_type="relation",
+                            rule="referential_integrity",
+                            message=(
+                                f"Relationship {role} endpoint does not reference a current "
+                                f"entity node: {endpoint}"
+                            ),
+                            policy=self.policy,
+                        )
+                    )
+
+        for fact in batch.facts:
+            fact_endpoints = [("subject", fact.subject)]
+            if str(fact.properties.get("rdf_object_type", "iri")) != "literal":
+                fact_endpoints.append(("object", fact.object))
+            for role, endpoint in fact_endpoints:
+                checked_count += 1
+                if _is_internal_entity_reference(endpoint, known_entity_references) and (
+                    endpoint not in current_entity_ids
+                ):
+                    findings.append(
+                        ValidationFinding(
+                            object_id=fact.fact_id,
+                            object_type="fact",
+                            rule="referential_integrity",
+                            message=(
+                                f"Fact {role} endpoint refers to a non-current entity ID: "
+                                f"{endpoint}"
+                            ),
+                            policy=self.policy,
+                        )
+                    )
+
+        return ValidationReport(findings=findings, checked_count=checked_count)
+
+
+def _is_internal_entity_reference(value: str, known_references: set[str]) -> bool:
+    return (
+        value in known_references
+        or value.startswith("canonical_entity_")
+        or value.startswith("entity_")
+    )
+
+
 class SchemaRegistryValidator:
     """Validate candidate labels against the configured schema registry."""
 
@@ -114,10 +188,7 @@ class SchemaRegistryValidator:
 
     def validate(self, batch: ConstructionBatch) -> ValidationReport:
         findings: list[ValidationFinding] = []
-        entity_types = {
-            entity.candidate_id: entity.entity_type
-            for entity in batch.entities
-        }
+        entity_types = _entity_types_by_reference(batch)
         for entity in batch.entities:
             if not self.registry.validate_entity_type(entity.entity_type):
                 findings.append(
@@ -152,10 +223,13 @@ class SchemaRegistryValidator:
                     )
                 )
                 continue
-            if not self.registry.validate_relationship(
+            source_types = entity_types.get(relation.source, set())
+            target_types = entity_types.get(relation.target, set())
+            if not _validate_relationship_for_type_sets(
+                self.registry,
                 relation.relation_type,
-                source_type=entity_types.get(relation.source),
-                target_type=entity_types.get(relation.target),
+                source_types=source_types,
+                target_types=target_types,
             ):
                 findings.append(
                     ValidationFinding(
@@ -164,7 +238,9 @@ class SchemaRegistryValidator:
                         rule="relationship_domain_range",
                         message=(
                             f"Relationship {relation.relation_type} does not match "
-                            "the generated source/target type constraints."
+                            "the generated source/target type constraints: "
+                            f"source_types={sorted(source_types)}, "
+                            f"target_types={sorted(target_types)}."
                         ),
                         policy=self.policy,
                     )
@@ -173,6 +249,47 @@ class SchemaRegistryValidator:
             findings=findings,
             checked_count=len(batch.entities) + len(batch.relations),
         )
+
+
+def _entity_types_by_reference(batch: ConstructionBatch) -> dict[str, set[str]]:
+    """Index entity types by candidate and materialized canonical references."""
+
+    entity_types: dict[str, set[str]] = {}
+    for entity in batch.entities:
+        references = {entity.candidate_id}
+        for property_name in ("canonical_entity_id", "canonical_id"):
+            canonical_id = entity.properties.get(property_name)
+            if canonical_id:
+                references.add(str(canonical_id))
+        for reference in references:
+            entity_types.setdefault(reference, set()).add(entity.entity_type)
+    return entity_types
+
+
+def _validate_relationship_for_type_sets(
+    registry: SchemaRegistry,
+    relationship_type: str,
+    *,
+    source_types: set[str],
+    target_types: set[str],
+) -> bool:
+    """Require every possible canonical-cluster type pairing to satisfy the schema."""
+
+    source_options: list[str | None] = list(sorted(source_types))
+    target_options: list[str | None] = list(sorted(target_types))
+    if not source_options:
+        source_options.append(None)
+    if not target_options:
+        target_options.append(None)
+    return all(
+        registry.validate_relationship(
+            relationship_type,
+            source_type=source_type,
+            target_type=target_type,
+        )
+        for source_type in source_options
+        for target_type in target_options
+    )
 
 
 class ConfidenceThresholdValidator:
@@ -229,6 +346,7 @@ __all__ = [
     "CompositeValidator",
     "ConfidenceThresholdValidator",
     "EvidenceRequiredValidator",
+    "ReferentialIntegrityValidator",
     "SchemaRegistryValidator",
     "ValidationFinding",
     "ValidationPolicy",

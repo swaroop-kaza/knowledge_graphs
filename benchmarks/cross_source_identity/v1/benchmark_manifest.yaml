@@ -1,0 +1,44 @@
+schema_version: "1.0"
+benchmark_id: cross_source_identity_dedup
+version: "1.0.0"
+description: >-
+  Synthetic, human-authored multi-source organization and person records with
+  aliases, legal suffixes, punctuation variants, exact duplicates, and namesakes.
+domain: cross-domain-master-data
+split: test
+publication_date: "2026-07-21"
+license: CC0-1.0
+input_hash: 36acf7cb9eedd83454f647f1542c8990474dd2231bf5212be40e0db21689fb0b
+source_inventory:
+  - crm.csv
+  - billing.csv
+  - support.csv
+entity_resolution_fixture: gold_entity_resolution.json
+citations:
+  - https://webdatacommons.org/largescaleproductcorpus/wdc-products/index.html
+metadata:
+  benchmark_status: gold-candidate
+  maintainer: swaroop-kaza
+  annotation_method: Human-authored synthetic clusters with explicit hard-negative review.
+  task: cross_source_entity_resolution
+  synthetic: true
+  source_files:
+    - crm.csv
+    - billing.csv
+    - support.csv
+  record_count: 12
+  source_count: 3
+  gold_pair_count: 8
+  leakage_policy: No gold cluster identifier is present in source files.
+  identity_policy: >-
+    Person names alone are not identifiers. Trusted identifiers are included as
+    observable source attributes but the published name-based baselines do not use them.
+  hard_gates:
+    minimum_pairwise_precision: 0.98
+    maximum_false_merge_rate: 0.02
+    minimum_evidence_coverage: 1.0
+    require_source_order_invariance: true
+  limitations:
+    - Tiny synthetic correctness fixture; it is not representative of production scale.
+    - It evaluates clustering only, not field survivorship or temporal updates.
+    - The trusted-identifier reference is deliberately easy and is not independent evidence that a learned resolver generalizes.

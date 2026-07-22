@@ -9,6 +9,24 @@ from kg_construction.domain.models import ConstructionBatch
 from kg_construction.infrastructure.ontology.validation import ValidationReport
 
 
+def validation_failure_metrics(
+    batch: ConstructionBatch,
+    validation_report: ValidationReport,
+) -> dict[str, float]:
+    """Return distinct-object failure rate plus unbounded finding density."""
+
+    total_objects = max(1, len(batch.entities) + len(batch.relations) + len(batch.facts))
+    failed_object_ids = {
+        (finding.object_type, finding.object_id)
+        for finding in validation_report.findings
+        if finding.object_id
+    }
+    return {
+        "validation_failure_rate": min(1.0, len(failed_object_ids) / total_objects),
+        "validation_finding_density": len(validation_report.findings) / total_objects,
+    }
+
+
 class ValidationMetrics:
     """Compute validity scores from validation reports and graph objects."""
 
@@ -34,23 +52,27 @@ class ValidationMetrics:
             if finding.rule == "evidence_required"
         )
         duplicate_edge_rate = self._duplicate_edge_rate(property_graph)
+        dangling_edge_rate = self._dangling_edge_rate(property_graph)
         orphan_node_rate = self._orphan_node_rate(property_graph)
         rdf_output_validity = 1.0 if rdf_graph is None else self._rdf_validity(rdf_graph)
         unsupported_extraction_rate = self._unsupported_extraction_rate(batch)
-        return {
+        result = {
             "schema_validity_score": max(0.0, 1.0 - schema_violations / total_objects),
             "rdf_output_validity_score": rdf_output_validity,
             "shacl_validity_score": rdf_output_validity,
             "evidence_coverage": max(0.0, 1.0 - evidence_violations / total_objects),
             "provenance_coverage": self._provenance_coverage(batch),
             "duplicate_edge_rate": duplicate_edge_rate,
+            "dangling_edge_rate": dangling_edge_rate,
+            "referential_integrity_score": 1.0 - dangling_edge_rate,
             "orphan_node_rate": orphan_node_rate,
             "schema_violation_rate": schema_violations / total_objects,
-            "validation_failure_rate": len(validation_report.findings) / total_objects,
             "unsupported_extraction_rate": unsupported_extraction_rate,
             "hallucination_risk_proxy": unsupported_extraction_rate,
             "hallucination_rate": unsupported_extraction_rate,
         }
+        result.update(validation_failure_metrics(batch, validation_report))
+        return result
 
     @staticmethod
     def _provenance_coverage(batch: ConstructionBatch) -> float:
@@ -75,7 +97,16 @@ class ValidationMetrics:
     def _duplicate_edge_rate(property_graph: PropertyGraph | None) -> float:
         if property_graph is None or not property_graph.edges:
             return 0.0
-        keys = [(edge.source_id, edge.type, edge.target_id) for edge in property_graph.edges]
+        # Canonical builders expose the qualifier-aware key used to consolidate
+        # equivalent assertions. Other edges remain distinct by ID: a shared
+        # source/type/target tuple alone cannot prove that qualified relations
+        # or repeated events are duplicates.
+        keys = [
+            ("semantic_relation", str(edge.properties["semantic_relation_key"]))
+            if edge.properties.get("semantic_relation_key")
+            else ("edge", edge.edge_id)
+            for edge in property_graph.edges
+        ]
         return 1.0 - len(set(keys)) / len(keys)
 
     @staticmethod
@@ -91,6 +122,18 @@ class ValidationMetrics:
         if not domain_nodes:
             return 0.0
         return len(domain_nodes - connected) / len(domain_nodes)
+
+    @staticmethod
+    def _dangling_edge_rate(property_graph: PropertyGraph | None) -> float:
+        if property_graph is None or not property_graph.edges:
+            return 0.0
+        node_ids = {node.node_id for node in property_graph.nodes}
+        dangling = sum(
+            1
+            for edge in property_graph.edges
+            if edge.source_id not in node_ids or edge.target_id not in node_ids
+        )
+        return dangling / len(property_graph.edges)
 
     @staticmethod
     def _rdf_validity(rdf_graph: RDFGraph) -> float:
@@ -112,4 +155,4 @@ class ValidationMetrics:
         return max(0.0, 1.0 - invalid / triples)
 
 
-__all__ = ["ValidationMetrics"]
+__all__ = ["ValidationMetrics", "validation_failure_metrics"]

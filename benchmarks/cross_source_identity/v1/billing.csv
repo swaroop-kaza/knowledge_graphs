@@ -1,0 +1,6 @@
+record_id,entity_type,name,source_local_id,trusted_identifier
+billing_org_a,Organization,ACME Corp,C-9001,lei:ACME-001
+billing_person_17,Person,J. Lee,C-9002,employee:SG-104
+billing_person_29,Person,Alex Kim,C-9003,employee:AU-771
+billing_org_b,Organization,Globex,C-9004,lei:GLOBEX-002
+

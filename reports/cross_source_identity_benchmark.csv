@@ -1,0 +1,5 @@
+baseline,resolver,technique,record_count,gold_cluster_count,predicted_cluster_count,gold_pair_count,predicted_pair_count,pairwise_precision,pairwise_recall,pairwise_f1,false_merge_rate,false_split_rate,evidence_coverage,precision_gate,false_merge_gate,evidence_gate,source_order_invariant,passes_all_gates
+exact_normalized_type_and_name,exact_key_entity_resolver,exact_key_matching,12,6,9,8,4,0.5,0.25,0.333333,0.5,0.75,1.0,False,False,True,True,False
+normalized_name_and_legal_suffix,normalized_string_resolver,normalized_string_matching,12,6,6,8,8,0.75,0.75,0.75,0.25,0.25,1.0,False,False,True,True,False
+curated_alias_table,alias_table_resolver,alias_table_matching,12,6,5,8,10,0.8,1.0,0.888889,0.2,0.0,1.0,False,False,True,True,False
+trusted_identifier_exact,trusted_identifier_resolver,trusted_identifier_exact_matching,12,6,6,8,8,1.0,1.0,1.0,0.0,0.0,1.0,True,True,True,True,True

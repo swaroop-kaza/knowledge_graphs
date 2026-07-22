@@ -1,0 +1,6 @@
+record_id,entity_type,name,source_local_id,trusted_identifier
+crm_org_001,Organization,Acme Corporation,ORG-100,lei:ACME-001
+crm_person_001,Person,Jordan Lee,PERSON-10,employee:SG-104
+crm_person_002,Person,Alex Kim,PERSON-11,employee:US-220
+crm_org_002,Organization,Globex LLC,ORG-101,lei:GLOBEX-002
+

@@ -1,0 +1,24 @@
+{
+  "fixture_id": "cross_source_identity_dedup_v1",
+  "evaluation_record_id_property": "record_id",
+  "records": [
+    {"record_id": "crm_org_001", "entity_type": "Organization", "name": "Acme Corporation", "cluster_id": "organization_acme"},
+    {"record_id": "crm_person_001", "entity_type": "Person", "name": "Jordan Lee", "cluster_id": "person_jordan_lee"},
+    {"record_id": "crm_person_002", "entity_type": "Person", "name": "Alex Kim", "cluster_id": "person_alex_kim_us"},
+    {"record_id": "crm_org_002", "entity_type": "Organization", "name": "Globex LLC", "cluster_id": "organization_globex"},
+    {"record_id": "billing_org_a", "entity_type": "Organization", "name": "ACME Corp", "cluster_id": "organization_acme"},
+    {"record_id": "billing_person_17", "entity_type": "Person", "name": "J. Lee", "cluster_id": "person_jordan_lee"},
+    {"record_id": "billing_person_29", "entity_type": "Person", "name": "Alex Kim", "cluster_id": "person_alex_kim_au"},
+    {"record_id": "billing_org_b", "entity_type": "Organization", "name": "Globex", "cluster_id": "organization_globex"},
+    {"record_id": "support_org_91", "entity_type": "Organization", "name": "Acme", "cluster_id": "organization_acme"},
+    {"record_id": "support_person_3", "entity_type": "Person", "name": "Jordan Lee", "cluster_id": "person_jordan_lee"},
+    {"record_id": "support_person_8", "entity_type": "Person", "name": "Alex Kim", "cluster_id": "person_alex_kim_us"},
+    {"record_id": "support_org_22", "entity_type": "Organization", "name": "Initech", "cluster_id": "organization_initech"}
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "review_status": "human_authored_and_reviewed",
+    "gold_pair_count": 8,
+    "namesake_warning": "billing_person_29 is not the same person as the two other Alex Kim records"
+  }
+}

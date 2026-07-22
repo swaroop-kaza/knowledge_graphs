@@ -1,6 +1,6 @@
 # Small Benchmark Leaderboard
 
-Generated: 2026-07-14
+Generated: 2026-07-21
 
 This committed leaderboard is intentionally small and reproducible. It uses tiny fixtures under `tests/fixtures/golden_benchmarks/`, deterministic runtime settings, and the same scoring path used by `TechniqueEvaluationRunner`. Big multi-dataset experiment outputs remain generated artifacts outside the committed repo.
 
@@ -13,7 +13,7 @@ Runtime/resource columns are deterministic controls for comparability:
 Regenerate with:
 
 ```bash
-PYTHONPATH=src python scripts/generate_benchmark_leaderboard.py
+make benchmark-leaderboard
 ```
 
 | Dataset type | Rank | Technique | Entity coverage | Relation coverage | Evidence coverage | Validation pass rate | Latency | Memory/resource | Final score |

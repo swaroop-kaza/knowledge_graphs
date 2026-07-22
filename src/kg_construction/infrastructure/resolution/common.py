@@ -7,7 +7,13 @@ import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from kg_construction.domain.models import ConstructionBatch, EntityCandidate, stable_id
+from kg_construction.domain.models import (
+    ConstructionBatch,
+    EntityCandidate,
+    GraphFact,
+    RelationCandidate,
+    stable_id,
+)
 
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 _SPACES_RE = re.compile(r"\s+")
@@ -96,28 +102,167 @@ def apply_merge_decisions(
         }
         resolved_entities.append(entity.model_copy(update={"properties": properties}))
 
-    resolved_relations = []
-    for relation in batch.relations:
-        source = candidate_to_canonical.get(relation.source, relation.source)
-        target = candidate_to_canonical.get(relation.target, relation.target)
-        properties = {
-            **relation.properties,
-            "original_source": relation.source,
-            "original_target": relation.target,
-        }
-        resolved_relations.append(
-            relation.model_copy(update={"source": source, "target": target, "properties": properties})
-        )
-
     audit = merge_audit(batch.entities, decisions, cluster_members, resolver_name, resolver_technique)
     previous_audit = list(batch.metadata.get("entity_resolution_audit", []))
     metadata = {
         **batch.metadata,
         "entity_resolution_audit": [*previous_audit, *audit],
+        "entity_resolution_aliases": _updated_resolution_aliases(batch, resolved_entities),
         "resolver": resolver_name,
     }
+    return reconcile_entity_references(
+        batch.model_copy(update={"entities": resolved_entities, "metadata": metadata})
+    )
+
+
+def reconcile_entity_references(batch: ConstructionBatch) -> ConstructionBatch:
+    """Rewrite entity references to the current canonical IDs.
+
+    Resolution is deliberately non-destructive: entity candidates retain their original IDs while
+    ``canonical_entity_id`` identifies the node that will be materialized.  This helper uses the
+    original endpoint saved on relations/facts plus a flattened alias history, so applying a second
+    resolver cannot leave an endpoint pointing at a canonical ID created by an earlier resolver.
+    """
+
+    aliases = _resolution_aliases(batch)
+    if not aliases:
+        return batch
+
+    resolved_relations = [_reconcile_relation(relation, aliases) for relation in batch.relations]
+    resolved_facts = [_reconcile_fact(fact, aliases) for fact in batch.facts]
+    metadata = {
+        **batch.metadata,
+        "entity_resolution_aliases": dict(sorted(aliases.items())),
+    }
     return batch.model_copy(
-        update={"entities": resolved_entities, "relations": resolved_relations, "metadata": metadata}
+        update={
+            "relations": resolved_relations,
+            "facts": resolved_facts,
+            "metadata": metadata,
+        }
+    )
+
+
+def _updated_resolution_aliases(
+    previous_batch: ConstructionBatch,
+    resolved_entities: list[EntityCandidate],
+) -> dict[str, str]:
+    """Return a flattened candidate/historical-canonical to current-ID map."""
+
+    final_by_candidate = {
+        entity.candidate_id: str(entity.properties.get("canonical_entity_id", entity.candidate_id))
+        for entity in resolved_entities
+    }
+    old_targets: dict[str, set[str]] = {}
+    for entity in previous_batch.entities:
+        old_id = entity.properties.get("canonical_entity_id")
+        final_id = final_by_candidate.get(entity.candidate_id, entity.candidate_id)
+        if old_id:
+            old_targets.setdefault(str(old_id), set()).add(final_id)
+    unambiguous_old_to_final = {
+        old_id: next(iter(final_ids))
+        for old_id, final_ids in old_targets.items()
+        if len(final_ids) == 1
+    }
+
+    aliases: dict[str, str] = {}
+    previous_aliases = previous_batch.metadata.get("entity_resolution_aliases", {})
+    if isinstance(previous_aliases, dict):
+        for alias, target in previous_aliases.items():
+            alias_value = str(alias)
+            target_value = str(target)
+            aliases[alias_value] = unambiguous_old_to_final.get(target_value, target_value)
+    aliases.update(unambiguous_old_to_final)
+    aliases.update(final_by_candidate)
+
+    current_ids = set(final_by_candidate.values())
+    for current_id in current_ids:
+        aliases[current_id] = current_id
+    return _flatten_aliases(aliases, current_ids=current_ids)
+
+
+def _resolution_aliases(batch: ConstructionBatch) -> dict[str, str]:
+    canonicalized_entities = [
+        entity for entity in batch.entities if entity.properties.get("canonical_entity_id")
+    ]
+    stored_aliases = batch.metadata.get("entity_resolution_aliases", {})
+    if not canonicalized_entities and not isinstance(stored_aliases, dict):
+        return {}
+    if not canonicalized_entities and not stored_aliases:
+        return {}
+
+    aliases = (
+        {str(alias): str(target) for alias, target in stored_aliases.items()}
+        if isinstance(stored_aliases, dict)
+        else {}
+    )
+    current_ids: set[str] = set()
+    for entity in batch.entities:
+        canonical_id = str(entity.properties.get("canonical_entity_id", entity.candidate_id))
+        if canonical_id != entity.candidate_id or entity.properties.get("canonical_entity_id"):
+            aliases[entity.candidate_id] = canonical_id
+            aliases[canonical_id] = canonical_id
+            current_ids.add(canonical_id)
+    return _flatten_aliases(aliases, current_ids=current_ids)
+
+
+def _flatten_aliases(aliases: dict[str, str], *, current_ids: set[str]) -> dict[str, str]:
+    flattened: dict[str, str] = {}
+    for alias in aliases:
+        current = alias
+        seen: set[str] = set()
+        while current in aliases and current not in seen:
+            seen.add(current)
+            target = aliases[current]
+            if target == current:
+                break
+            current = target
+        flattened[alias] = current
+    for current_id in current_ids:
+        flattened[current_id] = current_id
+    return flattened
+
+
+def _resolve_endpoint(value: str, aliases: dict[str, str]) -> str:
+    return aliases.get(value, value)
+
+
+def _reconcile_relation(
+    relation: RelationCandidate,
+    aliases: dict[str, str],
+) -> RelationCandidate:
+    prior_source = str(relation.properties.get("original_source", relation.source))
+    prior_target = str(relation.properties.get("original_target", relation.target))
+    source = _resolve_endpoint(prior_source, aliases)
+    target = _resolve_endpoint(prior_target, aliases)
+    if source == relation.source and target == relation.target:
+        return relation
+    properties = {
+        **relation.properties,
+        "original_source": prior_source,
+        "original_target": prior_target,
+    }
+    return relation.model_copy(update={"source": source, "target": target, "properties": properties})
+
+
+def _reconcile_fact(fact: GraphFact, aliases: dict[str, str]) -> GraphFact:
+    prior_subject = str(fact.properties.get("original_subject", fact.subject))
+    prior_object = str(fact.properties.get("original_object", fact.object))
+    subject = _resolve_endpoint(prior_subject, aliases)
+    object_is_literal = str(fact.properties.get("rdf_object_type", "iri")) == "literal"
+    object_value = prior_object if object_is_literal else _resolve_endpoint(prior_object, aliases)
+
+    properties = dict(fact.properties)
+    if "rdf_subject_iri" in properties:
+        properties["rdf_subject_iri"] = _resolve_endpoint(str(properties["rdf_subject_iri"]), aliases)
+    if "rdf_object" in properties and not object_is_literal:
+        properties["rdf_object"] = _resolve_endpoint(str(properties["rdf_object"]), aliases)
+    if subject == fact.subject and object_value == fact.object and properties == fact.properties:
+        return fact
+    properties["original_subject"] = prior_subject
+    properties["original_object"] = prior_object
+    return fact.model_copy(
+        update={"subject": subject, "object": object_value, "properties": properties}
     )
 
 
@@ -197,5 +342,6 @@ __all__ = [
     "compact_resolution_key",
     "current_canonical_name",
     "decisions_from_groups",
+    "reconcile_entity_references",
     "resolution_key",
 ]

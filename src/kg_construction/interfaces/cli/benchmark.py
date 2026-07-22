@@ -9,6 +9,7 @@ from kg_construction.application.benchmark_runner import (
     TechniqueEvaluationConfig,
     TechniqueEvaluationRunner,
 )
+from kg_construction.infrastructure.reports.csv_report import CsvReportWriter
 from kg_construction.infrastructure.reports.json_report import JsonReportWriter
 from kg_construction.infrastructure.reports.markdown_report import MarkdownReportWriter
 
@@ -21,7 +22,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--techniques", default="applicable", help="'applicable', 'all', or comma-separated names.")
     parser.add_argument("--output", required=True, help="Markdown report output path.")
     parser.add_argument("--json-output", help="JSON report output path.")
-    parser.add_argument("--candidate-output-dir", help="Directory for candidate graph outputs.")
+    parser.add_argument("--csv-output", help="CSV leaderboard output path.")
+    parser.add_argument(
+        "--candidate-output-dir",
+        help="Opt-in directory for source-derived candidate graphs; review for sensitive data.",
+    )
+    parser.add_argument(
+        "--include-sensitive-json-artifacts",
+        action="store_true",
+        help="Embed source-derived batches and graphs in JSON (unsafe for direct publication).",
+    )
     return parser
 
 
@@ -30,11 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     config = TechniqueEvaluationConfig.from_yaml(args.config) if args.config else TechniqueEvaluationConfig()
     output_path = Path(args.output)
     json_output = Path(args.json_output) if args.json_output else output_path.with_suffix(".json")
-    candidate_output_dir = (
-        Path(args.candidate_output_dir)
-        if args.candidate_output_dir
-        else output_path.parent / "candidate_graphs"
-    )
+    csv_output = Path(args.csv_output) if args.csv_output else output_path.with_suffix(".csv")
+    candidate_output_dir = Path(args.candidate_output_dir) if args.candidate_output_dir else None
 
     report = TechniqueEvaluationRunner(config=config).run(
         input_path=args.input,
@@ -43,7 +50,10 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=candidate_output_dir,
     )
     MarkdownReportWriter().write(report, output_path)
-    JsonReportWriter().write(report, json_output)
+    JsonReportWriter(
+        include_sensitive_artifacts=args.include_sensitive_json_artifacts
+    ).write(report, json_output)
+    CsvReportWriter().write(report, csv_output)
     print(
         {
             "best_technique": report.best_technique,
@@ -51,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
             "ranked_count": len(report.ranked_scores),
             "markdown_report": str(output_path),
             "json_report": str(json_output),
+            "csv_report": str(csv_output),
         }
     )
     return 0

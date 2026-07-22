@@ -835,6 +835,7 @@ def run_benchmark(dataset: DatasetRun) -> dict[str, Any]:
                 "quality_score": round(score.quality_score, 6),
                 "runtime_score": round(score.runtime_score, 6),
                 "confidence_interval": score.confidence_interval,
+                "confidence_interval_method": score.confidence_interval_method,
             }
             for index, score in enumerate(report.ranked_scores, start=1)
         ],
@@ -967,12 +968,13 @@ def benchmark_score_rows(results: list[dict[str, Any]]) -> list[list[Any]]:
             final_score = round(float(score.get("final_score", 0.0)), 6)
             rank = score.get("rank")
             rank_label = f"{rank} - tie" if scores_by_value[final_score] > 1 else str(rank)
+            method = str(score.get("confidence_interval_method", "not_estimated"))
             interval = score.get("confidence_interval", [0.0, 0.0])
-            ci = (
-                f"{float(interval[0]):.3f}-{float(interval[1]):.3f}"
-                if isinstance(interval, list | tuple) and len(interval) == 2
-                else "-"
-            )
+            uncertainty = "not estimated"
+            if method != "not_estimated" and isinstance(interval, list | tuple) and len(interval) == 2:
+                uncertainty = (
+                    f"{method}: {float(interval[0]):.3f}-{float(interval[1]):.3f}"
+                )
             rows.append(
                 [
                     result.get("dataset_id"),
@@ -981,7 +983,7 @@ def benchmark_score_rows(results: list[dict[str, Any]]) -> list[list[Any]]:
                     f"{final_score:.6f}",
                     f"{float(score.get('quality_score', 0.0)):.6f}",
                     f"{float(score.get('runtime_score', 0.0)):.6f}",
-                    ci,
+                    uncertainty,
                 ]
             )
     return rows
@@ -1188,8 +1190,8 @@ def write_markdown_report(
                     "Scalability and cost-efficiency proxy minus latency penalty. Fixed in this deterministic run to avoid score drift.",
                 ],
                 [
-                    "`CI`",
-                    "Wilson-style confidence interval from estimated valid outputs. It is a proxy, not a gold-standard accuracy interval.",
+                    "`Score uncertainty`",
+                    "Statistical uncertainty for the weighted score. It is reported as not estimated unless a valid resampling or repeated-run method is supplied.",
                 ],
                 [
                     "`Tie`",
@@ -1208,7 +1210,15 @@ def write_markdown_report(
         "## Full benchmark score table",
         "",
         markdown_table(
-            ["Dataset", "Rank", "Technique", "Final", "Quality", "Runtime", "CI"],
+            [
+                "Dataset",
+                "Rank",
+                "Technique",
+                "Final",
+                "Quality",
+                "Runtime",
+                "Score uncertainty",
+            ],
             all_score_rows,
         )
         if all_score_rows

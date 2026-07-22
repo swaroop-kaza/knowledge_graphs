@@ -1,0 +1,6 @@
+record_id,entity_type,name,source_local_id,trusted_identifier
+support_org_91,Organization,Acme,T-501,lei:ACME-001
+support_person_3,Person,Jordan Lee,T-502,employee:SG-104
+support_person_8,Person,Alex Kim,T-503,employee:US-220
+support_org_22,Organization,Initech,T-504,lei:INITECH-004
+

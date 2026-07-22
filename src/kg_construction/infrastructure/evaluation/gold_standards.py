@@ -52,6 +52,8 @@ class GoldEntityResolutionFixture(BaseModel):
 
     fixture_id: str
     records: list[GoldEntityResolutionRecord]
+    evaluation_record_id_property: str | None = None
+    closed_world: bool = True
     metadata: JsonDict = Field(default_factory=dict)
 
     @classmethod
@@ -59,6 +61,7 @@ class GoldEntityResolutionFixture(BaseModel):
         return cls.model_validate(json.loads(Path(path).read_text(encoding="utf-8")))
 
     def gold_pairs(self) -> set[tuple[str, str]]:
+        self.record_ids()
         pairs: set[tuple[str, str]] = set()
         clusters: dict[str, list[str]] = {}
         for record in self.records:
@@ -68,6 +71,27 @@ class GoldEntityResolutionFixture(BaseModel):
                 for right in sorted(members)[left_index + 1 :]:
                     pairs.add((left, right))
         return pairs
+
+    def record_ids(self) -> set[str]:
+        """Return the unique human-reviewed record-ID universe."""
+
+        record_ids = [record.record_id for record in self.records]
+        if not record_ids:
+            raise ValueError(
+                "A gold entity-resolution fixture must contain at least one record."
+            )
+        unique_ids = set(record_ids)
+        if len(unique_ids) != len(record_ids):
+            duplicates = sorted(
+                record_id
+                for record_id in unique_ids
+                if record_ids.count(record_id) > 1
+            )
+            raise ValueError(
+                "Gold entity-resolution record IDs must be unique; duplicate IDs: "
+                f"{duplicates!r}."
+            )
+        return unique_ids
 
 
 class GoldRetrievalEdge(BaseModel):
@@ -204,9 +228,12 @@ def _score_sets(predicted: set[tuple[Any, ...]], expected: set[tuple[Any, ...]])
     true_positive = len(predicted & expected)
     false_positive = len(predicted - expected)
     false_negative = len(expected - predicted)
-    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
-    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
-    f1 = (2 * precision * recall / (precision + recall)) if precision + recall else 0.0
+    if not predicted and not expected:
+        precision = recall = f1 = 1.0
+    else:
+        precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
+        recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
+        f1 = (2 * precision * recall / (precision + recall)) if precision + recall else 0.0
     return GoldBenchmarkScore(
         precision=round(precision, 6),
         recall=round(recall, 6),
