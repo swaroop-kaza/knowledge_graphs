@@ -2347,7 +2347,7 @@ Useful local checks:
 
 ```bash
 python3 -m compileall -q src tests
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -v
 python3 -m ruff check src tests
 python3 -m mypy src/kg_construction
 make smoke
@@ -2357,7 +2357,7 @@ make verify
 Useful inventory checks:
 
 ```bash
-PYTHONPATH=src python3 - <<'PY'
+python3 - <<'PY'
 from collections import Counter
 from kg_construction.application.registry import default_registry
 

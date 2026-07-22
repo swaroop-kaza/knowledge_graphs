@@ -5,8 +5,8 @@ This directory is reserved for downloaded or generated public dataset samples.
 Do not commit downloaded datasets, archives, warehouse exports, vendor data, private data, or raw enterprise data. Use the dataset scripts to recreate local experiment inputs when needed:
 
 ```bash
-PYTHONPATH=src python3 scripts/download_experiment_datasets.py
-PYTHONPATH=src python3 scripts/run_experiment_datasets.py
+python3 scripts/download_experiment_datasets.py
+python3 scripts/run_experiment_datasets.py
 ```
 
 Before adding any dataset fixture to the repository, confirm:

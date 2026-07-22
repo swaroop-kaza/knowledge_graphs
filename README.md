@@ -1,7 +1,5 @@
 # Data-to-Knowledge Graph Construction Framework
 
-Repo status date: 2026-07-21
-
 `kg_construction` is an evidence-grounded, multi-source knowledge graph construction framework with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks.
 
 ## Run it in under a minute
@@ -70,7 +68,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-PYTHONPATH=src python3 examples/quickstart_60_second.py
+python3 examples/quickstart_60_second.py
 ```
 
 The same flow as Python:
@@ -133,7 +131,7 @@ make verify
 Run a CLI construction:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.construct \
+kg-construction \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --output data/processed/data_to_kg_text_property_graph.json \
@@ -144,7 +142,7 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.construct \
 Run a CLI technique benchmark:
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
+kg-construction-benchmark \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --config configs/evaluation.example.yaml \
@@ -287,7 +285,7 @@ See `docs/support_levels.md` and `reports/current_registry_matrix.csv` for the c
 ## Construction CLI
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.construct \
+kg-construction \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --output data/processed/data_to_kg_text_property_graph.json \
@@ -299,7 +297,7 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.construct \
 ## Technique Evaluation CLI
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
+kg-construction-benchmark \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --config configs/evaluation.example.yaml \
@@ -328,7 +326,7 @@ publishing. Use `--include-sensitive-json-artifacts` only for controlled local o
 ## Dead-Letter Replay CLI
 
 ```bash
-PYTHONPATH=src python3 -m kg_construction.interfaces.cli.replay_dead_letters \
+kg-construction-replay-deadletters \
   --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl \
   --store kuzu_ingestion_adapter \
   --kuzu-database data/processed/kuzu_graph
