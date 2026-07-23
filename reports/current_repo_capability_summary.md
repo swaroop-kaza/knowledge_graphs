@@ -1,6 +1,6 @@
 # Current Repo Capability Summary
 
-Report date: 2026-07-14
+Report date: 2026-07-22
 
 This report is generated from the live `kg_construction.application.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.
 

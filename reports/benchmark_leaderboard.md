@@ -1,6 +1,6 @@
 # Small Benchmark Leaderboard
 
-Generated: 2026-07-21
+Generated: 2026-07-22
 
 This committed leaderboard is intentionally small and reproducible. It uses tiny fixtures under `tests/fixtures/golden_benchmarks/`, deterministic runtime settings, and the same scoring path used by `TechniqueEvaluationRunner`. Big multi-dataset experiment outputs remain generated artifacts outside the committed repo.
 

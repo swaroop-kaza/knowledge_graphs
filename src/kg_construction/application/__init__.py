@@ -40,6 +40,14 @@ from kg_construction.application.hybrid_gliner import (
     HybridGlinerPipelineConfig,
     extract_entities_with_ollama_labels_and_gliner,
 )
+from kg_construction.application.modeling_policy import (
+    CanonicalizationRule,
+    ColumnPolicy,
+    ModelingPolicy,
+    PromotionThresholds,
+    RelationshipDeclaration,
+    default_modeling_policy,
+)
 from kg_construction.application.planner import TechniquePlanner
 from kg_construction.application.production import ProductionServices, build_production_services
 from kg_construction.application.recommendation_engine import (
@@ -63,6 +71,14 @@ from kg_construction.application.scoring import (
     ScoringWeights,
     TechniqueScore,
 )
+from kg_construction.application.semantic_profiler import (
+    ColumnFeatures,
+    ColumnRoleAssignment,
+    ForeignKeyLink,
+    ModelingPlan,
+    SemanticColumnProfiler,
+)
+from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.technique_selector import ApplicabilityResult, TechniqueSelector
 from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
 
@@ -71,6 +87,10 @@ __all__ = [
     "BenchmarkHardGateSettings",
     "BenchmarkRunMetadata",
     "CandidateGraphResult",
+    "CanonicalizationRule",
+    "ColumnFeatures",
+    "ColumnPolicy",
+    "ColumnRoleAssignment",
     "ConstructionResult",
     "ConstructionWorkflow",
     "DataToKGConfig",
@@ -79,6 +99,14 @@ __all__ = [
     "ErrorQuarantineSettings",
     "EvaluationSettings",
     "ExtractionComparisonRow",
+    "ForeignKeyLink",
+    "ModelingPlan",
+    "ModelingPolicy",
+    "PromotionThresholds",
+    "RelationshipDeclaration",
+    "SemanticColumnProfiler",
+    "SemanticTableMapper",
+    "default_modeling_policy",
     "GraphMLWorkflow",
     "GraphMLWorkflowConfig",
     "GoldDatasetManifest",
