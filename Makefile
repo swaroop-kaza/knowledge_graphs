@@ -12,7 +12,7 @@ endif
 PYTHONPATH ?= src
 
 .DEFAULT_GOAL := help
-.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev modelling-correctness notebook-check package-check quality quickstart registry-reports schema-quality setup smoke test venv verify
+.PHONY: benchmark-leaderboard capability-manifest clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev modelling-correctness notebook-check package-check quality quickstart registry-reports schema-quality setup smoke test venv verify
 
 help:
 	@echo "kg-construction - common tasks"
@@ -103,6 +103,9 @@ schema-quality:
 
 modelling-correctness:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_modelling_correctness_report.py
+
+capability-manifest:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_capability_manifest.py
 
 package-check:
 	rm -rf build dist
