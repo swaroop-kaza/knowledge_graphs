@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from kg_construction.infrastructure.resolution.canonicalization import (
+    EntityLinker,
+    LinkResult,
+    UnstructuredCanonicalizer,
+)
 from kg_construction.infrastructure.resolution.common import reconcile_entity_references
 from kg_construction.infrastructure.resolution.entity_resolution import (
     AliasTableResolver,
@@ -43,6 +48,9 @@ __all__ = [
     "AliasTableResolver",
     "AliasTableResolverConfig",
     "BlockingResolver",
+    "EntityLinker",
+    "LinkResult",
+    "UnstructuredCanonicalizer",
     "CrossEncoderModelProtocol",
     "CrossEncoderResolver",
     "CrossEncoderResolverConfig",

@@ -1,0 +1,45 @@
+{
+  "cases": [
+    {
+      "case_id": "structured_categorical_and_fk_v1",
+      "checks": {
+        "absent:Status": true,
+        "categorical_duplication_zero": true,
+        "edges:has_department": true,
+        "edges:manager": true,
+        "no_literal:department": true,
+        "no_literal:manager_id": true,
+        "property_kept:status": true,
+        "record_node_count": true,
+        "shared_nodes:Department": true
+      },
+      "kind": "structured",
+      "metrics": {
+        "categorical_duplication_rate": 0.0,
+        "edges:has_department": 8.0,
+        "edges:manager": 7.0,
+        "nodes:Department": 3.0,
+        "orphan_rate": 0.0,
+        "record_nodes": 8.0
+      },
+      "passed": true
+    },
+    {
+      "case_id": "unstructured_salient_entities_v1",
+      "checks": {
+        "entity_coverage_meets_minimum": true
+      },
+      "kind": "unstructured",
+      "metrics": {
+        "entity_coverage": 0.8,
+        "gold_entity_count": 5.0,
+        "matched_entity_count": 4.0,
+        "minimum_entity_coverage": 0.8,
+        "nil_rate": 1.0
+      },
+      "passed": true
+    }
+  ],
+  "generated": "2026-07-23",
+  "overall_passed": true
+}

@@ -1,0 +1,19 @@
+{
+  "description": "Gold references for unstructured coverage: salient entities, claims, and intents.",
+  "text": "Alan Turing worked at Bletchley Park during the war. Turing designed the Bombe. Ada Lovelace wrote the first algorithm for the Analytical Engine.",
+  "gold_entities": [
+    {"name": "Alan Turing", "type": "Person"},
+    {"name": "Bletchley Park", "type": "Organization"},
+    {"name": "Ada Lovelace", "type": "Person"},
+    {"name": "Analytical Engine", "type": "Machine"},
+    {"name": "Bombe", "type": "Machine"}
+  ],
+  "gold_claims": [
+    {"subject": "Alan Turing", "predicate": "works_at", "object": "Bletchley Park"},
+    {"subject": "Ada Lovelace", "predicate": "wrote", "object": "first algorithm"}
+  ],
+  "gold_intents": [
+    "Alan Turing worked at Bletchley Park.",
+    "Ada Lovelace created the first algorithm."
+  ]
+}

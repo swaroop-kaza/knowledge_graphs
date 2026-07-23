@@ -60,6 +60,9 @@ jobs:
       - name: Test
         run: make verify
 
+      - name: Modelling correctness
+        run: make modelling-correctness
+
   package:
     name: package / build and check
     runs-on: ubuntu-latest

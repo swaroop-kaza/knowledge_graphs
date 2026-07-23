@@ -1,4 +1,4 @@
-"""Stage 3: ontology formation + SHACL conformance gate for structured graphs."""
+"""Ontology formation and the SHACL conformance gate for structured graphs."""
 
 from __future__ import annotations
 

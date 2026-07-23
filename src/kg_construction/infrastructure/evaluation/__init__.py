@@ -8,6 +8,11 @@ from kg_construction.infrastructure.evaluation.coverage_metrics import CoverageM
 from kg_construction.infrastructure.evaluation.entity_resolution_metrics import (
     EntityResolutionMetrics,
 )
+from kg_construction.infrastructure.evaluation.extraction_coverage import (
+    CoverageEvaluator,
+    CoverageReport,
+    IntentJudge,
+)
 from kg_construction.infrastructure.evaluation.gold_standards import (
     GoldBenchmarkEvaluator,
     GoldBenchmarkFixture,
@@ -32,6 +37,12 @@ from kg_construction.infrastructure.evaluation.operational_metrics import (
     RuntimeReport,
 )
 from kg_construction.infrastructure.evaluation.retrieval_metrics import RetrievalMetrics
+from kg_construction.infrastructure.evaluation.schema_quality import (
+    SchemaQualityEvaluator,
+    SchemaQualityGate,
+    SchemaQualityGateSettings,
+    SchemaQualityReport,
+)
 from kg_construction.infrastructure.evaluation.statistical_confidence import (
     bootstrap_mean_interval,
     wilson_score_interval,
@@ -43,8 +54,11 @@ __all__ = [
     "BenchmarkResult",
     "BenchmarkRunner",
     "ConstructionMetricsEvaluator",
+    "CoverageEvaluator",
     "CoverageMetrics",
+    "CoverageReport",
     "EntityResolutionMetrics",
+    "IntentJudge",
     "GoldBenchmarkEvaluator",
     "GoldBenchmarkFixture",
     "GoldBenchmarkScore",
@@ -61,6 +75,10 @@ __all__ = [
     "OperationalMetricsRecorder",
     "RetrievalMetrics",
     "RuntimeReport",
+    "SchemaQualityEvaluator",
+    "SchemaQualityGate",
+    "SchemaQualityGateSettings",
+    "SchemaQualityReport",
     "ValidationMetrics",
     "bootstrap_mean_interval",
     "precision_recall_f1",

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from kg_construction.infrastructure.ontology.ontology_alignment import (
+    AlignmentReport,
+    OntologyAligner,
+)
 from kg_construction.infrastructure.ontology.schema_proposal import (
     SchemaProposalResult,
     SchemaProposalWorkflow,
@@ -44,6 +48,8 @@ __all__ = [
     "PropertyGraphValidator",
     "ReferentialIntegrityValidator",
     "SchemaDriftValidator",
+    "AlignmentReport",
+    "OntologyAligner",
     "SchemaProposalResult",
     "SchemaProposalWorkflow",
     "SchemaRegistryValidator",

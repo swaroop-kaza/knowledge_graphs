@@ -1,0 +1,17 @@
+{
+  "case_id": "unstructured_salient_entities_v1",
+  "description": "An incident brief with structured salient entities (incident id, date, email, version) plus a non-structured salient event. The default regex extractor should capture the structured entities; the event is a deliberate miss so entity coverage is a real recall number below 1.0.",
+  "text": "Incident INC-4821 was reported on 2024-03-15 by sre@example.com. A rollback to v2.3.1 resolved the payments outage.",
+  "gold_entities": [
+    {"name": "INC-4821", "type": "Identifier"},
+    {"name": "2024-03-15", "type": "Date"},
+    {"name": "sre@example.com", "type": "EmailAddress"},
+    {"name": "v2.3.1", "type": "Version"},
+    {"name": "payments outage", "type": "Event"}
+  ],
+  "gold_intents": [
+    "An incident identified as INC-4821 occurred.",
+    "A rollback to v2.3.1 resolved the payments outage."
+  ],
+  "minimum_entity_coverage": 0.8
+}

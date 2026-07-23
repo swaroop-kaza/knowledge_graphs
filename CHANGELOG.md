@@ -15,4 +15,4 @@ The project follows a simple public-release flow until formal semantic versionin
 
 ### Migration warning
 
-- `kg-identity-v2` changes text snapshot hashes, default structured canonical IDs, entity/relation/fact assertion IDs, and semantic edge IDs. Existing Neo4j, Kuzu, or exported property graphs created by an earlier checkout must be rebuilt or migrated before incremental ingestion; appending v2 output to a v1 store can leave obsolete nodes and edges beside their replacements. See `docs/identity_v2_migration.md`.
+- `kg-identity-v2` changes text snapshot hashes, default structured canonical IDs, entity/relation/fact assertion IDs, and semantic edge IDs. Existing Neo4j, Kuzu, or exported property graphs created by an earlier checkout must be rebuilt or migrated before incremental ingestion; appending v2 output to a v1 store can leave obsolete nodes and edges beside their replacements.

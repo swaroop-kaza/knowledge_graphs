@@ -1,4 +1,4 @@
-"""Stage 0 modelling contract: roles, reference nodes, ontology, and policy."""
+"""The modelling contract: roles, reference nodes, ontology, and policy."""
 
 from __future__ import annotations
 

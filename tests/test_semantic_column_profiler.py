@@ -1,4 +1,4 @@
-"""Stage 1: semantic column-role profiling, measured against a gold fixture."""
+"""Semantic column-role profiling, measured against a gold fixture."""
 
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ class ModelingPolicyEmissionTests(unittest.TestCase):
         self.assertEqual(manager.reference_type, "Employee")
         # Property-role columns carry a datatype (salary values are whole numbers).
         self.assertEqual(policy.column_policy("salary").datatype, "integer")
-        # The emitted policy derives a coherent ontology (Stage 0 bridge).
+        # The emitted policy derives a coherent ontology.
         ontology = policy.to_ontology_schema()
         self.assertIn("Department", {cls.name for cls in ontology.classes})
 

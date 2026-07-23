@@ -12,7 +12,7 @@ endif
 PYTHONPATH ?= src
 
 .DEFAULT_GOAL := help
-.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev notebook-check package-check quality quickstart registry-reports setup smoke test venv verify
+.PHONY: benchmark-leaderboard clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev modelling-correctness notebook-check package-check quality quickstart registry-reports schema-quality setup smoke test venv verify
 
 help:
 	@echo "kg-construction - common tasks"
@@ -97,6 +97,12 @@ gold-benchmark-story:
 
 cross-source-identity-benchmark:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_cross_source_identity_benchmark.py
+
+schema-quality:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_schema_quality_report.py
+
+modelling-correctness:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_modelling_correctness_report.py
 
 package-check:
 	rm -rf build dist

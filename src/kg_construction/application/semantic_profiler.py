@@ -1,29 +1,21 @@
-"""Stage 1: semantic column-role profiling for structured sources.
+"""Classify each column of a table into a modelling role.
 
-Classifies every column of a table into a
-:class:`~kg_construction.domain.modeling.ColumnRole` and emits a proposed
-:class:`~kg_construction.application.modeling_policy.ModelingPolicy`. This is the
-first place the modelling contract (Stage 0) meets real data, and it directly
-serves the structured-data pillars: promoting categorical dimensions to shared
-nodes (no duplication) and turning references into relationships.
+Assigns every column a :class:`~kg_construction.domain.modeling.ColumnRole`
+(identifier, entity reference, categorical dimension, measure, temporal, free text,
+or ignore) and emits a proposed
+:class:`~kg_construction.application.modeling_policy.ModelingPolicy`. The role
+decides how the column is later mapped: dimensions become shared nodes (avoiding
+duplication) and references become relationships.
 
-Method: a transparent, dependency-free, deterministic rule set over per-column
-features -- data type, distinct/row cardinality ratio, null rate, uniqueness,
-average text length, and column-name heuristics -- plus foreign-key detection.
-This mirrors how non-ML profilers work: ydata-profiling treats low-distinct
-columns as categorical and caps high cardinality; Sherlock/AUTOTYPE note that
-rule/dictionary systems combine name signals with statistical value features.
-An ML semantic-type detector (Sherlock-style) is a future enhancement; the
-deterministic classifier is auditable and needs no models.
-
-References: ydata-profiling categorical detection (``low_categorical_threshold``,
-``cardinality_threshold``); Sherlock (Hulsebos et al., 2019); W3C Direct Mapping
-(primary key -> identity, foreign key -> reference); Kimball dimensional
-modelling (key / dimension / measure).
+Classification is a transparent, dependency-free rule set over per-column features
+-- data type, distinct/row cardinality ratio, null rate, uniqueness, average text
+length, and column-name heuristics -- plus foreign-key detection by value
+containment. Every decision carries a confidence and a rationale for review.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from statistics import mean
 from typing import Any, Literal
@@ -41,6 +33,8 @@ from kg_construction.infrastructure.mapping.direct_table_mapper import infer_col
 
 JsonDict = dict[str, Any]
 Materialization = Literal["identity", "edge", "node", "property", "excluded"]
+
+logger = logging.getLogger(__name__)
 
 # Numeric columns with at most this many distinct values are read as coded
 # categories (status codes, type ids) rather than measures. Aligned with
@@ -147,7 +141,7 @@ class ModelingPlan(BaseModel):
     def to_modeling_policy(
         self, *, thresholds: PromotionThresholds | None = None
     ) -> ModelingPolicy:
-        """Lower the plan into an executable ModelingPolicy (Stage 0 contract)."""
+        """Lower the plan into an executable ModelingPolicy."""
 
         columns: list[ColumnPolicy] = []
         for item in self.assignments:
@@ -269,6 +263,13 @@ class SemanticColumnProfiler:
             )
             for column in columns
         ]
+        logger.info(
+            "Classified %d columns of %s into modelling roles (identity=%s, foreign keys=%d)",
+            len(assignments),
+            record_type,
+            identity_columns,
+            len(foreign_keys),
+        )
         return ModelingPlan(
             table_name=table_name,
             record_type=record_type,

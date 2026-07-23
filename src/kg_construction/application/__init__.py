@@ -48,6 +48,11 @@ from kg_construction.application.modeling_policy import (
     RelationshipDeclaration,
     default_modeling_policy,
 )
+from kg_construction.application.modelling_correctness import (
+    ModellingCase,
+    evaluate_structured_case,
+    evaluate_unstructured_case,
+)
 from kg_construction.application.planner import TechniquePlanner
 from kg_construction.application.production import ProductionServices, build_production_services
 from kg_construction.application.recommendation_engine import (
@@ -102,11 +107,14 @@ __all__ = [
     "ForeignKeyLink",
     "ModelingPlan",
     "ModelingPolicy",
+    "ModellingCase",
     "PromotionThresholds",
     "RelationshipDeclaration",
     "SemanticColumnProfiler",
     "SemanticTableMapper",
     "default_modeling_policy",
+    "evaluate_structured_case",
+    "evaluate_unstructured_case",
     "GraphMLWorkflow",
     "GraphMLWorkflowConfig",
     "GoldDatasetManifest",

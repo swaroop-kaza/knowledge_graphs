@@ -1,22 +1,16 @@
 """Declarative modelling policy that drives structured graph construction.
 
-A ``ModelingPolicy`` is the per-source contract that Stage 1 (semantic profiling)
-proposes and Stage 2 (the semantic mapper) executes. It binds each column to a
+A ``ModelingPolicy`` is the per-source contract the profiler proposes and the
+mapper executes. It binds each column to a
 :class:`~kg_construction.domain.modeling.ColumnRole`, declares how categorical
 values are canonicalised and which controlled vocabularies apply, sets the
 thresholds that decide node-vs-property promotion (including a supernode guard),
 and declares the relationships that must be formed.
 
-The policy is *only* configuration in Stage 0 -- nothing consumes it yet. It is
-the rules everything else is measured against, and it lowers into an
-:class:`~kg_construction.domain.modeling.OntologySchema` (and from there into the
-existing ``GraphSchema``) via :meth:`ModelingPolicy.to_ontology_schema`.
-
-Grounding: ``ColumnPolicy`` mirrors an R2RML/CSVW term map (column, datatype,
-value/reference target); ``RelationshipDeclaration`` mirrors an R2RML
-referencing-object map with a join; ``PromotionThresholds`` encodes the Neo4j
-node-vs-property guidance (high-cardinality access points become nodes,
-low-cardinality dense values stay properties, and supernodes are guarded).
+It lowers into an :class:`~kg_construction.domain.modeling.OntologySchema` (and
+from there into the existing ``GraphSchema``) via
+:meth:`ModelingPolicy.to_ontology_schema`, so a single policy drives mapping,
+ontology, and validation.
 """
 
 from __future__ import annotations

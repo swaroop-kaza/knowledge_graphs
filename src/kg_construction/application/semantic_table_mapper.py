@@ -1,33 +1,22 @@
-"""Stage 2: policy-driven semantic table mapper (the core modelling fix).
+"""Turn structured rows into a well-formed, evidence-backed knowledge graph.
 
-Turns structured rows into an evidence-carrying ``ConstructionBatch`` that models
-the data *properly*, following a Stage 0/1 ``ModelingPolicy``:
+Following a ``ModelingPolicy``, each row becomes a typed node; a categorical
+dimension collapses into a single shared, deduplicated reference node linked by a
+typed edge (so a value is stored once, never repeated as a literal on every row);
+a foreign key becomes a typed edge to the referenced entity rather than a copied
+value; and measure, temporal, and free-text columns stay as node properties. A
+supernode guard keeps very low-cardinality categoricals as properties instead of
+nodes.
 
-- **row -> typed node** (``record_type``), carrying measure/temporal/free-text and
-  low-cardinality categorical values as literal properties;
-- **categorical dimension -> one shared, deduplicated reference node** plus a typed
-  edge (e.g. ``Employee -[:has_department]-> Department``). Every occurrence of the
-  same canonical value carries the same ``canonical_entity_id``
-  (``stable_id("ref", type, canonical)``), so the existing
-  ``PropertyGraphBuilder`` collapses them into one node -- the graph equivalent of
-  a ``MERGE`` on a business key;
-- **foreign key -> typed edge** to the referenced entity (a copied literal is never
-  emitted); and
-- a **supernode guard** keeps low-cardinality dense categoricals (distinct count
-  within ``keep_as_property_max_distinct``) as literal properties instead of nodes.
-
-This is the standard relational-to-graph transform ("a row is a node, a foreign key
-is a relationship") with dimension-node deduplication, expressed against the
-repository's evidence-first candidate model. It plugs into the existing workflow as
-a mapper (``map_source``) and needs no new graph builder.
-
-References: W3C R2RML (subject/referencing object maps); Neo4j RDBMS-to-graph ETL
-(rows->nodes, FKs->relationships, deduplicated dimension nodes); Kimball
-dimensional modelling (fact rows vs. shared dimensions).
+Every occurrence of the same canonical value shares one ``canonical_entity_id``,
+so the property-graph builder merges them into a single node automatically -- the
+graph equivalent of merging on a business key. The mapper plugs into the workflow
+via ``map_source`` and needs no dedicated graph builder.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
@@ -44,6 +33,8 @@ from kg_construction.domain.models import (
 )
 
 JsonDict = dict[str, Any]
+
+logger = logging.getLogger(__name__)
 
 _NAME_COLUMN_RE = re.compile(r"(name|title|label)", re.IGNORECASE)
 _PROPERTY_ROLES = {ColumnRole.MEASURE, ColumnRole.TEMPORAL, ColumnRole.FREE_TEXT, ColumnRole.IDENTIFIER}
@@ -136,6 +127,16 @@ class SemanticTableMapper:
                     )
                 )
 
+        logger.info(
+            "Mapped %d rows of %s into %d entities and %d relations "
+            "(dimension nodes: %s, kept as properties: %s)",
+            len(records),
+            self.policy.record_type,
+            len(entities),
+            len(relations),
+            sorted(node_categoricals),
+            sorted(property_categoricals),
+        )
         return ConstructionBatch(
             source_records=[source],
             entities=entities,

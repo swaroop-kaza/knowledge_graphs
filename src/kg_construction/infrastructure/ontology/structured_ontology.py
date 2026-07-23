@@ -1,31 +1,22 @@
-"""Stage 3: ontology formation from a modelling policy + a SHACL conformance gate.
+"""Form an ontology from a modelling policy and gate a release with SHACL.
 
-Given a Stage 0/1 ``ModelingPolicy`` (which already lowers to an ``OntologySchema``
-with classes, predicates, domain/range, cardinality, and datatypes), this module:
+Given a ``ModelingPolicy`` (which lowers to an ``OntologySchema`` with classes,
+predicates, domain/range, cardinality, and datatypes), this module:
 
-1. proposes the ontology through a ``proposed -> quarantine -> promoted`` lifecycle
-   built on the existing :class:`GraphSchema` lifecycle;
-2. generates SHACL shapes that encode class targets, datatype constraints, object
+1. proposes the ontology through a proposed -> quarantine -> promoted lifecycle
+   built on the existing ``GraphSchema`` lifecycle;
+2. generates SHACL shapes encoding class targets, datatype constraints, object
    ranges (``sh:class`` + ``sh:nodeKind sh:IRI``), and cardinality
-   (``sh:minCount`` / ``sh:maxCount``) -- the ontology-based generation approach
-   of tools like Astrea rather than instance sampling; and
-3. runs a **release gate**: an RDF graph passes only when it has *zero* SHACL
-   ``Violation`` results against the proposed shapes.
+   (``sh:minCount`` / ``sh:maxCount``); and
+3. runs a release gate: a graph passes only with zero SHACL ``Violation`` results.
 
-Because Stage 2 (the full semantic mapper) is not built yet, this module also
-provides a small, RDF-only *reference materializer* -- the minimum needed to turn a
-policy + records into an ontology-conformant structured graph so the gate is real
-and testable. Stage 2 will generalise materialisation (evidence, survivorship,
-property graph, all source types); the gate here is exactly what its output must
-pass.
-
-References: W3C SHACL (constraint components + validation reports); Astrea,
-"Automatic Generation of SHACL Shapes from Ontologies" (Cimmino et al., 2020);
-the repository's existing ``ShaclValidator`` (pySHACL) and schema lifecycle.
+It also provides a small, RDF-only materialiser that turns a policy and records
+into an ontology-conformant graph, so the gate can be exercised directly.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import defaultdict
 from typing import Literal
@@ -40,6 +31,8 @@ from kg_construction.domain.schema import GraphSchema, SchemaLifecycleStatus
 from kg_construction.infrastructure.ontology.shacl import ShaclValidator
 
 JsonDict = dict[str, object]
+
+logger = logging.getLogger(__name__)
 
 _RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 _SLUG_RE = re.compile(r"[^0-9A-Za-z]+")
@@ -168,6 +161,13 @@ def propose_structured_ontology(
         update={"namespace": namespace, "version": version}
     )
     graph_schema = ontology.to_graph_schema().with_status("proposed")
+    quarantined = ontology.unresolved_predicate_references()
+    logger.info(
+        "Proposed ontology with %d classes and %d predicates (%d quarantined terms)",
+        len(ontology.classes),
+        len(ontology.predicates),
+        len(quarantined),
+    )
     return StructuredOntologyProposal(
         ontology=ontology,
         graph_schema=graph_schema,
@@ -199,10 +199,9 @@ def materialize_structured_rdf(
 ) -> RDFGraph:
     """Materialise an ontology-conformant RDF graph from a policy and records.
 
-    A reference materializer for the SHACL gate. Categorical/reference values
-    collapse into shared, typed reference-node IRIs (one per canonical value);
-    measures/temporals/free-text become typed literals. Stage 2 will replace this
-    with the full evidence-carrying semantic mapper.
+    Used to exercise the SHACL gate. Categorical and reference values collapse into
+    shared, typed reference-node IRIs (one per canonical value); measures,
+    temporals, and free text become typed literals.
     """
 
     ontology = policy.to_ontology_schema()
@@ -297,6 +296,12 @@ class StructuredReleaseGate:
             rdf_graph, shacl_turtle=shapes, inference=inference
         )
         violation, warning, info = _count_severities(result.results_graph_turtle)
+        logger.info(
+            "SHACL release gate: conforms=%s violations=%d warnings=%d",
+            result.conforms,
+            violation,
+            warning,
+        )
         return ShaclReleaseReport(
             conforms=result.conforms,
             violation_count=violation,
