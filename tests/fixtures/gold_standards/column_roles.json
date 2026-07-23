@@ -1,0 +1,49 @@
+{
+  "description": "Gold column-role labels for Stage 1 semantic profiling. Each table lists records plus the human-assigned ColumnRole per column.",
+  "tables": [
+    {
+      "table_name": "employees",
+      "record_type": "Employee",
+      "gold_roles": {
+        "emp_id": "identifier",
+        "full_name": "free_text",
+        "department": "categorical_dimension",
+        "status": "categorical_dimension",
+        "manager_id": "entity_reference",
+        "salary": "measure",
+        "hired_on": "temporal",
+        "notes": "free_text",
+        "_source_batch": "ignore"
+      },
+      "records": [
+        {"emp_id": 1, "full_name": "Ada Lovelace", "department": "Engineering", "status": "active", "manager_id": null, "salary": 142000, "hired_on": "2019-04-12", "notes": "Founding engineer, leads the platform team and mentors new hires.", "_source_batch": "batch_2024_01"},
+        {"emp_id": 2, "full_name": "Alan Turing", "department": "Engineering", "status": "active", "manager_id": 1, "salary": 138000, "hired_on": "2020-01-06", "notes": "Works on the identity resolution subsystem and benchmarks.", "_source_batch": "batch_2024_01"},
+        {"emp_id": 3, "full_name": "Grace Hopper", "department": "Sales", "status": "active", "manager_id": 1, "salary": 125000, "hired_on": "2020-07-21", "notes": "Owns the enterprise accounts across the western region.", "_source_batch": "batch_2024_01"},
+        {"emp_id": 4, "full_name": "Katherine Johnson", "department": "Engineering", "status": "inactive", "manager_id": 2, "salary": 131000, "hired_on": "2021-02-15", "notes": "On sabbatical; previously worked on graph ML features.", "_source_batch": "batch_2024_02"},
+        {"emp_id": 5, "full_name": "Dennis Ritchie", "department": "Support", "status": "active", "manager_id": 3, "salary": 118000, "hired_on": "2021-09-30", "notes": "Handles escalations and writes internal runbooks daily.", "_source_batch": "batch_2024_02"},
+        {"emp_id": 6, "full_name": "Barbara Liskov", "department": "Sales", "status": "active", "manager_id": 3, "salary": 127000, "hired_on": "2022-03-11", "notes": "Closed the largest deal of the quarter last cycle.", "_source_batch": "batch_2024_02"},
+        {"emp_id": 7, "full_name": "Margaret Hamilton", "department": "Engineering", "status": "active", "manager_id": 2, "salary": 134000, "hired_on": "2022-11-01", "notes": "Leads reliability and the dead-letter replay tooling.", "_source_batch": "batch_2024_03"},
+        {"emp_id": 8, "full_name": "Tim Berners-Lee", "department": "Support", "status": "inactive", "manager_id": 3, "salary": 112000, "hired_on": "2023-05-19", "notes": "Contracted part-time for documentation and standards.", "_source_batch": "batch_2024_03"}
+      ]
+    },
+    {
+      "table_name": "orders",
+      "record_type": "Order",
+      "gold_roles": {
+        "order_id": "identifier",
+        "customer_id": "entity_reference",
+        "amount": "measure",
+        "order_date": "temporal",
+        "priority": "categorical_dimension",
+        "comment": "free_text"
+      },
+      "records": [
+        {"order_id": "O-1001", "customer_id": "C-17", "amount": 249.99, "order_date": "2024-01-05", "priority": "high", "comment": "Expedited shipping requested by the customer."},
+        {"order_id": "O-1002", "customer_id": "C-42", "amount": 19.50, "order_date": "2024-01-06", "priority": "low", "comment": "Standard order, no special handling needed."},
+        {"order_id": "O-1003", "customer_id": "C-17", "amount": 1299.00, "order_date": "2024-01-08", "priority": "high", "comment": "Bulk purchase for the annual company conference."},
+        {"order_id": "O-1004", "customer_id": "C-09", "amount": 75.25, "order_date": "2024-01-11", "priority": "medium", "comment": "Gift wrap requested for two of the items."},
+        {"order_id": "O-1005", "customer_id": "C-42", "amount": 42.00, "order_date": "2024-01-14", "priority": "low", "comment": "Repeat customer; applied the loyalty discount."}
+      ]
+    }
+  ]
+}

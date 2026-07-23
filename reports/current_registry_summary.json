@@ -30,7 +30,7 @@
     "resilience": 4,
     "rules": 25
   },
-  "report_date": "2026-07-14",
+  "report_date": "2026-07-22",
   "report_files": [
     "reports/current_repo_capability_summary.md",
     "reports/current_registry_summary.json",

@@ -10,6 +10,15 @@ from kg_construction.domain.graph_objects import (
     RDFQuad,
     RDFTriple,
 )
+from kg_construction.domain.modeling import (
+    Cardinality,
+    ColumnRole,
+    ControlledVocabulary,
+    OntologyClass,
+    OntologyPredicate,
+    OntologySchema,
+    ReferenceNode,
+)
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
@@ -35,13 +44,19 @@ from kg_construction.domain.schema import (
 )
 
 __all__ = [
+    "Cardinality",
+    "ColumnRole",
     "ConstructionBatch",
+    "ControlledVocabulary",
     "EntityCandidate",
     "EvidenceRef",
     "ExtractorRun",
     "GraphFact",
     "GraphSchema",
     "NodeTypeDefinition",
+    "OntologyClass",
+    "OntologyPredicate",
+    "OntologySchema",
     "PropertyDefinition",
     "PropertyEdge",
     "PropertyGraph",
@@ -49,6 +64,7 @@ __all__ = [
     "RDFGraph",
     "RDFQuad",
     "RDFTriple",
+    "ReferenceNode",
     "RelationCandidate",
     "RelationshipTypeDefinition",
     "SchemaDiffReport",

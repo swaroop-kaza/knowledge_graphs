@@ -8,6 +8,14 @@ from kg_construction.infrastructure.ontology.schema_proposal import (
 )
 from kg_construction.infrastructure.ontology.schema_registry import InMemorySchemaRegistry
 from kg_construction.infrastructure.ontology.shacl import ShaclValidationResult, ShaclValidator
+from kg_construction.infrastructure.ontology.structured_ontology import (
+    ShaclReleaseReport,
+    StructuredOntologyProposal,
+    StructuredReleaseGate,
+    generate_shacl_shapes,
+    materialize_structured_rdf,
+    propose_structured_ontology,
+)
 from kg_construction.infrastructure.ontology.stubs import (
     JSONSchemaValidator,
     OwlOntologyLoader,
@@ -39,8 +47,14 @@ __all__ = [
     "SchemaProposalResult",
     "SchemaProposalWorkflow",
     "SchemaRegistryValidator",
+    "ShaclReleaseReport",
     "ShaclValidationResult",
     "ShaclValidator",
+    "StructuredOntologyProposal",
+    "StructuredReleaseGate",
     "ValidationFinding",
     "ValidationReport",
+    "generate_shacl_shapes",
+    "materialize_structured_rdf",
+    "propose_structured_ontology",
 ]
