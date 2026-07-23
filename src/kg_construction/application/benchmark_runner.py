@@ -54,6 +54,7 @@ from kg_construction.infrastructure.evaluation.operational_metrics import (
     RuntimeReport,
 )
 from kg_construction.infrastructure.evaluation.retrieval_metrics import RetrievalMetrics
+from kg_construction.infrastructure.evaluation.schema_quality import SchemaQualityEvaluator
 from kg_construction.infrastructure.evaluation.validation_metrics import ValidationMetrics
 from kg_construction.infrastructure.extractors.gazetteer import GazetteerEntityExtractor
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
@@ -169,6 +170,13 @@ class BenchmarkHardGateSettings(BaseModel):
         ge=0.0,
         le=1.0,
     )
+    # Schema/instance quality gates. Opt-in: default off so existing smoke and gold
+    # benchmarks are unaffected. Enable for policy-driven semantic (structured) graphs.
+    enforce_schema_quality_gates: bool = False
+    maximum_orphan_rate: float = Field(default=0.05, ge=0.0, le=1.0)
+    maximum_duplicate_node_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    maximum_categorical_duplication_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    maximum_schema_consistency_violation_count: float = Field(default=0.0, ge=0.0)
 
 
 class TechniqueEvaluationConfig(BaseModel):
@@ -586,6 +594,11 @@ class TechniqueEvaluationRunner:
             profile,
             gold_dataset,
         )
+        if self.config.hard_gates.enforce_schema_quality_gates:
+            metrics = {
+                **metrics,
+                **SchemaQualityEvaluator().structural_metrics(result.property_graph),
+            }
         hard_gates = self._evaluate_hard_gates(metrics, gold_evaluation)
         return CandidateGraphResult(
             technique_name=str(spec["technique_name"]),
@@ -990,6 +1003,34 @@ class TechniqueEvaluationRunner:
                     ),
                 ]
             )
+        if settings.enforce_schema_quality_gates:
+            gates.append(
+                self._maximum_gate(
+                    "schema_connectivity", "orphan_rate",
+                    metrics.get("orphan_rate", 0.0), settings.maximum_orphan_rate,
+                )
+            )
+            gates.append(
+                self._maximum_gate(
+                    "schema_node_conciseness", "duplicate_node_rate",
+                    metrics.get("duplicate_node_rate", 0.0), settings.maximum_duplicate_node_rate,
+                )
+            )
+            gates.append(
+                self._maximum_gate(
+                    "schema_consistency", "consistency_violation_count",
+                    metrics.get("consistency_violation_count", 0.0),
+                    settings.maximum_schema_consistency_violation_count,
+                )
+            )
+            if "categorical_duplication_rate" in metrics:
+                gates.append(
+                    self._maximum_gate(
+                        "categorical_conciseness", "categorical_duplication_rate",
+                        metrics["categorical_duplication_rate"],
+                        settings.maximum_categorical_duplication_rate,
+                    )
+                )
         gates.append(
             HardGateResult(
                 gate="gold_correctness",

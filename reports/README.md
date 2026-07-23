@@ -30,6 +30,6 @@ make cross-source-identity-benchmark
 make registry-reports
 ```
 
-The small leaderboard is a deterministic smoke/regression comparison. The cross-source identity report is a versioned, gold-labelled correctness benchmark with explicit false-merge and publication gates. See `docs/benchmarking_and_publication.md` for the distinction and the publication contract.
+The small leaderboard is a deterministic smoke/regression comparison. The cross-source identity report is a versioned, gold-labelled correctness benchmark with explicit false-merge and publication gates.
 
 Generated experiment outputs belong under `reports/experiment_datasets/` and are intentionally not kept after cleanup because they can become large and stale. Regenerate them with `scripts/run_experiment_datasets.py` when you need a fresh dataset run.

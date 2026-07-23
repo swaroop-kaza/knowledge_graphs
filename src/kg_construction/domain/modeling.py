@@ -1,29 +1,19 @@
-"""Knowledge-graph modelling contract: roles, reference nodes, and ontology schema.
+"""Core modelling vocabulary: roles, reference nodes, and ontology schema.
 
-This module is the *domain vocabulary* for Stage 0 of the modelling redesign. It
-defines the concepts that every later stage is measured against:
+Defines the concepts the modelling pipeline is built on:
 
 - ``ColumnRole`` -- the semantic role a source column plays in the graph.
 - ``Cardinality`` -- explicit min/max multiplicity for a predicate.
-- ``ControlledVocabulary`` -- a closed/open set of permissible categorical values
-  (the LinkML ``enum`` / SHACL ``sh:in`` analogue).
+- ``ControlledVocabulary`` -- a closed or open set of permissible categorical values.
 - ``ReferenceNode`` -- a shared, deterministically-identified node that a
-  categorical or reference value collapses into, so a value is stored *once*
-  rather than repeated as a literal on every row (the conciseness rule).
+  categorical or reference value collapses into, so a value is stored once rather
+  than repeated as a literal on every row.
 - ``OntologyClass`` / ``OntologyPredicate`` / ``OntologySchema`` -- the declared
   classes and predicates with domain, range, and cardinality.
 
-The design deliberately reuses, rather than duplicates, the existing
-``kg_construction.domain.schema.GraphSchema``: ``OntologySchema`` is the
-*modelling-intent* view (roles + cardinality + controlled vocabularies) and
-lowers into a ``GraphSchema`` via :meth:`OntologySchema.to_graph_schema` so the
-existing SHACL/OWL emitters and validators keep working unchanged.
-
-Grounding: the abstractions mirror W3C R2RML/RML (subject/predicate-object maps,
-referencing object maps), W3C CSVW (column datatype/aboutUrl/valueUrl, foreign
-keys), LinkML (class/slot/enum, ``identifier``, ``multivalued``), and W3C SHACL
-(``sh:minCount``/``sh:maxCount``/``sh:class``/``sh:in``). See
-``docs/kg_modelling_rules.md``.
+``OntologySchema`` lowers into the existing ``GraphSchema`` via
+:meth:`OntologySchema.to_graph_schema`, so the shared SHACL/OWL emitters and
+validators are reused. See ``docs/knowledge_graph_modelling.md``.
 """
 
 from __future__ import annotations
@@ -316,7 +306,7 @@ class OntologySchema(BaseModel):
     def unresolved_predicate_references(self) -> list[str]:
         """Return object predicates whose domain/range class is not declared.
 
-        A soft consistency check (does not raise); useful for review and Stage 3.
+        A soft consistency check (does not raise); useful for review before promotion.
         """
 
         known = self.class_names()

@@ -1,0 +1,60 @@
+{
+  "attribute_richness": 1.0,
+  "average_degree": 1.6666666666666667,
+  "cardinality_violation_rate": 0.0,
+  "categorical_duplication_rate": 0.0,
+  "class_population": {
+    "Employee": 3,
+    "Team": 3
+  },
+  "class_richness": 1.0,
+  "connected_component_count": 1,
+  "consistency_violation_count": 0,
+  "distinct_class_count": 2,
+  "domain_range_violation_rate": 0.0,
+  "duplicate_node_rate": 0.0,
+  "edge_count": 5,
+  "gates": [
+    {
+      "actual": 0.0,
+      "gate": "node_conciseness",
+      "metric": "duplicate_node_rate",
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.0
+    },
+    {
+      "actual": 0.0,
+      "gate": "connectivity",
+      "metric": "orphan_rate",
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.05
+    },
+    {
+      "actual": 0.0,
+      "gate": "consistency",
+      "metric": "consistency_violation_count",
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.0
+    },
+    {
+      "actual": 0.0,
+      "gate": "categorical_conciseness",
+      "metric": "categorical_duplication_rate",
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.0
+    }
+  ],
+  "literal_that_should_be_node_rate": 0.0,
+  "node_count": 6,
+  "orphan_rate": 0.0,
+  "passed": true,
+  "property_completeness": 0.6666666666666666,
+  "relationship_completeness": 1.0,
+  "relationship_richness": 0.45454545454545453,
+  "schema_completeness": 0.8333333333333334,
+  "shacl_violation_count": null
+}

@@ -12,10 +12,8 @@ installed** yet. By the end you will be able to:
 You do **not** need any of the optional services to try the framework. The core
 install runs fully offline. Add optional pieces only when you need them.
 
-> Already have Python and just want the commands? Jump to
-> [`setup_running_configuration_guide.md`](setup_running_configuration_guide.md).
-> Not sure whether a technique needs an optional dependency? See
-> [`support_levels.md`](support_levels.md).
+> Want to understand how the framework forms graphs? See
+> [`knowledge_graph_modelling.md`](knowledge_graph_modelling.md).
 
 ---
 
@@ -161,9 +159,7 @@ is active — `source .venv/bin/activate`):
 | Command | What it does |
 | --- | --- |
 | `kg-construction` | Build a knowledge graph from a source file. |
-| `kg-construction-benchmark` | Compare construction techniques on your data. |
 | `kg-construction doctor` | Diagnose your install and optional services. |
-| `kg-construction-replay-deadletters` | Replay failed graph-ingestion records. |
 
 Handy `make` shortcuts wrap the common tasks so they work whether or not the venv is
 activated (`make` uses `.venv` automatically): `make quickstart`, `make doctor`,
@@ -328,20 +324,18 @@ curl http://localhost:11434/api/tags
 
 ### 6. Use it
 
-Run a benchmark that includes an Ollama-backed technique using the example config:
+Build a graph with an Ollama-backed extraction technique using the example config:
 
 ```bash
-kg-construction-benchmark \
+kg-construction \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
   --config configs/ollama_gliner_label_proposal.example.yaml \
-  --techniques applicable \
-  --output data/processed/ollama_report.md
+  --output data/processed/ollama_text_property_graph.json
 ```
 
-If Ollama is not running, LLM-backed techniques are reported as failed/skipped while
-the deterministic techniques still run — the framework never silently fabricates
-output.
+If Ollama is not running, LLM-backed extraction is reported as skipped while the
+deterministic techniques still run — the framework never silently fabricates output.
 
 ---
 
@@ -411,19 +405,9 @@ package with an on-disk file, so there is no server to run.
 python -m pip install -e ".[graph]"
 ```
 
-Point commands at a database directory with `--kuzu-database`, e.g. dead-letter
-replay:
-
-```bash
-kg-construction-replay-deadletters \
-  --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl \
-  --store kuzu_ingestion_adapter \
-  --kuzu-database data/processed/kuzu_graph \
-  --dry-run
-```
-
-`kg-construction doctor` runs a Kuzu smoke query automatically when the package is
-installed.
+Kuzu is used as an embedded graph store: point ingestion at a database directory with
+`--kuzu-database data/processed/kuzu_graph`. `kg-construction doctor` runs a Kuzu smoke
+query automatically when the package is installed.
 
 ---
 
@@ -509,31 +493,16 @@ kg-construction \
   --neo4j-output data/processed/data_to_kg_text_neo4j.cypher
 ```
 
-### Compare techniques (CLI)
-
-```bash
-kg-construction-benchmark \
-  --input examples/data_to_kg/sample.txt \
-  --source-type text \
-  --config configs/evaluation.example.yaml \
-  --techniques applicable \
-  --output data/processed/data_to_kg_technique_evaluation_report.md \
-  --json-output data/processed/data_to_kg_technique_evaluation_report.json
-```
-
 ### Python API
 
 ```python
-from kg_construction import construct_kg, evaluate_techniques, load_sources, profile_dataset
+from kg_construction import construct_kg, load_sources, profile_dataset
 
 sources = load_sources("examples/data_to_kg/sample.csv")
 profile = profile_dataset(sources)
 
 result = construct_kg("examples/data_to_kg/sample.csv")
-print(len(result.property_graph.nodes))
-
-report = evaluate_techniques("examples/data_to_kg/sample.txt", source_type="text", techniques="applicable")
-print(report.best_technique)
+print(len(result.property_graph.nodes), len(result.property_graph.edges))
 ```
 
 ### Notebooks
@@ -543,14 +512,13 @@ python -m pip install -e ".[dev,rdf,graph,notebook]"
 jupyter lab
 ```
 
-Start with `notebooks/01_data_loading_and_profiling.ipynb` and work upward. The full
-suggested order is in [`setup_running_configuration_guide.md`](setup_running_configuration_guide.md#8-run-notebooks).
+Start with `notebooks/01_data_loading_and_profiling.ipynb` and work upward.
 
 ### Verify the whole install
 
 ```bash
 kg-construction doctor
-make verify          # runs unit tests + construction/benchmark smoke flows (macOS/Linux)
+make verify          # runs unit tests + a construction smoke flow (macOS/Linux)
 ```
 
 ---
@@ -564,15 +532,12 @@ make verify          # runs unit tests + construction/benchmark smoke flows (mac
 | `doctor` shows `ollama … not reachable` | Ollama is not running. Start it (`ollama serve`) and `ollama pull llama3.1`. Optional unless you use LLM techniques. |
 | `doctor` shows Neo4j **WARN** | `NEO4J_URI`/`NEO4J_USER` are set but `NEO4J_PASSWORD` is missing or the DB is down. Export the password and confirm the database is running. |
 | `pip install ".[gliner]"` / `".[ml]"` is slow or fails | These pull PyTorch. Ensure a recent `pip` (`python -m pip install --upgrade pip`) and enough disk space; on some platforms install `torch` first per the [PyTorch instructions](https://pytorch.org/get-started/locally/). |
-| A benchmark lists an LLM/GLiNER technique as failed | Its optional dependency or service is not configured. Configure it (this guide) or ignore it — deterministic techniques still run. |
+| An LLM/GLiNER extraction step is reported as skipped | Its optional dependency or service is not configured. Configure it (this guide) or ignore it — the deterministic techniques still run. |
 | `make: command not found` (Windows) | `make` is optional. Use WSL, or run the `python`/`kg-construction` commands directly. |
 
 ---
 
 ## Where to go next
 
-- [`setup_running_configuration_guide.md`](setup_running_configuration_guide.md) — configuration files, verification, and production-ingestion commands.
-- [`support_levels.md`](support_levels.md) — which techniques are Stable vs. Optional vs. Experimental vs. Planned.
-- [`production_ingestion.md`](production_ingestion.md) — Neo4j/Kuzu ingestion, retries, and dead-letter replay in depth.
-- [`repo_implementation_inventory.md`](repo_implementation_inventory.md) — the full catalogue of what is implemented.
+- [`knowledge_graph_modelling.md`](knowledge_graph_modelling.md) — how the framework forms graphs: the three modelling pillars and their code entry points.
 - [`../README.md`](../README.md) — project overview and quickstart.

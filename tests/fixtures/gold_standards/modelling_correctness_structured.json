@@ -1,0 +1,25 @@
+{
+  "case_id": "structured_categorical_and_fk_v1",
+  "description": "A table with a shared categorical dimension (department), a low-cardinality categorical kept as a property by the supernode guard (status), and a self-referential foreign key (manager_id). The gold graph asserts deduplicated dimension nodes, typed FK edges, and zero categorical duplication.",
+  "table_name": "employees",
+  "record_type": "Employee",
+  "records": [
+    {"emp_id": 1, "full_name": "Ada Lovelace", "department": "Engineering", "status": "active", "manager_id": null, "salary": 142000, "hired_on": "2019-04-12"},
+    {"emp_id": 2, "full_name": "Alan Turing", "department": "Engineering", "status": "active", "manager_id": 1, "salary": 138000, "hired_on": "2020-01-06"},
+    {"emp_id": 3, "full_name": "Grace Hopper", "department": "Sales", "status": "active", "manager_id": 1, "salary": 125000, "hired_on": "2020-07-21"},
+    {"emp_id": 4, "full_name": "Katherine Johnson", "department": "Engineering", "status": "inactive", "manager_id": 2, "salary": 131000, "hired_on": "2021-02-15"},
+    {"emp_id": 5, "full_name": "Dennis Ritchie", "department": "Support", "status": "active", "manager_id": 3, "salary": 118000, "hired_on": "2021-09-30"},
+    {"emp_id": 6, "full_name": "Barbara Liskov", "department": "Sales", "status": "active", "manager_id": 3, "salary": 127000, "hired_on": "2022-03-11"},
+    {"emp_id": 7, "full_name": "Margaret Hamilton", "department": "Engineering", "status": "active", "manager_id": 2, "salary": 134000, "hired_on": "2022-11-01"},
+    {"emp_id": 8, "full_name": "Tim Berners-Lee", "department": "Support", "status": "inactive", "manager_id": 3, "salary": 112000, "hired_on": "2023-05-19"}
+  ],
+  "gold_graph": {
+    "record_nodes": 8,
+    "shared_reference_nodes": {"Department": 3},
+    "edge_counts": {"has_department": 8, "manager": 7},
+    "property_categoricals": ["status"],
+    "absent_reference_types": ["Status"],
+    "record_literal_forbidden": ["department", "manager_id"],
+    "categorical_duplication_rate": 0.0
+  }
+}

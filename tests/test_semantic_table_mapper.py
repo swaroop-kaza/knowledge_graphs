@@ -1,4 +1,4 @@
-"""Stage 2: the policy-driven semantic table mapper (Pillars 1.1 and 1.2)."""
+"""The policy-driven semantic table mapper: dedup, typed edges, round-trip."""
 
 from __future__ import annotations
 

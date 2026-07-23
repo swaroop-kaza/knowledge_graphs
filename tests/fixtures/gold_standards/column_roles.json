@@ -1,5 +1,5 @@
 {
-  "description": "Gold column-role labels for Stage 1 semantic profiling. Each table lists records plus the human-assigned ColumnRole per column.",
+  "description": "Gold column-role labels for semantic profiling. Each table lists records plus the human-assigned ColumnRole per column.",
   "tables": [
     {
       "table_name": "employees",
