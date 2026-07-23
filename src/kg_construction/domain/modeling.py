@@ -39,8 +39,9 @@ _JSON_TYPES: frozenset[str] = frozenset(
 class ColumnRole(StrEnum):
     """Semantic role a source column plays when it becomes part of the graph.
 
-    The role drives the node/property/relationship decision documented in
-    ``docs/kg_modelling_rules.md``.
+    The role is the semantic decision; physical materialization (node vs literal)
+    is resolved separately in the ``ResolvedModelingPlan``. See
+    ``docs/knowledge_graph_modelling.md``.
     """
 
     IDENTIFIER = "identifier"
