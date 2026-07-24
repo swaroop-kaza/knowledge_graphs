@@ -108,9 +108,10 @@ class RelationshipFormationTests(unittest.TestCase):
         # The reference value is retained on the Order so no data is lost.
         order_nodes = _nodes_with_label(graph, "Order")
         self.assertTrue(all("customer_id" in node.properties for node in order_nodes))
-        # A categorical dimension still becomes a shared concept node.
-        self.assertEqual(len(_nodes_with_label(graph, "Priority")), 3)
-        self.assertTrue(_edges_of_type(graph, "has_priority"))
+        # Priority is a scalar enum, not an independently reusable entity.
+        self.assertEqual(_nodes_with_label(graph, "Priority"), [])
+        self.assertEqual(_edges_of_type(graph, "has_priority"), [])
+        self.assertTrue(all("priority" in node.properties for node in order_nodes))
 
 
 class PropertiesAndRoundTripTests(unittest.TestCase):

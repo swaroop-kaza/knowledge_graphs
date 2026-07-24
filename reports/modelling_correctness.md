@@ -1,6 +1,7 @@
 # Modelling Correctness Report
 
 Generated: 2026-07-24
+Thresholds: `kg-quality-v2`
 
 Runs the gold modelling cases through the real pipeline and verifies the output conforms to the expected graph (RML/R2RML conformance style). CI fails on regression.
 
@@ -27,7 +28,9 @@ Metrics: `categorical_duplication_rate=0`, `edges:has_department=8`, `edges:mana
 | Check | Result |
 | --- | :---: |
 | entity_coverage_meets_minimum | PASS |
+| claims_have_complete_provenance | PASS |
+| intents_evaluated | PASS |
 
-Metrics: `entity_coverage=0.8`, `gold_entity_count=5`, `matched_entity_count=4`, `minimum_entity_coverage=0.8`, `nil_rate=1`
+Metrics: `claim_coverage=1`, `entity_coverage=0.8`, `gold_entity_count=5`, `intent_coverage=0`, `matched_entity_count=4`, `minimum_entity_coverage=0.8`, `nil_rate=1`, `promoted_claim_count=0`
 
 Regenerate with `make modelling-correctness`.

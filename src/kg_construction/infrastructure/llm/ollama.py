@@ -29,7 +29,7 @@ class OllamaConfig(BaseModel):
 
     provider: str = "ollama"
     base_url: str = "http://localhost:11434"
-    model: str = "llama3.1"
+    model: str = "qwen3:1.7b-q4_K_M"
     temperature: float = 0.0
     structured_output: bool = True
     evidence_required: bool = True

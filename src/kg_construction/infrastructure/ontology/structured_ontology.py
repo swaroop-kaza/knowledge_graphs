@@ -25,7 +25,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.application.modeling_policy import ModelingPolicy
 from kg_construction.domain.graph_objects import RDFGraph, RDFTriple
-from kg_construction.domain.modeling import ColumnRole, OntologyPredicate, OntologySchema
+from kg_construction.domain.modeling import (
+    ColumnRole,
+    ControlledVocabulary,
+    OntologyPredicate,
+    OntologySchema,
+)
 from kg_construction.domain.models import content_hash
 from kg_construction.domain.schema import GraphSchema, SchemaLifecycleStatus
 from kg_construction.infrastructure.ontology.shacl import ShaclValidator
@@ -80,12 +85,40 @@ def generate_shacl_shapes(ontology: OntologySchema, *, namespace: str = "urn:kg:
     predicates_by_domain: dict[str, list[OntologyPredicate]] = defaultdict(list)
     for predicate in ontology.predicates:
         predicates_by_domain[predicate.domain].append(predicate)
+    vocabularies = {
+        vocabulary.name: vocabulary
+        for vocabulary in ontology.controlled_vocabularies
+    }
+    concept_vocabulary_by_class: dict[str, ControlledVocabulary] = {}
+    for predicate in ontology.predicates:
+        if predicate.kind != "object" or not predicate.controlled_vocabulary:
+            continue
+        vocabulary = vocabularies.get(predicate.controlled_vocabulary)
+        if vocabulary is not None:
+            concept_vocabulary_by_class[predicate.range] = vocabulary
+    # Backward-compatible inference for non-strict policies.  Product
+    # declarations carry the explicit predicate binding above.
+    for ontology_class in ontology.classes:
+        vocabulary = vocabularies.get(ontology_class.name)
+        if vocabulary is not None:
+            concept_vocabulary_by_class.setdefault(
+                ontology_class.name,
+                vocabulary,
+            )
 
     for ontology_class in sorted(ontology.classes, key=lambda item: item.name):
         blocks = [
-            _property_shape(predicate)
+            _property_shape(
+                predicate,
+                vocabulary=vocabularies.get(
+                    predicate.controlled_vocabulary or ""
+                ),
+            )
             for predicate in predicates_by_domain.get(ontology_class.name, [])
         ]
+        concept_vocabulary = concept_vocabulary_by_class.get(ontology_class.name)
+        if concept_vocabulary is not None and concept_vocabulary.closed:
+            blocks.append(_controlled_code_shape(concept_vocabulary))
         lines.append(f"kg:{_term(ontology_class.name)}Shape a sh:NodeShape ;")
         target_line = f"  sh:targetClass kg:{_term(ontology_class.name)}"
         lines.append(target_line + (" ;" if blocks else " ."))
@@ -96,18 +129,59 @@ def generate_shacl_shapes(ontology: OntologySchema, *, namespace: str = "urn:kg:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _property_shape(predicate: OntologyPredicate) -> str:
+def _property_shape(
+    predicate: OntologyPredicate,
+    *,
+    vocabulary: ControlledVocabulary | None = None,
+) -> str:
     parts = [f"sh:path kg:{_term(predicate.name)}"]
     if predicate.kind == "datatype":
         parts.append(f"sh:datatype {_XSD_PREFIXED.get(predicate.range, 'xsd:string')}")
     else:
         parts.append(f"sh:class kg:{_term(predicate.range)}")
         parts.append("sh:nodeKind sh:IRI")
+    if (
+        vocabulary is not None
+        and vocabulary.closed
+        and predicate.kind == "datatype"
+    ):
+        parts.append(_shacl_in(vocabulary))
     if predicate.cardinality.min_count >= 1:
         parts.append(f"sh:minCount {predicate.cardinality.min_count}")
     if predicate.cardinality.max_count is not None:
         parts.append(f"sh:maxCount {predicate.cardinality.max_count}")
     return "[ " + " ; ".join(parts) + " ]"
+
+
+def _controlled_code_shape(vocabulary: ControlledVocabulary) -> str:
+    return (
+        "[ sh:path kg:code ; sh:datatype xsd:string ; sh:minCount 1 ; "
+        f"{_shacl_in(vocabulary)} ]"
+    )
+
+
+def _shacl_in(vocabulary: ControlledVocabulary) -> str:
+    codes = sorted(
+        {
+            code
+            for value in vocabulary.permissible_values
+            if (code := vocabulary.canonical_value(value)) is not None
+        }
+    )
+    values = " ".join(
+        f"{_turtle_string(code)}^^xsd:string" for code in codes
+    )
+    return f"sh:in ( {values} )"
+
+
+def _turtle_string(value: str) -> str:
+    escaped = (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+    return f'"{escaped}"'
 
 
 class StructuredOntologyProposal(BaseModel):
@@ -241,12 +315,37 @@ def materialize_structured_rdf(
                 and column_policy.role == ColumnRole.ENTITY_REFERENCE
                 and predicate.range == policy.record_type
             )
+            vocabulary: ControlledVocabulary | None = None
+            canonical = ""
             if is_self_reference:
                 target_iri = _instance_iri(instance_namespace, policy.record_type, str(value))
             else:
-                canonical = policy.canonicalization_for(column).apply(str(value))
+                vocabulary_name = (
+                    (column_policy.controlled_vocabulary if column_policy else None)
+                    or predicate.controlled_vocabulary
+                    or predicate.range
+                )
+                vocabulary = policy.vocabulary(vocabulary_name)
+                resolved_code = (
+                    vocabulary.canonical_value(str(value))
+                    if vocabulary is not None
+                    else policy.canonicalization_for(column).apply(str(value))
+                )
+                if resolved_code is None:
+                    raise ValueError(
+                        f"value {value!r} in row {index}, column {column!r} is "
+                        f"not permitted by closed vocabulary {vocabulary_name!r}"
+                    )
+                canonical = resolved_code
                 target_iri = _instance_iri(instance_namespace, predicate.range, canonical)
             type_node(target_iri, predicate.range)
+            if not is_self_reference and vocabulary is not None:
+                add(
+                    target_iri,
+                    _predicate_iri(namespace, "code"),
+                    canonical,
+                    literal="string",
+                )
             add(record_iri, predicate_iri, target_iri)
 
     return RDFGraph(triples=[triples[key] for key in sorted(triples)])

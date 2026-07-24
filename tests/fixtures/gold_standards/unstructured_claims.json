@@ -1,0 +1,97 @@
+{
+  "description": "Held-out evidence-first fixture covering exact mention offsets, coreference, relations, events, intents, facts, and semantic qualifiers.",
+  "text": "Alan Turing worked at Bletchley Park during the war. Turing designed the Bombe. Ada Lovelace never worked with Charles Babbage. According to Menabrea, Ada Lovelace created the Analytical Engine in 1843. Ada Lovelace intended to publish Notes. Bombe was a Machine.",
+  "gold_entities": [
+    {"name": "Alan Turing", "type": "Person"},
+    {"name": "Bletchley Park", "type": "Place"},
+    {"name": "Bombe", "type": "Artifact"},
+    {"name": "Ada Lovelace", "type": "Person"},
+    {"name": "Charles Babbage", "type": "Person"},
+    {"name": "Menabrea", "type": "Person"},
+    {"name": "Analytical Engine", "type": "Artifact"},
+    {"name": "Notes", "type": "Entity"},
+    {"name": "Machine", "type": "Artifact"}
+  ],
+  "gold_mentions": [
+    {"start": 0, "end": 11, "text": "Alan Turing", "type": "Person"},
+    {"start": 22, "end": 36, "text": "Bletchley Park", "type": "Place"},
+    {"start": 53, "end": 59, "text": "Turing", "type": "Person"},
+    {"start": 73, "end": 78, "text": "Bombe", "type": "Artifact"},
+    {"start": 80, "end": 92, "text": "Ada Lovelace", "type": "Person"},
+    {"start": 111, "end": 126, "text": "Charles Babbage", "type": "Person"},
+    {"start": 141, "end": 149, "text": "Menabrea", "type": "Person"},
+    {"start": 151, "end": 163, "text": "Ada Lovelace", "type": "Person"},
+    {"start": 176, "end": 193, "text": "Analytical Engine", "type": "Artifact"},
+    {"start": 203, "end": 215, "text": "Ada Lovelace", "type": "Person"},
+    {"start": 236, "end": 241, "text": "Notes", "type": "Entity"},
+    {"start": 243, "end": 248, "text": "Bombe", "type": "Artifact"},
+    {"start": 255, "end": 262, "text": "Machine", "type": "Artifact"}
+  ],
+  "gold_claims": [
+    {
+      "kind": "relation",
+      "subject": "Alan Turing",
+      "predicate": "works_at",
+      "object": "Bletchley Park",
+      "negated": false,
+      "modality": "asserted",
+      "temporal": "during the war",
+      "attribution": null
+    },
+    {
+      "kind": "relation",
+      "subject": "Alan Turing",
+      "predicate": "designed",
+      "object": "Bombe",
+      "negated": false,
+      "modality": "asserted",
+      "temporal": null,
+      "attribution": null
+    },
+    {
+      "kind": "relation",
+      "subject": "Ada Lovelace",
+      "predicate": "works_with",
+      "object": "Charles Babbage",
+      "negated": true,
+      "modality": "asserted",
+      "temporal": null,
+      "attribution": null
+    },
+    {
+      "kind": "relation",
+      "subject": "Ada Lovelace",
+      "predicate": "created",
+      "object": "Analytical Engine",
+      "negated": false,
+      "modality": "asserted",
+      "temporal": "in 1843",
+      "attribution": "Menabrea"
+    }
+  ],
+  "gold_events": [
+    {
+      "event": "created",
+      "roles": {
+        "agent": "Ada Lovelace",
+        "theme": "Analytical Engine"
+      }
+    }
+  ],
+  "gold_intents": [
+    {
+      "kind": "intent",
+      "subject": "Ada Lovelace",
+      "predicate": "publish",
+      "object": "Notes"
+    }
+  ],
+  "gold_facts": [
+    {
+      "kind": "fact",
+      "subject": "Bombe",
+      "predicate": "is_a",
+      "object": "Machine"
+    }
+  ]
+}

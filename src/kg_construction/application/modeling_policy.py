@@ -87,9 +87,7 @@ class CanonicalizationRule(BaseModel):
     strip_characters: str | None = None
     aliases: dict[str, str] = Field(default_factory=dict)
 
-    def apply(self, value: str) -> str:
-        """Return the canonical form of ``value`` under this rule."""
-
+    def _surface(self, value: str) -> str:
         result = value
         if self.unicode_nfkc:
             result = unicodedata.normalize("NFKC", result)
@@ -103,7 +101,31 @@ class CanonicalizationRule(BaseModel):
             result = result.casefold()
         elif self.lowercase:
             result = result.lower()
-        return self.aliases.get(result, result)
+        return result
+
+    @model_validator(mode="after")
+    def _aliases_are_unambiguous(self) -> CanonicalizationRule:
+        normalized: dict[str, str] = {}
+        for alias, target in self.aliases.items():
+            alias_code = self._surface(alias)
+            target_code = self._surface(target)
+            previous = normalized.get(alias_code)
+            if previous is not None and previous != target_code:
+                raise ValueError(
+                    f"canonicalization aliases for {alias_code!r} disagree"
+                )
+            normalized[alias_code] = target_code
+        return self
+
+    def apply(self, value: str) -> str:
+        """Return the canonical form of ``value`` under this rule."""
+
+        result = self._surface(value)
+        aliases = {
+            self._surface(alias): self._surface(target)
+            for alias, target in self.aliases.items()
+        }
+        return aliases.get(result, result)
 
 
 class ColumnPolicy(BaseModel):
@@ -243,6 +265,7 @@ class ModelingPolicy(BaseModel):
                         kind="object",
                         cardinality=policy.cardinality or Cardinality.zero_or_one(),
                         source_columns=[policy.column],
+                        controlled_vocabulary=policy.controlled_vocabulary,
                         description=policy.description,
                     )
                 )
@@ -258,6 +281,7 @@ class ModelingPolicy(BaseModel):
                         kind="datatype",
                         cardinality=policy.cardinality or Cardinality.zero_or_one(),
                         source_columns=[policy.column],
+                        controlled_vocabulary=policy.controlled_vocabulary,
                         description=policy.description,
                     )
                 )

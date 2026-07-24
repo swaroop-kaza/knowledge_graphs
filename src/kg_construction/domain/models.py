@@ -105,6 +105,97 @@ class SourceRecord(StrictModel):
     metadata: JsonDict = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utc_now)
 
+    @property
+    def document_version(self) -> str:
+        """Return the immutable document version represented by this snapshot."""
+
+        return self.source_id
+
+    def derive_snapshot(
+        self,
+        *,
+        content: str | None,
+        records: list[JsonDict],
+        metadata: JsonDict,
+        transformation: str,
+        transformation_version: str,
+    ) -> SourceRecord:
+        """Create a content-addressed child snapshot with explicit lineage.
+
+        A transformed payload must never retain its parent's identity.  The
+        child identifier binds the transformed bytes/rows, transformation
+        contract, and parent version so two redacted inputs that happen to
+        collapse to identical replacement text still retain distinct lineage.
+        """
+
+        transformation_name = transformation.strip()
+        version = transformation_version.strip()
+        if not transformation_name or not version:
+            raise ValueError(
+                "derived snapshots require transformation and transformation_version"
+            )
+
+        parent_payload = _source_snapshot_payload(self.content, self.records)
+        child_payload = _source_snapshot_payload(content, records)
+        if canonical_json(parent_payload) == canonical_json(child_payload):
+            raise ValueError("derived snapshots require a content or records mutation")
+
+        payload_digest = content_hash(
+            canonical_json(child_payload),
+            length=64,
+            normalize=False,
+        )
+        child_source_id = stable_id(
+            "source",
+            self.source_type,
+            self.source_name,
+            payload_digest,
+            "derived_from",
+            self.source_id,
+            transformation_name,
+            version,
+        )
+        prior_lineage = self.metadata.get("_source_lineage")
+        if isinstance(prior_lineage, dict):
+            root_source_id = str(
+                prior_lineage.get("root_source_id") or self.source_id
+            )
+            root_document_version = str(
+                prior_lineage.get("root_document_version") or self.document_version
+            )
+        else:
+            root_source_id = self.source_id
+            root_document_version = self.document_version
+
+        child_metadata = {
+            **metadata,
+            "_source_lineage": {
+                "schema_version": "source-lineage-v1",
+                "relation": "DERIVED_FROM",
+                "transformation": transformation_name,
+                "transformation_version": version,
+                "parent_source_id": self.source_id,
+                "parent_document_version": self.document_version,
+                "root_source_id": root_source_id,
+                "root_document_version": root_document_version,
+                "derived_source_id": child_source_id,
+                "derived_document_version": child_source_id,
+                "payload_sha256": payload_digest,
+            },
+        }
+        return SourceRecord(
+            source_id=child_source_id,
+            source_type=self.source_type,
+            source_name=self.source_name,
+            content=content,
+            records=records,
+            metadata=child_metadata,
+            # Preserve the source snapshot capture time. The deterministic
+            # transformation contract, rather than wall-clock time, versions
+            # the derived snapshot.
+            created_at=self.created_at,
+        )
+
     @classmethod
     def from_text(
         cls,
@@ -181,6 +272,18 @@ class SourceRecord(StrictModel):
             records=records,
             metadata=source_metadata,
         )
+
+
+def _source_snapshot_payload(
+    content: str | None,
+    records: list[JsonDict],
+) -> JsonDict:
+    """Canonical payload used to version a transformed source snapshot."""
+
+    return {
+        "content": content,
+        "records": sorted(canonical_json(row) for row in records),
+    }
 
 
 class EvidenceRef(StrictModel):
@@ -443,10 +546,17 @@ class ConstructionBatch(StrictModel):
         for source_record in [*self.source_records, *other.source_records]:
             source_records_by_id.setdefault(source_record.source_id, source_record)
 
+        metadata = {**self.metadata, **other.metadata}
+        for key in self.metadata.keys() & other.metadata.keys():
+            left = self.metadata[key]
+            right = other.metadata[key]
+            if isinstance(left, dict) and isinstance(right, dict):
+                metadata[key] = {**left, **right}
+
         return ConstructionBatch(
             source_records=list(source_records_by_id.values()),
             entities=[*self.entities, *other.entities],
             relations=[*self.relations, *other.relations],
             facts=[*self.facts, *other.facts],
-            metadata={**self.metadata, **other.metadata},
+            metadata=metadata,
         )

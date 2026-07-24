@@ -2,40 +2,42 @@ from __future__ import annotations
 
 import unittest
 
-from kg_construction import SUPPORT_LEVEL_DEFINITIONS, default_registry
+from kg_construction import SUPPORT_LEVEL_DEFINITIONS, default_registry, research_registry
 
 
 class RegistrySupportLevelTests(unittest.TestCase):
-    def test_public_support_levels_are_available_for_all_techniques(self) -> None:
+    def test_release_registry_contains_only_mandatory_techniques(self) -> None:
         registry = default_registry()
         levels = {technique.public_support_level for technique in registry.techniques}
 
-        self.assertEqual(
-            set(SUPPORT_LEVEL_DEFINITIONS),
-            {"stable", "optional_adapter", "experimental", "planned"},
-        )
-        self.assertTrue({"stable", "optional_adapter", "experimental", "planned"} <= levels)
+        self.assertEqual(set(SUPPORT_LEVEL_DEFINITIONS), {"mandatory", "research", "roadmap"})
+        self.assertEqual(levels, {"mandatory"})
+        self.assertTrue(all(technique.status == "implemented" for technique in registry.techniques))
+        self.assertTrue(all(technique.adapter is not None for technique in registry.techniques))
         self.assertTrue(all(technique.public_support_label for technique in registry.techniques))
 
-    def test_internal_status_maps_to_public_support_level(self) -> None:
-        registry = default_registry()
+    def test_research_inventory_keeps_non_release_work_visible(self) -> None:
+        registry = research_registry()
 
         self.assertEqual(registry.get("csv_loader").status, "implemented")
-        self.assertEqual(registry.get("csv_loader").public_support_level, "stable")
-        self.assertEqual(registry.get("rebel_relation_extractor").status, "adapter")
-        self.assertEqual(registry.get("rebel_relation_extractor").public_support_level, "optional_adapter")
+        self.assertEqual(registry.get("csv_loader").public_support_level, "mandatory")
+        self.assertEqual(registry.get("transformer_relation_extractor").status, "adapter")
+        self.assertEqual(
+            registry.get("transformer_relation_extractor").public_support_level,
+            "research",
+        )
         self.assertEqual(registry.get("chunk_embedding_enricher").status, "stub")
-        self.assertEqual(registry.get("chunk_embedding_enricher").public_support_level, "planned")
+        self.assertEqual(registry.get("chunk_embedding_enricher").public_support_level, "roadmap")
 
-    def test_research_and_service_backed_features_are_not_labeled_core_stable(self) -> None:
-        registry = default_registry()
+    def test_downstream_graph_enrichment_is_outside_the_release_registry(self) -> None:
+        release = default_registry()
+        research = research_registry()
 
-        self.assertEqual(registry.get("graph_retrieval_benchmark").status, "implemented")
-        self.assertEqual(registry.get("graph_retrieval_benchmark").public_support_level, "experimental")
-        self.assertEqual(registry.get("ollama_graph_extractor").status, "implemented")
-        self.assertEqual(registry.get("ollama_graph_extractor").public_support_level, "optional_adapter")
-        self.assertEqual(registry.get("neo4j_ingestion_adapter").status, "implemented")
-        self.assertEqual(registry.get("neo4j_ingestion_adapter").public_support_level, "optional_adapter")
+        self.assertNotIn("graph_retrieval_benchmark", release.names())
+        self.assertIn("graph_retrieval_benchmark", research.names())
+        # Service/model-backed construction is mandatory in the release contract.
+        self.assertEqual(release.get("ollama_graph_extractor").public_support_level, "mandatory")
+        self.assertEqual(release.get("neo4j_ingestion_adapter").public_support_level, "mandatory")
 
 
 if __name__ == "__main__":

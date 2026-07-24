@@ -115,10 +115,20 @@ class EntityLinkingTests(unittest.TestCase):
 
     def test_openrefine_reconciler_links_and_merges_same_external_match(self) -> None:
         def transport(url: str, **kwargs: Any) -> dict[str, object]:
-            self.assertEqual(url, "http://localhost:3333/reconcile")
+            self.assertEqual(
+                url,
+                "https://wikidata-reconciliation.wmcloud.org/en/api",
+            )
+            self.assertEqual(kwargs["method"], "POST")
+            self.assertEqual(
+                kwargs["headers"]["Content-Type"],
+                "application/x-www-form-urlencoded",
+            )
             body = kwargs["body"].decode("utf-8")
             queries = json.loads(urllib.parse.parse_qs(body)["queries"][0])
             self.assertEqual(len(queries), 2)
+            self.assertEqual(queries["q0"]["query"], "IBM")
+            self.assertEqual(queries["q0"]["limit"], 3)
             return {
                 "q0": {
                     "result": [
@@ -143,10 +153,12 @@ class EntityLinkingTests(unittest.TestCase):
             }
 
         batch = batch_with_entities("IBM", "International Business Machines", entity_type="Organization")
-        resolved = OpenRefineReconciler(
-            OpenRefineReconcilerConfig(endpoint_url="http://localhost:3333/reconcile"),
-            transport=transport,
-        ).resolve(batch)
+        config = OpenRefineReconcilerConfig()
+        self.assertEqual(
+            config.endpoint_url,
+            "https://wikidata-reconciliation.wmcloud.org/en/api",
+        )
+        resolved = OpenRefineReconciler(config, transport=transport).resolve(batch)
 
         canonical_ids = {entity.properties["canonical_entity_id"] for entity in resolved.entities}
         self.assertEqual(len(canonical_ids), 1)

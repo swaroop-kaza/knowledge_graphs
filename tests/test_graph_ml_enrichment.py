@@ -7,7 +7,7 @@ from kg_construction.application.graph_ml import (
     graph_ml_workflow_config_from_dict,
     run_graph_ml_capabilities,
 )
-from kg_construction.application.registry import default_registry
+from kg_construction.application.registry import research_registry
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
 from kg_construction.infrastructure.enrichment import (
     CommunityDetectionEnricher,
@@ -122,7 +122,7 @@ class GraphMLEnrichmentTests(unittest.TestCase):
             self.assertEqual(set(embeddings), {node.node_id for node in sample_property_graph().nodes})
 
     def test_registry_marks_graph_ml_capabilities_as_implemented(self) -> None:
-        registry = default_registry()
+        registry = research_registry()
         self.assertEqual(registry.get("pagerank_enricher").status, "implemented")
         self.assertEqual(registry.get("community_detection_enricher").status, "implemented")
         self.assertEqual(registry.get("connected_components_enricher").status, "implemented")

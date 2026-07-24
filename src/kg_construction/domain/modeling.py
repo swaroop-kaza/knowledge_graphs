@@ -163,17 +163,61 @@ class ControlledVocabulary(BaseModel):
             raise ValueError("controlled vocabulary name must not be empty")
         return value
 
+    @model_validator(mode="after")
+    def _canonical_codes_are_unambiguous(self) -> ControlledVocabulary:
+        """Reject declarations that collapse to ambiguous canonical codes."""
+
+        normalized_values = [normalize_text(item) for item in self.permissible_values]
+        duplicates = sorted(
+            {
+                value
+                for value in normalized_values
+                if normalized_values.count(value) > 1
+            }
+        )
+        if duplicates:
+            raise ValueError(
+                "permissible values collapse to duplicate canonical code(s): "
+                f"{duplicates}"
+            )
+
+        normalized_aliases: dict[str, str] = {}
+        for alias, target in self.aliases.items():
+            alias_code = normalize_text(alias)
+            target_code = normalize_text(target)
+            previous = normalized_aliases.get(alias_code)
+            if previous is not None and previous != target_code:
+                raise ValueError(
+                    f"aliases for canonical surface {alias_code!r} disagree: "
+                    f"{previous!r} versus {target_code!r}"
+                )
+            normalized_aliases[alias_code] = target_code
+            if self.closed and target_code not in normalized_values:
+                raise ValueError(
+                    f"alias {alias!r} targets {target!r}, which is not a "
+                    f"permissible value in closed vocabulary {self.name!r}"
+                )
+        return self
+
     def canonical_value(self, value: str) -> str | None:
         """Return the permitted canonical value, or ``None`` when not permitted.
 
-        An open vocabulary (``closed=False``) always returns the alias-resolved
-        value. A closed vocabulary returns ``None`` for values outside the set.
+        Canonical codes always use the same Unicode NFKC, case-folding, and
+        whitespace-normalisation algorithm.  An open vocabulary
+        (``closed=False``) admits a new canonical code; a closed vocabulary
+        returns ``None`` for values outside the governed set.
         """
 
-        resolved = self.aliases.get(value, value)
+        normalized = normalize_text(value)
+        aliases = {
+            normalize_text(alias): normalize_text(target)
+            for alias, target in self.aliases.items()
+        }
+        permissible = {normalize_text(item) for item in self.permissible_values}
+        resolved = aliases.get(normalized, normalized)
         if not self.closed:
             return resolved
-        return resolved if resolved in self.permissible_values else None
+        return resolved if resolved in permissible else None
 
     def is_permitted(self, value: str) -> bool:
         """True when ``value`` (after alias resolution) is admissible."""
@@ -262,6 +306,7 @@ class OntologyPredicate(BaseModel):
     cardinality: Cardinality = Field(default_factory=Cardinality)
     source_columns: list[str] = Field(default_factory=list)
     target_columns: list[str] = Field(default_factory=list)
+    controlled_vocabulary: str | None = None
     description: str | None = None
 
     @field_validator("kind")

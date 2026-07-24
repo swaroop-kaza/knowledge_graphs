@@ -1,0 +1,666 @@
+# Research and roadmap inventory; excluded from release certification.
+version: 1
+purpose: research_and_roadmap_only
+generated_by: scripts/generate_capability_manifest.py
+count: 60
+techniques:
+- name: api_response_mapper
+  category: mapper
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.mapping.semi_structured.APIResponseMapper
+  certified: false
+- name: blocking_resolver
+  category: resolution
+  method_type: rules
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.stubs.BlockingResolver
+  certified: false
+- name: chunk_embedding_enricher
+  category: enrichment
+  method_type: embedding
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.ChunkEmbeddingEnricher
+  certified: false
+- name: community_detection_enricher
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.CommunityDetectionEnricher
+  certified: false
+- name: community_summary_enricher
+  category: enrichment
+  method_type: llm
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.CommunitySummaryEnricher
+  certified: false
+- name: connected_components_enricher
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.ConnectedComponentsEnricher
+  certified: false
+- name: coreference_adapter
+  category: extractor
+  method_type: nlp
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.CoreferenceAdapter
+  certified: false
+- name: data_warehouse_export_loader
+  category: loader
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.loaders.stubs.DataWarehouseExportLoader
+  certified: false
+- name: dedupe_active_learning_resolver
+  category: resolution
+  method_type: ml
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.entity_resolution.DedupeActiveLearningResolver
+  certified: false
+- name: entity_embedding_enricher
+  category: enrichment
+  method_type: embedding
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.EntityEmbeddingEnricher
+  certified: false
+- name: entity_summary_enricher
+  category: enrichment
+  method_type: llm
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.EntitySummaryEnricher
+  certified: false
+- name: external_kg_link_enricher
+  category: enrichment
+  method_type: rules
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.ExternalKGLinkEnricher
+  certified: false
+- name: graph_analytics_enricher
+  category: enrichment
+  method_type: deterministic
+  status: implemented
+  support_level: mandatory
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.GraphAnalyticsEnricher
+  certified: false
+- name: graph_neighborhood_resolver
+  category: resolution
+  method_type: ml
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.stubs.GraphNeighborhoodResolver
+  certified: false
+- name: graph_retrieval_benchmark
+  category: enrichment
+  method_type: evaluation
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.GraphRetrievalBenchmark
+  certified: false
+- name: graph_train_validation_splitter
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.GraphTrainValidationSplitter
+  certified: false
+- name: graphsage_link_prediction_trainer
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.GraphSageLinkPredictionTrainer
+  certified: false
+- name: graphsage_pyg_adapter
+  category: enrichment
+  method_type: ml
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.PyTorchGeometricGraphSAGEAdapter
+  certified: false
+- name: hallucination_filter
+  category: validation
+  method_type: rules
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.validation.EvidenceRequiredValidator
+  certified: false
+- name: human_review_resolver
+  category: resolution
+  method_type: human
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.stubs.HumanReviewResolver
+  certified: false
+- name: hybrid_deterministic_then_llm_enrichment
+  category: hybrid
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_human_reviewed_schema
+  category: hybrid
+  method_type: human
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_ollama_schema_then_gliner
+  category: hybrid
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_openie_then_ollama_canonicalization
+  category: hybrid
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_rules_gazetteer_regex
+  category: hybrid
+  method_type: rules
+  status: implemented
+  support_level: mandatory
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_rules_ml_ollama
+  category: hybrid
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_structured_then_text
+  category: hybrid
+  method_type: deterministic
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: composition
+  certified: false
+- name: hybrid_topology_embedding_link_prediction
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.LinkPredictionEnricher
+  certified: false
+- name: incremental_watermark_sync
+  category: mapper
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: null
+  certified: false
+- name: jaccard_link_prediction
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.LinkPredictionEnricher
+  certified: false
+- name: joint_entity_relation_extractor
+  category: extractor
+  method_type: ml
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.JointEntityRelationExtractor
+  certified: false
+- name: json_schema_validator
+  category: validation
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.stubs.JSONSchemaValidator
+  certified: false
+- name: knowledge_graph_embedding_adapter
+  category: enrichment
+  method_type: embedding
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.KnowledgeGraphEmbeddingAdapter
+  certified: false
+- name: large_graph_analytics_backend
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.LargeGraphAnalyticsBackend
+  certified: false
+- name: link_prediction_enricher
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.LinkPredictionEnricher
+  certified: false
+- name: node2vec_embedding_adapter
+  category: enrichment
+  method_type: embedding
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml_advanced.Node2VecEmbeddingAdapter
+  certified: false
+- name: node_embedding_enricher
+  category: enrichment
+  method_type: embedding
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.NodeEmbeddingEnricher
+  certified: false
+- name: ollama_entity_label_proposal
+  category: schema
+  method_type: llm
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.schema_proposal.SchemaProposalWorkflow
+  certified: false
+- name: ollama_ontology_proposal
+  category: schema
+  method_type: llm
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.schema_proposal.SchemaProposalWorkflow
+  certified: false
+- name: ollama_relationship_type_proposal
+  category: schema
+  method_type: llm
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.schema_proposal.SchemaProposalWorkflow
+  certified: false
+- name: ollama_schema_guided_extraction
+  category: extractor
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.ollama_graph.OllamaGraphExtractor
+  certified: false
+- name: ollama_schema_later_extraction
+  category: extractor
+  method_type: llm
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.ollama_graph.OllamaGraphExtractor
+  certified: false
+- name: owl_ontology_loader
+  category: schema
+  method_type: ontology
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.stubs.OwlOntologyLoader
+  certified: false
+- name: pagerank_enricher
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.PageRankEnricher
+  certified: false
+- name: pairwise_relation_classifier_adapter
+  category: extractor
+  method_type: ml
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.PairwiseRelationClassifierAdapter
+  certified: false
+- name: pos_tagging_adapter
+  category: extractor
+  method_type: nlp
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.PosTaggingAdapter
+  certified: false
+- name: probabilistic_linkage_resolver
+  category: resolution
+  method_type: ml
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.entity_resolution.SplinkProbabilisticResolver
+  certified: false
+- name: property_graph_validator
+  category: validation
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.stubs.PropertyGraphValidator
+  certified: false
+- name: relationship_inference_from_keys
+  category: mapper
+  method_type: deterministic
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.mapping.direct_table_mapper.DirectTableMapper
+  certified: false
+- name: resource_allocation_link_prediction
+  category: enrichment
+  method_type: ml
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.LinkPredictionEnricher
+  certified: false
+- name: schema_drift_validator
+  category: validation
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.ontology.stubs.SchemaDriftValidator
+  certified: false
+- name: sentence_splitter_adapter
+  category: extractor
+  method_type: nlp
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.SentenceSplitterAdapter
+  certified: false
+- name: spacy_entity_ruler_extractor
+  category: extractor
+  method_type: rules
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.SpacyEntityRulerExtractor
+  certified: false
+- name: spectral_node_embedding_enricher
+  category: enrichment
+  method_type: embedding
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.NodeEmbeddingEnricher
+  certified: false
+- name: splink_probabilistic_resolver
+  category: resolution
+  method_type: ml
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.resolution.entity_resolution.SplinkProbabilisticResolver
+  certified: false
+- name: structural_hash_node_embedding_enricher
+  category: enrichment
+  method_type: embedding
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.graph_ml.NodeEmbeddingEnricher
+  certified: false
+- name: supervised_relation_extractor
+  category: extractor
+  method_type: ml
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.stubs.SupervisedRelationExtractor
+  certified: false
+- name: temporal_event_enricher
+  category: enrichment
+  method_type: rules
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.enrichment.stubs.TemporalEventEnricher
+  certified: false
+- name: transformer_relation_extractor
+  category: extractor
+  method_type: ml
+  status: adapter
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.extractors.relations.TransformerRelationExtractor
+  certified: false
+- name: xmlpath_mapper
+  category: mapper
+  method_type: deterministic
+  status: stub
+  support_level: roadmap
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.infrastructure.mapping.semi_structured.XMLPathMapper
+  certified: false

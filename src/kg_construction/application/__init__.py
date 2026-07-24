@@ -40,6 +40,10 @@ from kg_construction.application.hybrid_gliner import (
     HybridGlinerPipelineConfig,
     extract_entities_with_ollama_labels_and_gliner,
 )
+from kg_construction.application.mandatory_unstructured_runtime import (
+    HeldOutClaimEvaluationReport,
+    MandatoryUnstructuredRuntime,
+)
 from kg_construction.application.modeling_policy import (
     CanonicalizationRule,
     ColumnPolicy,
@@ -85,7 +89,12 @@ from kg_construction.application.semantic_profiler import (
 )
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.technique_selector import ApplicabilityResult, TechniqueSelector
-from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
+from kg_construction.application.workflow import (
+    ConstructionResult,
+    ConstructionWorkflow,
+    PublicationGateError,
+    PublicationGateReport,
+)
 
 __all__ = [
     "ApplicabilityResult",
@@ -120,10 +129,12 @@ __all__ = [
     "GoldDatasetManifest",
     "GoldEvaluationSummary",
     "HardGateResult",
+    "HeldOutClaimEvaluationReport",
     "HybridGlinerExtractionResult",
     "HybridGlinerPipelineConfig",
     "HumanReviewQueueSettings",
     "IncrementalSyncSettings",
+    "MandatoryUnstructuredRuntime",
     "OllamaSettings",
     "PIIRedactionSettings",
     "PenaltyWeights",
@@ -132,6 +143,8 @@ __all__ = [
     "ProductionServices",
     "ProductionSettings",
     "ProductionThresholds",
+    "PublicationGateError",
+    "PublicationGateReport",
     "RecommendationDecision",
     "RecommendationEngine",
     "RecommendationSummary",

@@ -8,7 +8,7 @@ from typing import Any
 
 from kg_construction.domain.graph_objects import PropertyGraph, RDFGraph
 from kg_construction.infrastructure.graph_stores.ingestion import (
-    KuzuIngestionAdapter,
+    LadybugIngestionAdapter,
     Neo4jIngestionAdapter,
 )
 
@@ -55,16 +55,16 @@ class MemgraphExporter(Neo4jExporter):
     name = "memgraph_exporter"
 
 
-class KuzuExporter:
-    """Export a property graph into a simple Kuzu ingestion manifest."""
+class LadybugExporter:
+    """Export a property graph into a simple Ladybug ingestion manifest."""
 
-    name = "kuzu_exporter"
+    name = "ladybug_exporter"
 
     def export_property_graph(self, graph: PropertyGraph) -> dict[str, object]:
         return {
             "nodes": [node.model_dump(mode="json") for node in graph.nodes],
             "relationships": [edge.model_dump(mode="json") for edge in graph.edges],
-            "notes": "Use this manifest to create node/relationship tables in Kuzu.",
+            "notes": "Use this manifest to create node/relationship tables in Ladybug.",
         }
 
     def export_rdf_graph(self, graph: RDFGraph) -> dict[str, object]:
@@ -131,7 +131,14 @@ class RDFLibExporter:
         return graph.to_rdflib_dataset()
 
 
+# Compatibility aliases for the database's former product name.
+KuzuExporter = LadybugExporter
+KuzuIngestionAdapter = LadybugIngestionAdapter
+
+
 __all__ = [
+    "LadybugExporter",
+    "LadybugIngestionAdapter",
     "KuzuExporter",
     "KuzuIngestionAdapter",
     "MemgraphExporter",

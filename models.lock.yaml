@@ -1,0 +1,1670 @@
+# Generated immutable model lock. Do not hand-edit.
+version: 3
+generated_by: scripts/lock_models.py
+manifest_sha256: 785812cc5bf5a7fb4b40794ee5c458ecf41dec5ed359a06ea078da9740f8b4d3
+profiles:
+- darwin-arm64
+- linux-cpu
+- linux-cuda
+artifact_totals:
+  unique_huggingface_snapshots: 8
+  unique_huggingface_bytes: 16323577046
+  ollama_models: 1
+  ollama_bytes: 1359293444
+models:
+- name: gliner_entity_extractor
+  repo_id: gliner-community/gliner_small-v2.5
+  ref: main
+  revision: f227d3cd637bd4e6757ae143935316d062393341
+  backend: gliner
+  task: token-classification
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    labels:
+    - Person
+    - Organization
+    expect_entities:
+    - Alan Turing
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 612792278ccf30aefd3c418f955f81ffb47998de6f31133c0725b1f3af626cb2
+    size: 23327
+  - path: added_tokens.json
+    sha256: c358eb74586ab438484d8acf4534f67283b33041bc5ffee6b20a4a075cdc3cd6
+    size: 65
+  - path: gliner_config.json
+    sha256: 8e1eb4b733638be3935981feeb7c6a2e7e22e2600c58df66f74da4677f06c009
+    size: 676
+  - path: model.bf16.safetensors
+    sha256: 25a633c03236faa2f1560e107994a53672bee12293f9fa562023d9a07cc411b3
+    size: 332065520
+  - path: model.fp16.safetensors
+    sha256: d444ff406b27affc07e3165b454c3adc9f25f228c81ede197a7b806f49d12c74
+    size: 332065392
+  - path: models_comparison.png
+    sha256: 581277b11059c912f0a3aba7f94f28880574b12434ceb0e977af0918d67f231b
+    size: 156208
+  - path: pytorch_model.bin
+    sha256: f3aa07b0bbd2c7d551e935fe998ceaaaa1d387f7d92f05ec70396c1264f41d22
+    size: 664140326
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: 91cf35efa9ec3549c6c52a415cdd7531fd172858d7d9eecef720bc4a3f1f8699
+    size: 8649232
+  - path: tokenizer_config.json
+    sha256: 76b132e7e6fc098790d943e1bb411d405944849ce804755e3b446c5619251a2b
+    size: 1632
+- name: gliner_entity_extractor
+  repo_id: gliner-community/gliner_small-v2.5
+  ref: main
+  revision: f227d3cd637bd4e6757ae143935316d062393341
+  backend: gliner
+  task: token-classification
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    labels:
+    - Person
+    - Organization
+    expect_entities:
+    - Alan Turing
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 612792278ccf30aefd3c418f955f81ffb47998de6f31133c0725b1f3af626cb2
+    size: 23327
+  - path: added_tokens.json
+    sha256: c358eb74586ab438484d8acf4534f67283b33041bc5ffee6b20a4a075cdc3cd6
+    size: 65
+  - path: gliner_config.json
+    sha256: 8e1eb4b733638be3935981feeb7c6a2e7e22e2600c58df66f74da4677f06c009
+    size: 676
+  - path: model.bf16.safetensors
+    sha256: 25a633c03236faa2f1560e107994a53672bee12293f9fa562023d9a07cc411b3
+    size: 332065520
+  - path: model.fp16.safetensors
+    sha256: d444ff406b27affc07e3165b454c3adc9f25f228c81ede197a7b806f49d12c74
+    size: 332065392
+  - path: models_comparison.png
+    sha256: 581277b11059c912f0a3aba7f94f28880574b12434ceb0e977af0918d67f231b
+    size: 156208
+  - path: pytorch_model.bin
+    sha256: f3aa07b0bbd2c7d551e935fe998ceaaaa1d387f7d92f05ec70396c1264f41d22
+    size: 664140326
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: 91cf35efa9ec3549c6c52a415cdd7531fd172858d7d9eecef720bc4a3f1f8699
+    size: 8649232
+  - path: tokenizer_config.json
+    sha256: 76b132e7e6fc098790d943e1bb411d405944849ce804755e3b446c5619251a2b
+    size: 1632
+- name: gliner_entity_extractor
+  repo_id: gliner-community/gliner_small-v2.5
+  ref: main
+  revision: f227d3cd637bd4e6757ae143935316d062393341
+  backend: gliner
+  task: token-classification
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    labels:
+    - Person
+    - Organization
+    expect_entities:
+    - Alan Turing
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 612792278ccf30aefd3c418f955f81ffb47998de6f31133c0725b1f3af626cb2
+    size: 23327
+  - path: added_tokens.json
+    sha256: c358eb74586ab438484d8acf4534f67283b33041bc5ffee6b20a4a075cdc3cd6
+    size: 65
+  - path: gliner_config.json
+    sha256: 8e1eb4b733638be3935981feeb7c6a2e7e22e2600c58df66f74da4677f06c009
+    size: 676
+  - path: model.bf16.safetensors
+    sha256: 25a633c03236faa2f1560e107994a53672bee12293f9fa562023d9a07cc411b3
+    size: 332065520
+  - path: model.fp16.safetensors
+    sha256: d444ff406b27affc07e3165b454c3adc9f25f228c81ede197a7b806f49d12c74
+    size: 332065392
+  - path: models_comparison.png
+    sha256: 581277b11059c912f0a3aba7f94f28880574b12434ceb0e977af0918d67f231b
+    size: 156208
+  - path: pytorch_model.bin
+    sha256: f3aa07b0bbd2c7d551e935fe998ceaaaa1d387f7d92f05ec70396c1264f41d22
+    size: 664140326
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: 91cf35efa9ec3549c6c52a415cdd7531fd172858d7d9eecef720bc4a3f1f8699
+    size: 8649232
+  - path: tokenizer_config.json
+    sha256: 76b132e7e6fc098790d943e1bb411d405944849ce804755e3b446c5619251a2b
+    size: 1632
+- name: gliner_relex_extractor
+  repo_id: knowledgator/gliner-relex-large-v1.0
+  ref: main
+  revision: 4aedc9226a5ac9e2f6b5ea3e91c1ee577c88a290
+  backend: gliner
+  task: relation-extraction
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    expect_relation:
+    - Alan Turing
+    - worked_at
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 9971f14cb0bc1a487804193924bd6c2f0f1011728422839831130f583df19203
+    size: 9208
+  - path: added_tokens.json
+    sha256: 14fedd7e9f345ea45fd9b74245468121d5ccac83e523cad1680529d00bb0e8e8
+    size: 86
+  - path: gliner_config.json
+    sha256: 009031313c27dbdc255d4e9d85bdfb89f17259ccf4c82e8982ac763c249c1cdb
+    size: 3565
+  - path: model.safetensors
+    sha256: 7c5bd751e1b24e4254d70fe4355a986cd65400676ce3735f7752429fcc26960a
+    size: 1866369448
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: d9f64f3126faa24e3ef6bdc47e7120eef528a49cd8b447bdd6865bcf2043cd65
+    size: 8649416
+  - path: tokenizer_config.json
+    sha256: ee20eaa4db6f56045339841383f83e98cb79f1672a93bb76a9735243ca65d0fa
+    size: 1837
+  - path: trainer_state.json
+    sha256: 6a438bb2860e51ec8e872ca7fa2f88945558dda56ca8e5dd290f0ad877aa0b96
+    size: 1300
+- name: gliner_relex_extractor
+  repo_id: knowledgator/gliner-relex-large-v1.0
+  ref: main
+  revision: 4aedc9226a5ac9e2f6b5ea3e91c1ee577c88a290
+  backend: gliner
+  task: relation-extraction
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    expect_relation:
+    - Alan Turing
+    - worked_at
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 9971f14cb0bc1a487804193924bd6c2f0f1011728422839831130f583df19203
+    size: 9208
+  - path: added_tokens.json
+    sha256: 14fedd7e9f345ea45fd9b74245468121d5ccac83e523cad1680529d00bb0e8e8
+    size: 86
+  - path: gliner_config.json
+    sha256: 009031313c27dbdc255d4e9d85bdfb89f17259ccf4c82e8982ac763c249c1cdb
+    size: 3565
+  - path: model.safetensors
+    sha256: 7c5bd751e1b24e4254d70fe4355a986cd65400676ce3735f7752429fcc26960a
+    size: 1866369448
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: d9f64f3126faa24e3ef6bdc47e7120eef528a49cd8b447bdd6865bcf2043cd65
+    size: 8649416
+  - path: tokenizer_config.json
+    sha256: ee20eaa4db6f56045339841383f83e98cb79f1672a93bb76a9735243ca65d0fa
+    size: 1837
+  - path: trainer_state.json
+    sha256: 6a438bb2860e51ec8e872ca7fa2f88945558dda56ca8e5dd290f0ad877aa0b96
+    size: 1300
+- name: gliner_relex_extractor
+  repo_id: knowledgator/gliner-relex-large-v1.0
+  ref: main
+  revision: 4aedc9226a5ac9e2f6b5ea3e91c1ee577c88a290
+  backend: gliner
+  task: relation-extraction
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: Alan Turing worked at Bletchley Park.
+    expect_relation:
+    - Alan Turing
+    - worked_at
+    - Bletchley Park
+  files:
+  - path: .gitattributes
+    sha256: 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361
+    size: 1519
+  - path: README.md
+    sha256: 9971f14cb0bc1a487804193924bd6c2f0f1011728422839831130f583df19203
+    size: 9208
+  - path: added_tokens.json
+    sha256: 14fedd7e9f345ea45fd9b74245468121d5ccac83e523cad1680529d00bb0e8e8
+    size: 86
+  - path: gliner_config.json
+    sha256: 009031313c27dbdc255d4e9d85bdfb89f17259ccf4c82e8982ac763c249c1cdb
+    size: 3565
+  - path: model.safetensors
+    sha256: 7c5bd751e1b24e4254d70fe4355a986cd65400676ce3735f7752429fcc26960a
+    size: 1866369448
+  - path: special_tokens_map.json
+    sha256: b2f1b2f15f29a6b6d9d6ea4eca1675d2c231a71477f151d48f79cc83a625ba21
+    size: 970
+  - path: spm.model
+    sha256: c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd
+    size: 2464616
+  - path: tokenizer.json
+    sha256: d9f64f3126faa24e3ef6bdc47e7120eef528a49cd8b447bdd6865bcf2043cd65
+    size: 8649416
+  - path: tokenizer_config.json
+    sha256: ee20eaa4db6f56045339841383f83e98cb79f1672a93bb76a9735243ca65d0fa
+    size: 1837
+  - path: trainer_state.json
+    sha256: 6a438bb2860e51ec8e872ca7fa2f88945558dda56ca8e5dd290f0ad877aa0b96
+    size: 1300
+- name: structured_transformer_extractor
+  repo_id: Qwen/Qwen3-1.7B
+  ref: main
+  revision: 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e
+  backend: transformers
+  task: text-generation
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    prompt: 'Extract entities as JSON from: "Ada Lovelace wrote an algorithm."'
+    expect_contains: Ada Lovelace
+  files:
+  - path: .gitattributes
+    sha256: 34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930
+    size: 1570
+  - path: LICENSE
+    sha256: 832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e
+    size: 11343
+  - path: README.md
+    sha256: 257e52c419dac2258852643f18af6c974f21f8c6c1b6f371b6cca6201cf29091
+    size: 13963
+  - path: config.json
+    sha256: 1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197
+    size: 726
+  - path: generation_config.json
+    sha256: 2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2
+    size: 239
+  - path: merges.txt
+    sha256: 8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5
+    size: 1671853
+  - path: model-00001-of-00002.safetensors
+    sha256: 169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5
+    size: 3441185608
+  - path: model-00002-of-00002.safetensors
+    sha256: 912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9
+    size: 622329984
+  - path: model.safetensors.index.json
+    sha256: 0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d
+    size: 25605
+  - path: tokenizer.json
+    sha256: aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4
+    size: 11422654
+  - path: tokenizer_config.json
+    sha256: d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101
+    size: 9732
+  - path: vocab.json
+    sha256: ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910
+    size: 2776833
+- name: structured_transformer_extractor
+  repo_id: Qwen/Qwen3-1.7B
+  ref: main
+  revision: 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e
+  backend: transformers
+  task: text-generation
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    prompt: 'Extract entities as JSON from: "Ada Lovelace wrote an algorithm."'
+    expect_contains: Ada Lovelace
+  files:
+  - path: .gitattributes
+    sha256: 34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930
+    size: 1570
+  - path: LICENSE
+    sha256: 832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e
+    size: 11343
+  - path: README.md
+    sha256: 257e52c419dac2258852643f18af6c974f21f8c6c1b6f371b6cca6201cf29091
+    size: 13963
+  - path: config.json
+    sha256: 1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197
+    size: 726
+  - path: generation_config.json
+    sha256: 2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2
+    size: 239
+  - path: merges.txt
+    sha256: 8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5
+    size: 1671853
+  - path: model-00001-of-00002.safetensors
+    sha256: 169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5
+    size: 3441185608
+  - path: model-00002-of-00002.safetensors
+    sha256: 912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9
+    size: 622329984
+  - path: model.safetensors.index.json
+    sha256: 0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d
+    size: 25605
+  - path: tokenizer.json
+    sha256: aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4
+    size: 11422654
+  - path: tokenizer_config.json
+    sha256: d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101
+    size: 9732
+  - path: vocab.json
+    sha256: ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910
+    size: 2776833
+- name: structured_transformer_extractor
+  repo_id: Qwen/Qwen3-1.7B
+  ref: main
+  revision: 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e
+  backend: transformers
+  task: text-generation
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    prompt: 'Extract entities as JSON from: "Ada Lovelace wrote an algorithm."'
+    expect_contains: Ada Lovelace
+  files:
+  - path: .gitattributes
+    sha256: 34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930
+    size: 1570
+  - path: LICENSE
+    sha256: 832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e
+    size: 11343
+  - path: README.md
+    sha256: 257e52c419dac2258852643f18af6c974f21f8c6c1b6f371b6cca6201cf29091
+    size: 13963
+  - path: config.json
+    sha256: 1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197
+    size: 726
+  - path: generation_config.json
+    sha256: 2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2
+    size: 239
+  - path: merges.txt
+    sha256: 8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5
+    size: 1671853
+  - path: model-00001-of-00002.safetensors
+    sha256: 169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5
+    size: 3441185608
+  - path: model-00002-of-00002.safetensors
+    sha256: 912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9
+    size: 622329984
+  - path: model.safetensors.index.json
+    sha256: 0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d
+    size: 25605
+  - path: tokenizer.json
+    sha256: aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4
+    size: 11422654
+  - path: tokenizer_config.json
+    sha256: d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101
+    size: 9732
+  - path: vocab.json
+    sha256: ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910
+    size: 2776833
+- name: transformer_ner
+  repo_id: dslim/bert-base-NER
+  ref: main
+  revision: d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc
+  backend: transformers
+  task: token-classification
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: README.md
+    sha256: f570efa74d5f40eeafa35af45bc20ed6bdf49a5e517782218a23467d3bae576f
+    size: 6558
+  - path: added_tokens.json
+    sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    size: 2
+  - path: config.json
+    sha256: a5dc77a0d60dadf5645103017f3c7b8ece4ef1b450bc1ea68e17da1d3ae7e515
+    size: 829
+  - path: flax_model.msgpack
+    sha256: a124466eab9adb43377d35d32afe77313fceeb16b74b106f3742884c666a2c1e
+    size: 430913546
+  - path: model.safetensors
+    sha256: b04492186cfb45a64908487a17a9f8d6ddec3a403ef39db5bca688f0fa702a34
+    size: 433292294
+  - path: onnx/added_tokens.json
+    sha256: 909e96cb32d92ce728a01bc99850cbba26196d74115c17ebeb019275412588f2
+    size: 82
+  - path: onnx/config.json
+    sha256: bdc92243c070947117ec86391a257f5767a2bada249e57277269a5adcc39bd6a
+    size: 999
+  - path: onnx/model.onnx
+    sha256: 963039b81eec5b33e23d84826ccdf1e8f8ada776f320e692113034cfae384617
+    size: 431172619
+  - path: onnx/special_tokens_map.json
+    sha256: b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3
+    size: 125
+  - path: onnx/tokenizer.json
+    sha256: 343989712a36cd8b253efeaf8baf6a08b9d2583f78e395e83832e8ee9f8d8ee1
+    size: 668923
+  - path: onnx/tokenizer_config.json
+    sha256: c40ba9de0d39653e7559a32aaded857f49256f7530544d2f2535b3ae07cf8ef8
+    size: 1296
+  - path: onnx/vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+  - path: pytorch_model.bin
+    sha256: 4c0b01790e435da1337ea519d76e747427f2d3ee9c0e49b4952caa06298021f6
+    size: 433316646
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: ba8245e6eefa4057300e93caef9d8360192914c271f15c8bd112283d357a954b
+    size: 433538860
+  - path: tokenizer_config.json
+    sha256: 4c052d60b505817149a29e88c5292d7779ddecfadbfc6208729e61403ec558ba
+    size: 59
+  - path: vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+- name: transformer_ner
+  repo_id: dslim/bert-base-NER
+  ref: main
+  revision: d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc
+  backend: transformers
+  task: token-classification
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: README.md
+    sha256: f570efa74d5f40eeafa35af45bc20ed6bdf49a5e517782218a23467d3bae576f
+    size: 6558
+  - path: added_tokens.json
+    sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    size: 2
+  - path: config.json
+    sha256: a5dc77a0d60dadf5645103017f3c7b8ece4ef1b450bc1ea68e17da1d3ae7e515
+    size: 829
+  - path: flax_model.msgpack
+    sha256: a124466eab9adb43377d35d32afe77313fceeb16b74b106f3742884c666a2c1e
+    size: 430913546
+  - path: model.safetensors
+    sha256: b04492186cfb45a64908487a17a9f8d6ddec3a403ef39db5bca688f0fa702a34
+    size: 433292294
+  - path: onnx/added_tokens.json
+    sha256: 909e96cb32d92ce728a01bc99850cbba26196d74115c17ebeb019275412588f2
+    size: 82
+  - path: onnx/config.json
+    sha256: bdc92243c070947117ec86391a257f5767a2bada249e57277269a5adcc39bd6a
+    size: 999
+  - path: onnx/model.onnx
+    sha256: 963039b81eec5b33e23d84826ccdf1e8f8ada776f320e692113034cfae384617
+    size: 431172619
+  - path: onnx/special_tokens_map.json
+    sha256: b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3
+    size: 125
+  - path: onnx/tokenizer.json
+    sha256: 343989712a36cd8b253efeaf8baf6a08b9d2583f78e395e83832e8ee9f8d8ee1
+    size: 668923
+  - path: onnx/tokenizer_config.json
+    sha256: c40ba9de0d39653e7559a32aaded857f49256f7530544d2f2535b3ae07cf8ef8
+    size: 1296
+  - path: onnx/vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+  - path: pytorch_model.bin
+    sha256: 4c0b01790e435da1337ea519d76e747427f2d3ee9c0e49b4952caa06298021f6
+    size: 433316646
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: ba8245e6eefa4057300e93caef9d8360192914c271f15c8bd112283d357a954b
+    size: 433538860
+  - path: tokenizer_config.json
+    sha256: 4c052d60b505817149a29e88c5292d7779ddecfadbfc6208729e61403ec558ba
+    size: 59
+  - path: vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+- name: transformer_ner
+  repo_id: dslim/bert-base-NER
+  ref: main
+  revision: d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc
+  backend: transformers
+  task: token-classification
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: README.md
+    sha256: f570efa74d5f40eeafa35af45bc20ed6bdf49a5e517782218a23467d3bae576f
+    size: 6558
+  - path: added_tokens.json
+    sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    size: 2
+  - path: config.json
+    sha256: a5dc77a0d60dadf5645103017f3c7b8ece4ef1b450bc1ea68e17da1d3ae7e515
+    size: 829
+  - path: flax_model.msgpack
+    sha256: a124466eab9adb43377d35d32afe77313fceeb16b74b106f3742884c666a2c1e
+    size: 430913546
+  - path: model.safetensors
+    sha256: b04492186cfb45a64908487a17a9f8d6ddec3a403ef39db5bca688f0fa702a34
+    size: 433292294
+  - path: onnx/added_tokens.json
+    sha256: 909e96cb32d92ce728a01bc99850cbba26196d74115c17ebeb019275412588f2
+    size: 82
+  - path: onnx/config.json
+    sha256: bdc92243c070947117ec86391a257f5767a2bada249e57277269a5adcc39bd6a
+    size: 999
+  - path: onnx/model.onnx
+    sha256: 963039b81eec5b33e23d84826ccdf1e8f8ada776f320e692113034cfae384617
+    size: 431172619
+  - path: onnx/special_tokens_map.json
+    sha256: b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3
+    size: 125
+  - path: onnx/tokenizer.json
+    sha256: 343989712a36cd8b253efeaf8baf6a08b9d2583f78e395e83832e8ee9f8d8ee1
+    size: 668923
+  - path: onnx/tokenizer_config.json
+    sha256: c40ba9de0d39653e7559a32aaded857f49256f7530544d2f2535b3ae07cf8ef8
+    size: 1296
+  - path: onnx/vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+  - path: pytorch_model.bin
+    sha256: 4c0b01790e435da1337ea519d76e747427f2d3ee9c0e49b4952caa06298021f6
+    size: 433316646
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: ba8245e6eefa4057300e93caef9d8360192914c271f15c8bd112283d357a954b
+    size: 433538860
+  - path: tokenizer_config.json
+    sha256: 4c052d60b505817149a29e88c5292d7779ddecfadbfc6208729e61403ec558ba
+    size: 59
+  - path: vocab.txt
+    sha256: eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02
+    size: 213450
+- name: embedding_resolver
+  repo_id: sentence-transformers/all-MiniLM-L6-v2
+  ref: main
+  revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+  backend: sentence-transformers
+  task: feature-extraction
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: knowledge graph
+    expect_dim: 384
+  files:
+  - path: .gitattributes
+    sha256: 98ccb431c012ebfe976280fbd45aea4cec7409935868ccecf3954370f96732a1
+    size: 1229
+  - path: 1_Pooling/config.json
+    sha256: 4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23
+    size: 190
+  - path: README.md
+    sha256: dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0
+    size: 10502
+  - path: config.json
+    sha256: 953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41
+    size: 612
+  - path: config_sentence_transformers.json
+    sha256: 061ca9d39661d6c6d6de5ba27f79a1cd5770ea247f8d46412a68a498dc5ac9f3
+    size: 116
+  - path: data_config.json
+    sha256: 32edcb108fc2516b920734a862ae0692bcae1c5d45d5f8d972cb0d53434a4c54
+    size: 39265
+  - path: model.safetensors
+    sha256: 53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db
+    size: 90868376
+  - path: modules.json
+    sha256: 84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf
+    size: 349
+  - path: onnx/model.onnx
+    sha256: 6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452
+    size: 90405214
+  - path: onnx/model_O1.onnx
+    sha256: 1391c6fc20b5530250bc15cbe1f47578ffeca55ab0551d335cc668b6299a88ec
+    size: 90360328
+  - path: onnx/model_O2.onnx
+    sha256: 1de3905029190b398c7d300b530e320cf4b5e7d3dfb9af1429ebd73fd9a16faf
+    size: 90326566
+  - path: onnx/model_O3.onnx
+    sha256: a44f671e364dddbac31f203f07b91be6b0a35e51936e5ebfab65b6d9538b83ff
+    size: 90326497
+  - path: onnx/model_O4.onnx
+    sha256: 1667d7f3ba669048b13a96ee3a44456d5e42c8f44588ae8b603430e16160c485
+    size: 45212349
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21
+    size: 23046789
+  - path: openvino/openvino_model.bin
+    sha256: 8b86cab4722e2aefab310cf96d4d5a9eb3b187f7d9670a082afc55c7fa0d392a
+    size: 90265744
+  - path: openvino/openvino_model.xml
+    sha256: f87dd1482b2a745f8c699b81ddd9cbcad666a193be4693abcea44b7ac8c67c1e
+    size: 211315
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: c92ea4af3c6bc7b4a0f3b3d61b147c850f4dbdd7c9e7beee0c0c70dc12da289b
+    size: 22933664
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: a19425e3f56f7736f752923f0a0b5a8d61c7878017f02e1fc9086615391105dd
+    size: 368006
+  - path: pytorch_model.bin
+    sha256: c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256
+    size: 90888945
+  - path: rust_model.ot
+    sha256: 2d98d96d278348988f2744e6445b8bc16d921c3f6e17c667362f3cb353007aea
+    size: 90887379
+  - path: sentence_bert_config.json
+    sha256: fc1993fde0a95c24ec6c022539d41cf6e2f7c9721e5415d6fb6897472a9cd4b7
+    size: 53
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: 24c06a7429b843d46e40c6b167122053921bf94dce2e5550ea5c07fabc597646
+    size: 91005696
+  - path: tokenizer.json
+    sha256: be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037
+    size: 466247
+  - path: tokenizer_config.json
+    sha256: acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b
+    size: 350
+  - path: train_script.py
+    sha256: f9b98b9d203d728cbf93ccdbae84131ab926541b56196f11d1385fed0b4d1a07
+    size: 13156
+  - path: vocab.txt
+    sha256: 07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3
+    size: 231508
+- name: embedding_resolver
+  repo_id: sentence-transformers/all-MiniLM-L6-v2
+  ref: main
+  revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+  backend: sentence-transformers
+  task: feature-extraction
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: knowledge graph
+    expect_dim: 384
+  files:
+  - path: .gitattributes
+    sha256: 98ccb431c012ebfe976280fbd45aea4cec7409935868ccecf3954370f96732a1
+    size: 1229
+  - path: 1_Pooling/config.json
+    sha256: 4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23
+    size: 190
+  - path: README.md
+    sha256: dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0
+    size: 10502
+  - path: config.json
+    sha256: 953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41
+    size: 612
+  - path: config_sentence_transformers.json
+    sha256: 061ca9d39661d6c6d6de5ba27f79a1cd5770ea247f8d46412a68a498dc5ac9f3
+    size: 116
+  - path: data_config.json
+    sha256: 32edcb108fc2516b920734a862ae0692bcae1c5d45d5f8d972cb0d53434a4c54
+    size: 39265
+  - path: model.safetensors
+    sha256: 53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db
+    size: 90868376
+  - path: modules.json
+    sha256: 84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf
+    size: 349
+  - path: onnx/model.onnx
+    sha256: 6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452
+    size: 90405214
+  - path: onnx/model_O1.onnx
+    sha256: 1391c6fc20b5530250bc15cbe1f47578ffeca55ab0551d335cc668b6299a88ec
+    size: 90360328
+  - path: onnx/model_O2.onnx
+    sha256: 1de3905029190b398c7d300b530e320cf4b5e7d3dfb9af1429ebd73fd9a16faf
+    size: 90326566
+  - path: onnx/model_O3.onnx
+    sha256: a44f671e364dddbac31f203f07b91be6b0a35e51936e5ebfab65b6d9538b83ff
+    size: 90326497
+  - path: onnx/model_O4.onnx
+    sha256: 1667d7f3ba669048b13a96ee3a44456d5e42c8f44588ae8b603430e16160c485
+    size: 45212349
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21
+    size: 23046789
+  - path: openvino/openvino_model.bin
+    sha256: 8b86cab4722e2aefab310cf96d4d5a9eb3b187f7d9670a082afc55c7fa0d392a
+    size: 90265744
+  - path: openvino/openvino_model.xml
+    sha256: f87dd1482b2a745f8c699b81ddd9cbcad666a193be4693abcea44b7ac8c67c1e
+    size: 211315
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: c92ea4af3c6bc7b4a0f3b3d61b147c850f4dbdd7c9e7beee0c0c70dc12da289b
+    size: 22933664
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: a19425e3f56f7736f752923f0a0b5a8d61c7878017f02e1fc9086615391105dd
+    size: 368006
+  - path: pytorch_model.bin
+    sha256: c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256
+    size: 90888945
+  - path: rust_model.ot
+    sha256: 2d98d96d278348988f2744e6445b8bc16d921c3f6e17c667362f3cb353007aea
+    size: 90887379
+  - path: sentence_bert_config.json
+    sha256: fc1993fde0a95c24ec6c022539d41cf6e2f7c9721e5415d6fb6897472a9cd4b7
+    size: 53
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: 24c06a7429b843d46e40c6b167122053921bf94dce2e5550ea5c07fabc597646
+    size: 91005696
+  - path: tokenizer.json
+    sha256: be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037
+    size: 466247
+  - path: tokenizer_config.json
+    sha256: acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b
+    size: 350
+  - path: train_script.py
+    sha256: f9b98b9d203d728cbf93ccdbae84131ab926541b56196f11d1385fed0b4d1a07
+    size: 13156
+  - path: vocab.txt
+    sha256: 07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3
+    size: 231508
+- name: embedding_resolver
+  repo_id: sentence-transformers/all-MiniLM-L6-v2
+  ref: main
+  revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+  backend: sentence-transformers
+  task: feature-extraction
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    text: knowledge graph
+    expect_dim: 384
+  files:
+  - path: .gitattributes
+    sha256: 98ccb431c012ebfe976280fbd45aea4cec7409935868ccecf3954370f96732a1
+    size: 1229
+  - path: 1_Pooling/config.json
+    sha256: 4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23
+    size: 190
+  - path: README.md
+    sha256: dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0
+    size: 10502
+  - path: config.json
+    sha256: 953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41
+    size: 612
+  - path: config_sentence_transformers.json
+    sha256: 061ca9d39661d6c6d6de5ba27f79a1cd5770ea247f8d46412a68a498dc5ac9f3
+    size: 116
+  - path: data_config.json
+    sha256: 32edcb108fc2516b920734a862ae0692bcae1c5d45d5f8d972cb0d53434a4c54
+    size: 39265
+  - path: model.safetensors
+    sha256: 53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db
+    size: 90868376
+  - path: modules.json
+    sha256: 84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf
+    size: 349
+  - path: onnx/model.onnx
+    sha256: 6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452
+    size: 90405214
+  - path: onnx/model_O1.onnx
+    sha256: 1391c6fc20b5530250bc15cbe1f47578ffeca55ab0551d335cc668b6299a88ec
+    size: 90360328
+  - path: onnx/model_O2.onnx
+    sha256: 1de3905029190b398c7d300b530e320cf4b5e7d3dfb9af1429ebd73fd9a16faf
+    size: 90326566
+  - path: onnx/model_O3.onnx
+    sha256: a44f671e364dddbac31f203f07b91be6b0a35e51936e5ebfab65b6d9538b83ff
+    size: 90326497
+  - path: onnx/model_O4.onnx
+    sha256: 1667d7f3ba669048b13a96ee3a44456d5e42c8f44588ae8b603430e16160c485
+    size: 45212349
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    size: 23026053
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21
+    size: 23046789
+  - path: openvino/openvino_model.bin
+    sha256: 8b86cab4722e2aefab310cf96d4d5a9eb3b187f7d9670a082afc55c7fa0d392a
+    size: 90265744
+  - path: openvino/openvino_model.xml
+    sha256: f87dd1482b2a745f8c699b81ddd9cbcad666a193be4693abcea44b7ac8c67c1e
+    size: 211315
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: c92ea4af3c6bc7b4a0f3b3d61b147c850f4dbdd7c9e7beee0c0c70dc12da289b
+    size: 22933664
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: a19425e3f56f7736f752923f0a0b5a8d61c7878017f02e1fc9086615391105dd
+    size: 368006
+  - path: pytorch_model.bin
+    sha256: c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256
+    size: 90888945
+  - path: rust_model.ot
+    sha256: 2d98d96d278348988f2744e6445b8bc16d921c3f6e17c667362f3cb353007aea
+    size: 90887379
+  - path: sentence_bert_config.json
+    sha256: fc1993fde0a95c24ec6c022539d41cf6e2f7c9721e5415d6fb6897472a9cd4b7
+    size: 53
+  - path: special_tokens_map.json
+    sha256: 303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3
+    size: 112
+  - path: tf_model.h5
+    sha256: 24c06a7429b843d46e40c6b167122053921bf94dce2e5550ea5c07fabc597646
+    size: 91005696
+  - path: tokenizer.json
+    sha256: be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037
+    size: 466247
+  - path: tokenizer_config.json
+    sha256: acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b
+    size: 350
+  - path: train_script.py
+    sha256: f9b98b9d203d728cbf93ccdbae84131ab926541b56196f11d1385fed0b4d1a07
+    size: 13156
+  - path: vocab.txt
+    sha256: 07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3
+    size: 231508
+- name: cross_encoder_resolver
+  repo_id: cross-encoder/stsb-roberta-base
+  ref: main
+  revision: d576534b67143e2c70ee9966d7fdbf5835728d13
+  backend: sentence-transformers
+  task: text-ranking
+  profiles:
+  - darwin-arm64
+  device: mps
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    pair:
+    - a cat sits
+    - a cat is sitting
+    expect_score_min: 0.5
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: CECorrelationEvaluator_sts-dev_results.csv
+    sha256: c205711dba4dac59b2730e4b87e14213d2368362e3f3e601e0741eedef34c6d8
+    size: 310
+  - path: README.md
+    sha256: bfdfd87a1a11cabb2907c7e77866918e075e77690996605539ec7b5d54b3b1e6
+    size: 1137
+  - path: config.json
+    sha256: 8c50d3f5de660e595ff1f94d199984de19c51d0a8e7d26e692d6c52c18e20562
+    size: 608
+  - path: flax_model.msgpack
+    sha256: 768905d4b87ebefec4c819d9a36518802db21df7fc2d9e8ce7cb47ed3875283f
+    size: 498592825
+  - path: merges.txt
+    sha256: 1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5
+    size: 456318
+  - path: model.safetensors
+    sha256: 130e4eac117036a5803c3f832e95185b558d341cb9c4e576975614d8b1340ef7
+    size: 498613948
+  - path: onnx/model.onnx
+    sha256: c82166bb8dc6c022fb94e8aa7e7b0af4240cbfcbf8f29a58a5d26dcac5146711
+    size: 498905040
+  - path: onnx/model_O1.onnx
+    sha256: 2c1d4fdfa85014dc12cf3cffd1ec7e63bee02c0c93ac17d0181732b68112b9b7
+    size: 498803421
+  - path: onnx/model_O2.onnx
+    sha256: ae90e2d6fd8ab7708d2a857cc8d73df004ac5547ddec0babbb1288e2fb0e4baa
+    size: 498626418
+  - path: onnx/model_O3.onnx
+    sha256: 6ff18d82c77ea2c1c63aefab366c334bd1fe122626cdacd12c375114eba7d5ec
+    size: 498626273
+  - path: onnx/model_O4.onnx
+    sha256: 82678eb4507e362812e44a803a7f2d3849f58f03ae22035e3fc4b6c3c45ed99c
+    size: 249470678
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: ecca55ec425a68accbb9796cf65351332d9e5cdb42a291f66a90b6e9dffd38ce
+    size: 126017824
+  - path: openvino/openvino_model.bin
+    sha256: 4153ca3905be859cb0d13e718fdf31413c569b00a0c3f7b3875f485377921bca
+    size: 498589876
+  - path: openvino/openvino_model.xml
+    sha256: 3cee6cc3bc6f8935fc37cc7781bbddc3c5b5281ff861acca534559a2f8cb7c1b
+    size: 389560
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: fc01458a7eef642064bbefbc7c84f867b3eaec921468520821332f428e7dad21
+    size: 125819768
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: fe72dc21230a3d8b5b5df6c39ab97059f1b52cb9675e6036b2cc9893103dab2b
+    size: 710706
+  - path: pytorch_model.bin
+    sha256: bd8cddb9f6ddf924f91a1cc3c2bf83973a483a936654259d389ed1e7c56711d2
+    size: 498676169
+  - path: special_tokens_map.json
+    sha256: 75cbec71553267dadc77a583ef15122c2aa7422eb6635acc72a184a413f17c1c
+    size: 1008
+  - path: tokenizer.json
+    sha256: 2bb1a22cfbe25b8e5a232b7fc4d7fc5073923b45724a5f813b00811bb6620f66
+    size: 3558642
+  - path: tokenizer_config.json
+    sha256: fe09e6fe347cc94002f77bec394efa02db0ac151393f940d0d854af765e8b165
+    size: 1335
+  - path: vocab.json
+    sha256: ed19656ea1707df69134c4af35c8ceda2cc9860bf2c3495026153a133670ab5e
+    size: 798293
+- name: cross_encoder_resolver
+  repo_id: cross-encoder/stsb-roberta-base
+  ref: main
+  revision: d576534b67143e2c70ee9966d7fdbf5835728d13
+  backend: sentence-transformers
+  task: text-ranking
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    pair:
+    - a cat sits
+    - a cat is sitting
+    expect_score_min: 0.5
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: CECorrelationEvaluator_sts-dev_results.csv
+    sha256: c205711dba4dac59b2730e4b87e14213d2368362e3f3e601e0741eedef34c6d8
+    size: 310
+  - path: README.md
+    sha256: bfdfd87a1a11cabb2907c7e77866918e075e77690996605539ec7b5d54b3b1e6
+    size: 1137
+  - path: config.json
+    sha256: 8c50d3f5de660e595ff1f94d199984de19c51d0a8e7d26e692d6c52c18e20562
+    size: 608
+  - path: flax_model.msgpack
+    sha256: 768905d4b87ebefec4c819d9a36518802db21df7fc2d9e8ce7cb47ed3875283f
+    size: 498592825
+  - path: merges.txt
+    sha256: 1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5
+    size: 456318
+  - path: model.safetensors
+    sha256: 130e4eac117036a5803c3f832e95185b558d341cb9c4e576975614d8b1340ef7
+    size: 498613948
+  - path: onnx/model.onnx
+    sha256: c82166bb8dc6c022fb94e8aa7e7b0af4240cbfcbf8f29a58a5d26dcac5146711
+    size: 498905040
+  - path: onnx/model_O1.onnx
+    sha256: 2c1d4fdfa85014dc12cf3cffd1ec7e63bee02c0c93ac17d0181732b68112b9b7
+    size: 498803421
+  - path: onnx/model_O2.onnx
+    sha256: ae90e2d6fd8ab7708d2a857cc8d73df004ac5547ddec0babbb1288e2fb0e4baa
+    size: 498626418
+  - path: onnx/model_O3.onnx
+    sha256: 6ff18d82c77ea2c1c63aefab366c334bd1fe122626cdacd12c375114eba7d5ec
+    size: 498626273
+  - path: onnx/model_O4.onnx
+    sha256: 82678eb4507e362812e44a803a7f2d3849f58f03ae22035e3fc4b6c3c45ed99c
+    size: 249470678
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: ecca55ec425a68accbb9796cf65351332d9e5cdb42a291f66a90b6e9dffd38ce
+    size: 126017824
+  - path: openvino/openvino_model.bin
+    sha256: 4153ca3905be859cb0d13e718fdf31413c569b00a0c3f7b3875f485377921bca
+    size: 498589876
+  - path: openvino/openvino_model.xml
+    sha256: 3cee6cc3bc6f8935fc37cc7781bbddc3c5b5281ff861acca534559a2f8cb7c1b
+    size: 389560
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: fc01458a7eef642064bbefbc7c84f867b3eaec921468520821332f428e7dad21
+    size: 125819768
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: fe72dc21230a3d8b5b5df6c39ab97059f1b52cb9675e6036b2cc9893103dab2b
+    size: 710706
+  - path: pytorch_model.bin
+    sha256: bd8cddb9f6ddf924f91a1cc3c2bf83973a483a936654259d389ed1e7c56711d2
+    size: 498676169
+  - path: special_tokens_map.json
+    sha256: 75cbec71553267dadc77a583ef15122c2aa7422eb6635acc72a184a413f17c1c
+    size: 1008
+  - path: tokenizer.json
+    sha256: 2bb1a22cfbe25b8e5a232b7fc4d7fc5073923b45724a5f813b00811bb6620f66
+    size: 3558642
+  - path: tokenizer_config.json
+    sha256: fe09e6fe347cc94002f77bec394efa02db0ac151393f940d0d854af765e8b165
+    size: 1335
+  - path: vocab.json
+    sha256: ed19656ea1707df69134c4af35c8ceda2cc9860bf2c3495026153a133670ab5e
+    size: 798293
+- name: cross_encoder_resolver
+  repo_id: cross-encoder/stsb-roberta-base
+  ref: main
+  revision: d576534b67143e2c70ee9966d7fdbf5835728d13
+  backend: sentence-transformers
+  task: text-ranking
+  profiles:
+  - linux-cuda
+  device: cuda:0
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    pair:
+    - a cat sits
+    - a cat is sitting
+    expect_score_min: 0.5
+  files:
+  - path: .gitattributes
+    sha256: 98c91dabef4df27b2fc7c8454d220aba47476f73593cbd034d961fe4927304c1
+    size: 445
+  - path: CECorrelationEvaluator_sts-dev_results.csv
+    sha256: c205711dba4dac59b2730e4b87e14213d2368362e3f3e601e0741eedef34c6d8
+    size: 310
+  - path: README.md
+    sha256: bfdfd87a1a11cabb2907c7e77866918e075e77690996605539ec7b5d54b3b1e6
+    size: 1137
+  - path: config.json
+    sha256: 8c50d3f5de660e595ff1f94d199984de19c51d0a8e7d26e692d6c52c18e20562
+    size: 608
+  - path: flax_model.msgpack
+    sha256: 768905d4b87ebefec4c819d9a36518802db21df7fc2d9e8ce7cb47ed3875283f
+    size: 498592825
+  - path: merges.txt
+    sha256: 1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5
+    size: 456318
+  - path: model.safetensors
+    sha256: 130e4eac117036a5803c3f832e95185b558d341cb9c4e576975614d8b1340ef7
+    size: 498613948
+  - path: onnx/model.onnx
+    sha256: c82166bb8dc6c022fb94e8aa7e7b0af4240cbfcbf8f29a58a5d26dcac5146711
+    size: 498905040
+  - path: onnx/model_O1.onnx
+    sha256: 2c1d4fdfa85014dc12cf3cffd1ec7e63bee02c0c93ac17d0181732b68112b9b7
+    size: 498803421
+  - path: onnx/model_O2.onnx
+    sha256: ae90e2d6fd8ab7708d2a857cc8d73df004ac5547ddec0babbb1288e2fb0e4baa
+    size: 498626418
+  - path: onnx/model_O3.onnx
+    sha256: 6ff18d82c77ea2c1c63aefab366c334bd1fe122626cdacd12c375114eba7d5ec
+    size: 498626273
+  - path: onnx/model_O4.onnx
+    sha256: 82678eb4507e362812e44a803a7f2d3849f58f03ae22035e3fc4b6c3c45ed99c
+    size: 249470678
+  - path: onnx/model_qint8_arm64.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_qint8_avx512_vnni.onnx
+    sha256: 8b44d8ffa6775a7712e9f592b8a33162b3c183fedaeb2399bd0e2e40a5ddbd16
+    size: 126017827
+  - path: onnx/model_quint8_avx2.onnx
+    sha256: ecca55ec425a68accbb9796cf65351332d9e5cdb42a291f66a90b6e9dffd38ce
+    size: 126017824
+  - path: openvino/openvino_model.bin
+    sha256: 4153ca3905be859cb0d13e718fdf31413c569b00a0c3f7b3875f485377921bca
+    size: 498589876
+  - path: openvino/openvino_model.xml
+    sha256: 3cee6cc3bc6f8935fc37cc7781bbddc3c5b5281ff861acca534559a2f8cb7c1b
+    size: 389560
+  - path: openvino/openvino_model_qint8_quantized.bin
+    sha256: fc01458a7eef642064bbefbc7c84f867b3eaec921468520821332f428e7dad21
+    size: 125819768
+  - path: openvino/openvino_model_qint8_quantized.xml
+    sha256: fe72dc21230a3d8b5b5df6c39ab97059f1b52cb9675e6036b2cc9893103dab2b
+    size: 710706
+  - path: pytorch_model.bin
+    sha256: bd8cddb9f6ddf924f91a1cc3c2bf83973a483a936654259d389ed1e7c56711d2
+    size: 498676169
+  - path: special_tokens_map.json
+    sha256: 75cbec71553267dadc77a583ef15122c2aa7422eb6635acc72a184a413f17c1c
+    size: 1008
+  - path: tokenizer.json
+    sha256: 2bb1a22cfbe25b8e5a232b7fc4d7fc5073923b45724a5f813b00811bb6620f66
+    size: 3558642
+  - path: tokenizer_config.json
+    sha256: fe09e6fe347cc94002f77bec394efa02db0ac151393f940d0d854af765e8b165
+    size: 1335
+  - path: vocab.json
+    sha256: ed19656ea1707df69134c4af35c8ceda2cc9860bf2c3495026153a133670ab5e
+    size: 798293
+- name: spacy_pipeline
+  repo_id: spacy/en_core_web_sm
+  ref: main
+  revision: 8fb6f8155286360bf5486fe399e2738d1df7ded2
+  backend: spacy
+  task: sentence-pos-ner
+  profiles:
+  - darwin-arm64
+  device: cpu
+  accelerator_policy: cpu_only
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 93260bd5390399892e91280a6b316e41bd2ca387352669ed5ec89504080cf22a
+    size: 957
+  - path: LICENSE
+    sha256: 3933c176979b68bc6d0bcc902c7d6c130f1d127f476f17ba5cdba8d99cfd0012
+    size: 1056
+  - path: LICENSES_SOURCES
+    sha256: 20d9dfacd215112251f15341edd1a47b1f98bf393a212f10f194ffdc7ee98a90
+    size: 2347
+  - path: README.md
+    sha256: 23caf4a06c2db12c5bd34a60cf28628bcf1baf3a89e2caad6af78c25070b9ab9
+    size: 3648
+  - path: accuracy.json
+    sha256: 6cee79068ec6655cf9c68e2cd8aa1d3f5648d382d16aa43f6b29b5f82ba612c4
+    size: 6320
+  - path: attribute_ruler/patterns
+    sha256: f8b97f7ebef9b8536bba5f0fc1e73af6183563e96e2325bcbb021b8c6dbc6683
+    size: 14735
+  - path: config.cfg
+    sha256: 65c545ca2da5bd4b87b22d4917318605360b37dee6ed6b18516a036f87319f79
+    size: 5527
+  - path: en_core_web_sm-any-py3-none-any.whl
+    sha256: 86cc141f63942d4b2c5fcee06630fd6f904788d2f0ab005cce45aadb8fb73889
+    size: 12803381
+  - path: lemmatizer/lookups/lookups.bin
+    sha256: eb64f40c0f8396d1762730c0ddf4dad2a52d138f5a389f71a1a1d088173b7737
+    size: 972893
+  - path: meta.json
+    sha256: 5fc475fbe5bb0317249fd7e51c22d53052345bb23f13eaf149ff590223964d1c
+    size: 10085
+  - path: ner/cfg
+    sha256: a7172edadafba9f472e9ac0f2660eec04b6405e471be9e20267b79c67288d22d
+    size: 221
+  - path: ner/model
+    sha256: 6f47ca062eb419c8ffb7d3023e6fbc4b2eb21dab14c5d49aa5e5586228b87405
+    size: 6154601
+  - path: ner/moves
+    sha256: d82b13473ebd33e0396004dd22f00c71fe3c1251742bf1f7c4554f23fd3b0af4
+    size: 1064
+  - path: parser/cfg
+    sha256: e2a240ef01f95e58f5dd4c9d6e90d61f597b8d998966570d3009dd81e8879780
+    size: 222
+  - path: parser/model
+    sha256: a1836fbc02b3924b2fd5f65325c58ae852ff112db1090ca724e5a801e68b85fd
+    size: 319909
+  - path: parser/moves
+    sha256: ec41318c32eb7f9e4d8f050b2e8466ee67954d2d3455c1aec73abf46c82dd67f
+    size: 1571
+  - path: senter/cfg
+    sha256: 2a4db4a729b6469da1f87d71cc7cd3ed2a73360cc85326821e850836c4671103
+    size: 23
+  - path: senter/model
+    sha256: e62c2504dcdc66144b30c048100af05f12207f933f6d669982b947ae71ffdeef
+    size: 197089
+  - path: tagger/cfg
+    sha256: d484c3d9391f37bf9c727aa2eb4c477a24cb103020f95e52dc37842818b50118
+    size: 615
+  - path: tagger/model
+    sha256: fb00ef592a2a464d95dd889ce424952ae7fd64e095153054c310345198cc0fc4
+    size: 19829
+  - path: tok2vec/cfg
+    sha256: f8a5a26e3056eb6fb06deeb3dbccfd88ae74900200c98c70b5966bbb7ec9d4de
+    size: 4
+  - path: tok2vec/model
+    sha256: 42d8414521eaf75f817bd1b351b26039a22a912bb2617f95ead305420f2ebffd
+    size: 6269370
+  - path: tokenizer
+    sha256: b014e8bba4958b120af2d0c1c63eabb7c00379f2bacaf10df7c5325efd2ea467
+    size: 77066
+  - path: vocab/key2row
+    sha256: 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71
+    size: 1
+  - path: vocab/lookups.bin
+    sha256: fce9c883c56165f29573cc938c2a1c9d417ac61bd8f56b671dd5f7996de70682
+    size: 70040
+  - path: vocab/strings.json
+    sha256: b1966d1f07a05b68576df07f43f40203b4e11124ad82cc839e8312ad8d7fdae7
+    size: 1103983
+  - path: vocab/vectors
+    sha256: 14772b683e726436d5948ad3fff2b43d036ef2ebbe3458aafed6004e05a40706
+    size: 128
+  - path: vocab/vectors.cfg
+    sha256: ff4359091952c8cd16f1f0482f5770fb82d1707368d5cca3c46aa501f552e3c5
+    size: 22
+- name: spacy_pipeline
+  repo_id: spacy/en_core_web_sm
+  ref: main
+  revision: 8fb6f8155286360bf5486fe399e2738d1df7ded2
+  backend: spacy
+  task: sentence-pos-ner
+  profiles:
+  - linux-cpu
+  device: cpu
+  accelerator_policy: cpu_only
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 93260bd5390399892e91280a6b316e41bd2ca387352669ed5ec89504080cf22a
+    size: 957
+  - path: LICENSE
+    sha256: 3933c176979b68bc6d0bcc902c7d6c130f1d127f476f17ba5cdba8d99cfd0012
+    size: 1056
+  - path: LICENSES_SOURCES
+    sha256: 20d9dfacd215112251f15341edd1a47b1f98bf393a212f10f194ffdc7ee98a90
+    size: 2347
+  - path: README.md
+    sha256: 23caf4a06c2db12c5bd34a60cf28628bcf1baf3a89e2caad6af78c25070b9ab9
+    size: 3648
+  - path: accuracy.json
+    sha256: 6cee79068ec6655cf9c68e2cd8aa1d3f5648d382d16aa43f6b29b5f82ba612c4
+    size: 6320
+  - path: attribute_ruler/patterns
+    sha256: f8b97f7ebef9b8536bba5f0fc1e73af6183563e96e2325bcbb021b8c6dbc6683
+    size: 14735
+  - path: config.cfg
+    sha256: 65c545ca2da5bd4b87b22d4917318605360b37dee6ed6b18516a036f87319f79
+    size: 5527
+  - path: en_core_web_sm-any-py3-none-any.whl
+    sha256: 86cc141f63942d4b2c5fcee06630fd6f904788d2f0ab005cce45aadb8fb73889
+    size: 12803381
+  - path: lemmatizer/lookups/lookups.bin
+    sha256: eb64f40c0f8396d1762730c0ddf4dad2a52d138f5a389f71a1a1d088173b7737
+    size: 972893
+  - path: meta.json
+    sha256: 5fc475fbe5bb0317249fd7e51c22d53052345bb23f13eaf149ff590223964d1c
+    size: 10085
+  - path: ner/cfg
+    sha256: a7172edadafba9f472e9ac0f2660eec04b6405e471be9e20267b79c67288d22d
+    size: 221
+  - path: ner/model
+    sha256: 6f47ca062eb419c8ffb7d3023e6fbc4b2eb21dab14c5d49aa5e5586228b87405
+    size: 6154601
+  - path: ner/moves
+    sha256: d82b13473ebd33e0396004dd22f00c71fe3c1251742bf1f7c4554f23fd3b0af4
+    size: 1064
+  - path: parser/cfg
+    sha256: e2a240ef01f95e58f5dd4c9d6e90d61f597b8d998966570d3009dd81e8879780
+    size: 222
+  - path: parser/model
+    sha256: a1836fbc02b3924b2fd5f65325c58ae852ff112db1090ca724e5a801e68b85fd
+    size: 319909
+  - path: parser/moves
+    sha256: ec41318c32eb7f9e4d8f050b2e8466ee67954d2d3455c1aec73abf46c82dd67f
+    size: 1571
+  - path: senter/cfg
+    sha256: 2a4db4a729b6469da1f87d71cc7cd3ed2a73360cc85326821e850836c4671103
+    size: 23
+  - path: senter/model
+    sha256: e62c2504dcdc66144b30c048100af05f12207f933f6d669982b947ae71ffdeef
+    size: 197089
+  - path: tagger/cfg
+    sha256: d484c3d9391f37bf9c727aa2eb4c477a24cb103020f95e52dc37842818b50118
+    size: 615
+  - path: tagger/model
+    sha256: fb00ef592a2a464d95dd889ce424952ae7fd64e095153054c310345198cc0fc4
+    size: 19829
+  - path: tok2vec/cfg
+    sha256: f8a5a26e3056eb6fb06deeb3dbccfd88ae74900200c98c70b5966bbb7ec9d4de
+    size: 4
+  - path: tok2vec/model
+    sha256: 42d8414521eaf75f817bd1b351b26039a22a912bb2617f95ead305420f2ebffd
+    size: 6269370
+  - path: tokenizer
+    sha256: b014e8bba4958b120af2d0c1c63eabb7c00379f2bacaf10df7c5325efd2ea467
+    size: 77066
+  - path: vocab/key2row
+    sha256: 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71
+    size: 1
+  - path: vocab/lookups.bin
+    sha256: fce9c883c56165f29573cc938c2a1c9d417ac61bd8f56b671dd5f7996de70682
+    size: 70040
+  - path: vocab/strings.json
+    sha256: b1966d1f07a05b68576df07f43f40203b4e11124ad82cc839e8312ad8d7fdae7
+    size: 1103983
+  - path: vocab/vectors
+    sha256: 14772b683e726436d5948ad3fff2b43d036ef2ebbe3458aafed6004e05a40706
+    size: 128
+  - path: vocab/vectors.cfg
+    sha256: ff4359091952c8cd16f1f0482f5770fb82d1707368d5cca3c46aa501f552e3c5
+    size: 22
+- name: spacy_pipeline
+  repo_id: spacy/en_core_web_sm
+  ref: main
+  revision: 8fb6f8155286360bf5486fe399e2738d1df7ded2
+  backend: spacy
+  task: sentence-pos-ner
+  profiles:
+  - linux-cuda
+  device: cpu
+  accelerator_policy: cpu_only
+  license: mit
+  model_card_license: mit
+  smoke:
+    text: Ada Lovelace visited London.
+    expect_entities:
+    - Ada Lovelace
+    - London
+  files:
+  - path: .gitattributes
+    sha256: 93260bd5390399892e91280a6b316e41bd2ca387352669ed5ec89504080cf22a
+    size: 957
+  - path: LICENSE
+    sha256: 3933c176979b68bc6d0bcc902c7d6c130f1d127f476f17ba5cdba8d99cfd0012
+    size: 1056
+  - path: LICENSES_SOURCES
+    sha256: 20d9dfacd215112251f15341edd1a47b1f98bf393a212f10f194ffdc7ee98a90
+    size: 2347
+  - path: README.md
+    sha256: 23caf4a06c2db12c5bd34a60cf28628bcf1baf3a89e2caad6af78c25070b9ab9
+    size: 3648
+  - path: accuracy.json
+    sha256: 6cee79068ec6655cf9c68e2cd8aa1d3f5648d382d16aa43f6b29b5f82ba612c4
+    size: 6320
+  - path: attribute_ruler/patterns
+    sha256: f8b97f7ebef9b8536bba5f0fc1e73af6183563e96e2325bcbb021b8c6dbc6683
+    size: 14735
+  - path: config.cfg
+    sha256: 65c545ca2da5bd4b87b22d4917318605360b37dee6ed6b18516a036f87319f79
+    size: 5527
+  - path: en_core_web_sm-any-py3-none-any.whl
+    sha256: 86cc141f63942d4b2c5fcee06630fd6f904788d2f0ab005cce45aadb8fb73889
+    size: 12803381
+  - path: lemmatizer/lookups/lookups.bin
+    sha256: eb64f40c0f8396d1762730c0ddf4dad2a52d138f5a389f71a1a1d088173b7737
+    size: 972893
+  - path: meta.json
+    sha256: 5fc475fbe5bb0317249fd7e51c22d53052345bb23f13eaf149ff590223964d1c
+    size: 10085
+  - path: ner/cfg
+    sha256: a7172edadafba9f472e9ac0f2660eec04b6405e471be9e20267b79c67288d22d
+    size: 221
+  - path: ner/model
+    sha256: 6f47ca062eb419c8ffb7d3023e6fbc4b2eb21dab14c5d49aa5e5586228b87405
+    size: 6154601
+  - path: ner/moves
+    sha256: d82b13473ebd33e0396004dd22f00c71fe3c1251742bf1f7c4554f23fd3b0af4
+    size: 1064
+  - path: parser/cfg
+    sha256: e2a240ef01f95e58f5dd4c9d6e90d61f597b8d998966570d3009dd81e8879780
+    size: 222
+  - path: parser/model
+    sha256: a1836fbc02b3924b2fd5f65325c58ae852ff112db1090ca724e5a801e68b85fd
+    size: 319909
+  - path: parser/moves
+    sha256: ec41318c32eb7f9e4d8f050b2e8466ee67954d2d3455c1aec73abf46c82dd67f
+    size: 1571
+  - path: senter/cfg
+    sha256: 2a4db4a729b6469da1f87d71cc7cd3ed2a73360cc85326821e850836c4671103
+    size: 23
+  - path: senter/model
+    sha256: e62c2504dcdc66144b30c048100af05f12207f933f6d669982b947ae71ffdeef
+    size: 197089
+  - path: tagger/cfg
+    sha256: d484c3d9391f37bf9c727aa2eb4c477a24cb103020f95e52dc37842818b50118
+    size: 615
+  - path: tagger/model
+    sha256: fb00ef592a2a464d95dd889ce424952ae7fd64e095153054c310345198cc0fc4
+    size: 19829
+  - path: tok2vec/cfg
+    sha256: f8a5a26e3056eb6fb06deeb3dbccfd88ae74900200c98c70b5966bbb7ec9d4de
+    size: 4
+  - path: tok2vec/model
+    sha256: 42d8414521eaf75f817bd1b351b26039a22a912bb2617f95ead305420f2ebffd
+    size: 6269370
+  - path: tokenizer
+    sha256: b014e8bba4958b120af2d0c1c63eabb7c00379f2bacaf10df7c5325efd2ea467
+    size: 77066
+  - path: vocab/key2row
+    sha256: 76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71
+    size: 1
+  - path: vocab/lookups.bin
+    sha256: fce9c883c56165f29573cc938c2a1c9d417ac61bd8f56b671dd5f7996de70682
+    size: 70040
+  - path: vocab/strings.json
+    sha256: b1966d1f07a05b68576df07f43f40203b4e11124ad82cc839e8312ad8d7fdae7
+    size: 1103983
+  - path: vocab/vectors
+    sha256: 14772b683e726436d5948ad3fff2b43d036ef2ebbe3458aafed6004e05a40706
+    size: 128
+  - path: vocab/vectors.cfg
+    sha256: ff4359091952c8cd16f1f0482f5770fb82d1707368d5cca3c46aa501f552e3c5
+    size: 22
+- name: mlx_structured_extractor
+  repo_id: mlx-community/Qwen3-1.7B-4bit
+  ref: main
+  revision: 3b1b1768f8f8cf8351c712464f906e86c2b8269e
+  backend: mlx
+  task: text-generation
+  profiles:
+  - darwin-arm64
+  device: mlx
+  accelerator_policy: native
+  license: apache-2.0
+  model_card_license: apache-2.0
+  smoke:
+    prompt: 'Return the JSON object {"ok": true} and nothing else.'
+    expect_contains: ok
+  files:
+  - path: .gitattributes
+    sha256: 34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930
+    size: 1570
+  - path: README.md
+    sha256: 26afc7609fa8dce8a0763b115ce95017763e45c0aaa92ac38911363f4fc1c16b
+    size: 873
+  - path: added_tokens.json
+    sha256: c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680
+    size: 707
+  - path: config.json
+    sha256: 507a6701220524eb8b283425bf0856a9ae4f21f4052e563896ddd668994b1dc7
+    size: 937
+  - path: merges.txt
+    sha256: 8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5
+    size: 1671853
+  - path: model.safetensors
+    sha256: 0e86d9677e519323849eac1bc272caae88567a481ff188c431f70be543d9995f
+    size: 968080210
+  - path: model.safetensors.index.json
+    sha256: 1e3058d4ba4b04e4de35b74467725cbef90ff022198404218e48f21adc9cfa15
+    size: 49731
+  - path: special_tokens_map.json
+    sha256: 76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd
+    size: 613
+  - path: tokenizer.json
+    sha256: aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4
+    size: 11422654
+  - path: tokenizer_config.json
+    sha256: 253153d0738ceb4c668d2eff957714dd2bea0b56de772a9fdccd96cbf517e6a0
+    size: 9706
+  - path: vocab.json
+    sha256: ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910
+    size: 2776833
+service_models:
+- name: ollama_structured_extractor
+  service: ollama
+  model: qwen3:1.7b-q4_K_M
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  license: apache-2.0
+  smoke:
+    prompt: 'Return the JSON object {"ok": true} and nothing else.'
+    expect_contains: ok
+  digest: sha256:8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7
+  size: 1359293444

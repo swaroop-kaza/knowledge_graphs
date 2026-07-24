@@ -6,31 +6,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.production import build_production_services
-from kg_construction.application.source_catalog import CatalogTableMapper
-from kg_construction.application.workflow import ConstructionWorkflow
-from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
-from kg_construction.infrastructure.graph_stores.exporters import Neo4jExporter, RDFExporter
-from kg_construction.infrastructure.loaders import (
-    APIResponseLoader,
-    ChatTranscriptLoader,
-    EmailLoader,
-    ExcelLoader,
-    MarkdownLoader,
-    PDFLoader,
-    ReportLoader,
-    XMLLoader,
+from kg_construction.application.public_api import construct_kg, load_sources
+from kg_construction.application.publication_contract import (
+    UntrustedPublicationContractError,
 )
-from kg_construction.infrastructure.loaders.csv_loader import CsvLoader
-from kg_construction.infrastructure.loaders.json_loader import JsonLoader
-from kg_construction.infrastructure.loaders.text_loader import TextLoader
-from kg_construction.infrastructure.mapping.direct_table_mapper import DirectTableMapper
-from kg_construction.infrastructure.mapping.semi_structured import JsonPathMapper
-from kg_construction.infrastructure.ontology.validation import EvidenceRequiredValidator
-from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
+from kg_construction.application.workflow import PublicationGateError
+from kg_construction.infrastructure.graph_stores.exporters import Neo4jExporter, RDFExporter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,25 +22,72 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--source-type",
         choices=[
+            "api",
             "api_response",
             "chat_transcript",
             "csv",
             "email",
+            "event_payload",
             "excel",
+            "html",
             "json",
+            "jsonld",
+            "logs",
             "markdown",
             "pdf",
             "report",
+            "scientific_paper",
+            "sql",
+            "structured_api",
             "text",
+            "webpage",
             "xml",
         ],
         required=True,
     )
-    parser.add_argument("--config", help="Optional YAML config path.")
+    parser.add_argument(
+        "--config",
+        help="YAML config path; the mandatory product defaults are used when omitted.",
+    )
+    parser.add_argument(
+        "--evaluation-suite",
+        required=True,
+        help=(
+            "Sealed versioned YAML/JSON gold suite. Predictions are computed "
+            "from the frozen graph and cannot be supplied in this file."
+        ),
+    )
     parser.add_argument("--output", required=True, help="Property graph JSON output path.")
-    parser.add_argument("--rdf-output", help="RDF JSON/Turtle/N-Quads output path.")
-    parser.add_argument("--evidence-output", help="Evidence graph JSON output path.")
-    parser.add_argument("--neo4j-output", help="Neo4j Cypher output path.")
+    parser.add_argument(
+        "--rdf-output",
+        help="RDF JSON output path override; always emitted beside --output by default.",
+    )
+    parser.add_argument(
+        "--evidence-output",
+        help="Evidence graph JSON path override; always emitted beside --output by default.",
+    )
+    parser.add_argument(
+        "--neo4j-output",
+        help="Neo4j Cypher path override; always emitted beside --output by default.",
+    )
+    parser.add_argument(
+        "--quality-output",
+        help="Quality-gate JSON path override; always emitted beside --output by default.",
+    )
+    parser.add_argument(
+        "--intended-use-output",
+        help=(
+            "Intended-use benchmark JSON path override; always emitted beside "
+            "--output by default."
+        ),
+    )
+    parser.add_argument(
+        "--publication-contract-output",
+        help=(
+            "Trusted release-contract evidence path override; always emitted "
+            "beside --output by default."
+        ),
+    )
     return parser
 
 
@@ -72,31 +102,110 @@ def main(argv: list[str] | None = None) -> int:
 
     args = build_parser().parse_args(raw_args)
     config = DataToKGConfig.from_yaml(args.config) if args.config else DataToKGConfig()
-    sources = _load_sources(args.input, args.source_type)
-    production_services = build_production_services(config)
-    workflow = _workflow_for_source(
-        args.source_type,
-        config,
-        production_kwargs=production_services.workflow_kwargs(),
-    )
-    result = workflow.run(sources)
+    sources = load_sources(args.input, source_type=args.source_type)
+    try:
+        result = construct_kg(
+            sources,
+            source_type=args.source_type,
+            config=config,
+            evaluation_suite_path=args.evaluation_suite,
+        )
+    except UntrustedPublicationContractError as exc:
+        print(
+            json.dumps(
+                {
+                    "error": "untrusted_publication_contract",
+                    "research_only": True,
+                    "reasons": exc.assessment.reasons,
+                    "graph_outputs_written": False,
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        return 2
+    except PublicationGateError as exc:
+        print(
+            json.dumps(
+                {
+                    "error": "publication_gates_failed",
+                    "failed_gates": exc.result.publication_gate.failed_gates,
+                    "quality_passed": exc.result.quality_report.passed,
+                    "intended_use_passed": exc.result.intended_use_report.passed,
+                    "graph_outputs_written": False,
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        return 2
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(result.property_graph.to_json(), encoding="utf-8")
 
-    if args.rdf_output:
-        rdf_payload = RDFExporter().export_rdf_graph(result.rdf_graph)
-        Path(args.rdf_output).write_text(json.dumps(rdf_payload, indent=2, sort_keys=True), encoding="utf-8")
+    rdf_path = _derived_output_path(output_path, args.rdf_output, ".rdf.json")
+    evidence_path = _derived_output_path(
+        output_path,
+        args.evidence_output,
+        ".evidence.json",
+    )
+    neo4j_path = _derived_output_path(
+        output_path,
+        args.neo4j_output,
+        ".neo4j.cypher",
+    )
+    quality_path = _derived_output_path(
+        output_path,
+        args.quality_output,
+        ".quality.json",
+    )
+    intended_use_path = _derived_output_path(
+        output_path,
+        args.intended_use_output,
+        ".intended-use.json",
+    )
+    publication_contract_path = _derived_output_path(
+        output_path,
+        args.publication_contract_output,
+        ".publication-contract.json",
+    )
+    for path in (
+        rdf_path,
+        evidence_path,
+        neo4j_path,
+        quality_path,
+        intended_use_path,
+        publication_contract_path,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-    if args.evidence_output:
-        Path(args.evidence_output).write_text(result.evidence_graph.to_json(), encoding="utf-8")
-
-    if args.neo4j_output:
-        Path(args.neo4j_output).write_text(
-            "\n".join(Neo4jExporter().export_property_graph(result.property_graph)),
-            encoding="utf-8",
-        )
+    rdf_payload = RDFExporter().export_rdf_graph(result.rdf_graph)
+    rdf_path.write_text(
+        json.dumps(rdf_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    evidence_path.write_text(result.evidence_graph.to_json(), encoding="utf-8")
+    neo4j_path.write_text(
+        "\n".join(Neo4jExporter().export_property_graph(result.property_graph)),
+        encoding="utf-8",
+    )
+    quality_path.write_text(
+        result.quality_report.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+    intended_use_path.write_text(
+        result.intended_use_report.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+    if result.publication_contract is None:
+        raise RuntimeError("public CLI result is missing publication-contract evidence")
+    publication_contract_path.write_text(
+        result.publication_contract.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
 
     summary = {
         "sources": len(sources),
@@ -105,77 +214,42 @@ def main(argv: list[str] | None = None) -> int:
         "property_nodes": len(result.property_graph.nodes),
         "property_edges": len(result.property_graph.edges),
         "validation_findings": len(result.validation_report.findings),
+        "quality_passed": result.quality_report.passed,
+        "quality_missing_families": result.quality_report.missing_families,
+        "intended_use_passed": result.intended_use_report.passed,
+        "missing_intended_uses": result.intended_use_report.missing_uses,
+        "publication_passed": result.publication_gate.passed,
+        "release_eligible": result.release_eligible,
+        "publication_contract_id": (
+            result.publication_contract.contract_id
+            if result.publication_contract is not None
+            else None
+        ),
+        "publication_contract_output": str(publication_contract_path),
         "output": str(output_path),
+        "rdf_output": str(rdf_path),
+        "evidence_output": str(evidence_path),
+        "neo4j_output": str(neo4j_path),
+        "quality_output": str(quality_path),
+        "intended_use_output": str(intended_use_path),
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 
 
-def _load_sources(input_path: str, source_type: str):
-    if source_type == "csv":
-        return CsvLoader().load(input_path)
-    if source_type == "excel":
-        return ExcelLoader().load(input_path)
-    if source_type == "json":
-        return JsonLoader().load(input_path)
-    if source_type == "api_response":
-        return APIResponseLoader().load(input_path)
-    if source_type == "xml":
-        return XMLLoader().load(input_path)
-    if source_type == "markdown":
-        return MarkdownLoader().load(input_path)
-    if source_type == "pdf":
-        return PDFLoader().load(input_path)
-    if source_type == "report":
-        return ReportLoader().load(input_path)
-    if source_type == "email":
-        return EmailLoader().load(input_path)
-    if source_type == "chat_transcript":
-        return ChatTranscriptLoader().load(input_path)
-    return TextLoader().load(input_path)
-
-
-def _workflow_for_source(
-    source_type: str,
-    config: DataToKGConfig,
-    *,
-    production_kwargs: dict[str, Any] | None = None,
-) -> ConstructionWorkflow:
-    validators: list[Any] = [EvidenceRequiredValidator(config.pipeline.validation_policy)]
-    resolvers: list[Any] = [ExactKeyEntityResolver()]
-    common_kwargs: dict[str, Any] = {
-        "pipeline_name": config.pipeline.name,
-        "config_payload": config.model_dump(mode="json"),
-        **(production_kwargs or {}),
-    }
-    if source_type in {"csv", "excel", "sql", "structured_api"}:
-        direct = config.pipeline.structured_mapping == "direct"
-        return ConstructionWorkflow(
-            mappers=[DirectTableMapper()] if direct else [CatalogTableMapper()],
-            resolvers=resolvers,
-            validators=validators,
-            **common_kwargs,
-        )
-    if source_type in {"xml", "chat_transcript"}:
-        return ConstructionWorkflow(
-            mappers=[DirectTableMapper()],
-            resolvers=resolvers,
-            validators=validators,
-            **common_kwargs,
-        )
-    if source_type in {"json", "api_response"}:
-        return ConstructionWorkflow(
-            mappers=[JsonPathMapper()],
-            resolvers=resolvers,
-            validators=validators,
-            **common_kwargs,
-        )
-    return ConstructionWorkflow(
-        extractors=[RegexEntityExtractor()],
-        resolvers=resolvers,
-        validators=validators,
-        **common_kwargs,
+def _derived_output_path(
+    property_output: Path,
+    override: str | None,
+    suffix: str,
+) -> Path:
+    if override:
+        return Path(override)
+    base_name = (
+        property_output.name[: -len(property_output.suffix)]
+        if property_output.suffix
+        else property_output.name
     )
+    return property_output.with_name(f"{base_name}{suffix}")
 
 
 if __name__ == "__main__":

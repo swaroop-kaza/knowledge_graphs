@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from kg_construction.application.graph_store_benchmark import generate_graph_store_benchmark_fixture
-from kg_construction.application.registry import default_registry
+from kg_construction.application.registry import default_registry, research_registry
 from kg_construction.domain.graph_objects import RDFGraph, RDFTriple
 from kg_construction.domain.models import (
     ConstructionBatch,
@@ -26,8 +26,8 @@ from kg_construction.infrastructure.enrichment import (
 )
 from kg_construction.infrastructure.evaluation import GoldBenchmarkEvaluator, GoldBenchmarkFixture
 from kg_construction.infrastructure.graph_stores import (
-    KuzuIngestionAdapter,
-    KuzuIngestionConfig,
+    LadybugIngestionAdapter,
+    LadybugIngestionConfig,
     Neo4jIngestionAdapter,
     Neo4jIngestionConfig,
 )
@@ -94,7 +94,7 @@ class FakeNeo4jDriver:
         return FakeSession(self)
 
 
-class FakeKuzuConnection:
+class FakeLadybugConnection:
     def __init__(self) -> None:
         self.executions: list[tuple[str, dict[str, object] | None]] = []
 
@@ -240,7 +240,7 @@ class NextStageUpgradeTests(unittest.TestCase):
         self.assertEqual({row.strategy for row in rows}, {"text_only", "vector", "graphrag"})
         self.assertIn("split", trainer_payload)
 
-    def test_neosemantics_and_kuzu_bulk_paths_use_expected_queries(self) -> None:
+    def test_neosemantics_and_ladybug_bulk_paths_use_expected_queries(self) -> None:
         rdf_graph = RDFGraph(
             triples=[RDFTriple(subject="urn:s", predicate="urn:p", object="value")]
         )
@@ -251,10 +251,13 @@ class NextStageUpgradeTests(unittest.TestCase):
         )
         report = neo4j.write_rdf_graph(rdf_graph)
         graph = generate_graph_store_benchmark_fixture(node_count=3, edge_factor=1)
-        connection = FakeKuzuConnection()
-        kuzu = KuzuIngestionAdapter(KuzuIngestionConfig(database_path="memory"), connection=connection)
+        connection = FakeLadybugConnection()
+        ladybug = LadybugIngestionAdapter(
+            LadybugIngestionConfig(database_path="memory"),
+            connection=connection,
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
-            bulk_report = kuzu.bulk_import_property_graph(graph, tmpdir)
+            bulk_report = ladybug.bulk_import_property_graph(graph, tmpdir)
 
         self.assertEqual(report.graph_model, "rdf_graph")
         self.assertTrue(any("n10s.rdf.import.inline" in query for query, _ in driver.runs))
@@ -296,13 +299,19 @@ class NextStageUpgradeTests(unittest.TestCase):
             "obda_virtual_graph_mapper",
             "event_payload_loader",
             "event_graph_mapper",
+        }:
+            self.assertEqual(registry.get(name).status, "implemented")
+
+        research = research_registry()
+        for name in {
             "graph_train_validation_splitter",
             "node2vec_embedding_adapter",
             "knowledge_graph_embedding_adapter",
             "large_graph_analytics_backend",
             "graph_retrieval_benchmark",
         }:
-            self.assertEqual(registry.get(name).status, "implemented")
+            self.assertEqual(research.get(name).status, "implemented")
+            self.assertNotIn(name, registry.names())
 
 
 if __name__ == "__main__":

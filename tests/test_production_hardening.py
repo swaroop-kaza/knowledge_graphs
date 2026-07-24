@@ -12,8 +12,12 @@ from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.production import build_production_services
 from kg_construction.application.registry import default_registry
 from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.domain.claim import DocumentRef
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
+from kg_construction.infrastructure.graph_builders.evidence_graph import (
+    EvidenceGraphBuilder,
+)
 from kg_construction.infrastructure.mapping.direct_table_mapper import (
     DirectTableMapper,
     DirectTableMappingConfig,
@@ -60,6 +64,31 @@ class ProductionHardeningTests(unittest.TestCase):
         self.assertEqual(redacted.records[0]["phone"], "[REDACTED]")
         self.assertEqual(redacted.metadata["owner"], "[REDACTED]")
         self.assertTrue(redacted.metadata["_pii_redaction"]["applied"])
+        self.assertNotEqual(redacted.source_id, source.source_id)
+        self.assertEqual(redacted.document_version, redacted.source_id)
+        self.assertEqual(DocumentRef.from_source(redacted).version, redacted.source_id)
+        lineage = redacted.metadata["_source_lineage"]
+        self.assertEqual(lineage["relation"], "DERIVED_FROM")
+        self.assertEqual(lineage["parent_source_id"], source.source_id)
+        self.assertEqual(lineage["parent_document_version"], source.source_id)
+        self.assertEqual(lineage["root_source_id"], source.source_id)
+        self.assertEqual(lineage["derived_source_id"], redacted.source_id)
+
+        repeated = policy.redact_source_record(source)
+        self.assertEqual(repeated.source_id, redacted.source_id)
+        self.assertEqual(repeated.metadata["_source_lineage"], lineage)
+        self.assertIn("asha@example.com", source.content or "")
+
+        evidence_graph = EvidenceGraphBuilder().build(
+            ConstructionBatch(source_records=[redacted])
+        )
+        derived_from = [
+            edge for edge in evidence_graph.edges if edge.type == "DERIVED_FROM"
+        ]
+        self.assertEqual(len(derived_from), 1)
+        self.assertEqual(derived_from[0].source_id, redacted.source_id)
+        self.assertEqual(derived_from[0].target_id, source.source_id)
+        self.assertIn(source.source_id, {node.node_id for node in evidence_graph.nodes})
 
         stream = io.StringIO()
         logger = configure_structured_logging(
@@ -72,6 +101,47 @@ class ProductionHardeningTests(unittest.TestCase):
 
         self.assertEqual(payload["event"], "pii_test")
         self.assertEqual(payload["contact"], "[REDACTED]")
+
+    def test_pii_policy_preserves_identity_when_source_payload_does_not_change(
+        self,
+    ) -> None:
+        source = SourceRecord.from_text(
+            "No sensitive values are present.",
+            source_name="memory://pii/no-change",
+        )
+
+        redacted = PIIRedactionPolicy().redact_source_record(source)
+
+        self.assertEqual(redacted.source_id, source.source_id)
+        self.assertFalse(redacted.metadata["_pii_redaction"]["snapshot_mutated"])
+        self.assertNotIn("_source_lineage", redacted.metadata)
+
+    def test_redacted_snapshots_that_collapse_to_same_text_keep_distinct_lineage(
+        self,
+    ) -> None:
+        first = SourceRecord.from_text(
+            "Contact first@example.com",
+            source_name="memory://pii/collision",
+        )
+        second = SourceRecord.from_text(
+            "Contact second@example.com",
+            source_name="memory://pii/collision",
+        )
+        policy = PIIRedactionPolicy()
+
+        redacted_first = policy.redact_source_record(first)
+        redacted_second = policy.redact_source_record(second)
+
+        self.assertEqual(redacted_first.content, redacted_second.content)
+        self.assertNotEqual(redacted_first.source_id, redacted_second.source_id)
+        self.assertEqual(
+            redacted_first.metadata["_source_lineage"]["parent_source_id"],
+            first.source_id,
+        )
+        self.assertEqual(
+            redacted_second.metadata["_source_lineage"]["parent_source_id"],
+            second.source_id,
+        )
 
     def test_redacted_configured_identity_columns_do_not_false_merge(self) -> None:
         source = SourceRecord.from_rows(

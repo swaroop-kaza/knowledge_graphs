@@ -27,19 +27,25 @@
     {
       "case_id": "unstructured_salient_entities_v1",
       "checks": {
-        "entity_coverage_meets_minimum": true
+        "claims_have_complete_provenance": true,
+        "entity_coverage_meets_minimum": true,
+        "intents_evaluated": true
       },
       "kind": "unstructured",
       "metrics": {
+        "claim_coverage": 1.0,
         "entity_coverage": 0.8,
         "gold_entity_count": 5.0,
+        "intent_coverage": 0.0,
         "matched_entity_count": 4.0,
         "minimum_entity_coverage": 0.8,
-        "nil_rate": 1.0
+        "nil_rate": 1.0,
+        "promoted_claim_count": 0.0
       },
       "passed": true
     }
   ],
   "generated": "2026-07-24",
-  "overall_passed": true
+  "overall_passed": true,
+  "thresholds_version": "kg-quality-v2"
 }

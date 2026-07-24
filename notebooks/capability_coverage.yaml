@@ -48,6 +48,15 @@ coverage:
   - regex_entity_extractor
   - gazetteer_entity_extractor
   - gliner_entity_extractor
+  - gliner_relex_claim_extractor
+  - spacy_ner_extractor
+  - transformer_ner_extractor
+  - transformers_qwen_claim_extractor
+  - mlx_qwen_claim_extractor
+  - ollama_qwen_claim_extractor
+  - mandatory_mention_ensemble
+  - mandatory_claim_ensemble
+  - mandatory_composed_unstructured_runtime
   - ollama_graph_extractor
   - ollama_provider
   - hybrid_rules_gazetteer_regex
@@ -61,6 +70,10 @@ coverage:
   - human_review_queue
   - construction_metrics_evaluator
   - benchmark_runner
+  - claim_evaluation_suite
+  - knowledge_graph_quality_evaluator
+  - schema_quality_evaluator
+  - intended_use_metrics_evaluator
   - structured_logging
   - run_manifest_writer
   - incremental_sync_policy
@@ -87,10 +100,10 @@ coverage:
   - jsonld_mapper
   - obda_virtual_graph_mapper
   08_relation_extraction_and_entity_linking.ipynb:
+  - evidence_first_unstructured_pipeline
   - dependency_pattern_relation_extractor
   - openie_relation_extractor
   - gliner_ollama_relation_typing_extractor
-  - rebel_relation_extractor
   - transformer_relation_extractor
   - ollama_schema_guided_extraction
   - ollama_schema_later_extraction
@@ -121,9 +134,10 @@ coverage:
   10_graph_store_ingestion_and_exports.ipynb:
   - neo4j_exporter
   - neo4j_ingestion_adapter
+  - neo4j_vector_store_adapter
   - memgraph_exporter
-  - kuzu_exporter
-  - kuzu_ingestion_adapter
+  - ladybug_exporter
+  - ladybug_ingestion_adapter
   - networkx_exporter
   - rdf_exporter
   - rdflib_exporter
@@ -151,8 +165,6 @@ extension_points:
   - sentence_splitter_adapter
   - pos_tagging_adapter
   - coreference_adapter
-  - spacy_ner_extractor
-  - transformer_ner_extractor
   - pairwise_relation_classifier_adapter
   - joint_entity_relation_extractor
   - supervised_relation_extractor

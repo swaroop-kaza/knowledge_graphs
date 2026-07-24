@@ -26,6 +26,15 @@ from kg_construction.infrastructure.ontology.stubs import (
     PropertyGraphValidator,
     SchemaDriftValidator,
 )
+from kg_construction.infrastructure.ontology.unstructured_governance import (
+    ClaimShaclResult,
+    FinalResourceShaclResult,
+    GovernedClaimShaclGate,
+    GovernedPredicate,
+    GovernedResourceShaclGate,
+    GovernedUnstructuredSchema,
+    final_rdf_graph_sha256,
+)
 from kg_construction.infrastructure.ontology.validation import (
     CompositeValidator,
     ConfidenceThresholdValidator,
@@ -39,8 +48,14 @@ from kg_construction.infrastructure.production.review import HumanReviewQueue
 
 __all__ = [
     "CompositeValidator",
+    "ClaimShaclResult",
+    "FinalResourceShaclResult",
     "ConfidenceThresholdValidator",
     "EvidenceRequiredValidator",
+    "GovernedClaimShaclGate",
+    "GovernedPredicate",
+    "GovernedResourceShaclGate",
+    "GovernedUnstructuredSchema",
     "HumanReviewQueue",
     "InMemorySchemaRegistry",
     "JSONSchemaValidator",
@@ -61,6 +76,7 @@ __all__ = [
     "ValidationFinding",
     "ValidationReport",
     "generate_shacl_shapes",
+    "final_rdf_graph_sha256",
     "materialize_structured_rdf",
     "propose_structured_ontology",
 ]

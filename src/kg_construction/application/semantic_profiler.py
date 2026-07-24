@@ -3,9 +3,9 @@
 Assigns every column a :class:`~kg_construction.domain.modeling.ColumnRole`
 (identifier, entity reference, categorical dimension, measure, temporal, free text,
 or ignore) and emits a proposed
-:class:`~kg_construction.application.modeling_policy.ModelingPolicy`. The role
-decides how the column is later mapped: dimensions become shared nodes (avoiding
-duplication) and references become relationships.
+:class:`~kg_construction.application.modeling_policy.ModelingPolicy`. Role and
+materialisation are deliberately separate: a categorical value can remain an enum
+property, while a reusable business dimension can become a shared node.
 
 Classification is a transparent, dependency-free rule set over per-column features
 -- data type, distinct/row cardinality ratio, null rate, uniqueness, average text
@@ -70,6 +70,17 @@ _CATEGORICAL_NAME_RE = re.compile(
     r"tier|grade|gender|sex|country|region|city|province|currency|priority|severity|label|"
     r"segment|plan|stage|phase|source|channel|method|mode|unit|color|colour|brand|make|"
     r"model|flag|active|enabled)",
+    re.IGNORECASE,
+)
+# Cardinality is a profiling signal, not a modelling rule. Only names that usually
+# denote independently reusable business dimensions are eligible for inferred node
+# promotion. Scalar enums (status, priority, severity, flags, types, stages, and so
+# on) stay properties unless a source declaration explicitly promotes them to a
+# governed concept/entity.
+_REUSABLE_DIMENSION_NAME_RE = re.compile(
+    r"(department|dept|team|business_unit|organization|organisation|company|"
+    r"country|region|city|province|state_province|currency|brand|manufacturer|"
+    r"supplier|vendor|product|location|warehouse|store|branch|market|segment)$",
     re.IGNORECASE,
 )
 _REFERENCE_SUFFIX_RE = re.compile(r"(_id|_uuid|_ref|_fk|_key|_code|_no|_pk)$", re.IGNORECASE)
@@ -496,7 +507,13 @@ class SemanticColumnProfiler:
         # 5. Numeric: measure vs coded category.
         if features.dtype in {"integer", "number"}:
             if _CATEGORICAL_NAME_RE.search(column):
-                return self._categorical(features, datatype, 0.85, "categorical numeric-coded column name")
+                return self._categorical(
+                    features,
+                    datatype,
+                    0.85,
+                    "categorical numeric-coded column name",
+                    promote_to_node=bool(_REUSABLE_DIMENSION_NAME_RE.search(column)),
+                )
             if _MEASURE_NAME_RE.search(column):
                 return assign(ColumnRole.MEASURE, "property", 0.85, "numeric measure column name", include_datatype=True)
             if (
@@ -514,7 +531,13 @@ class SemanticColumnProfiler:
         if _FREE_TEXT_NAME_RE.search(column) or features.avg_text_length > self.thresholds.free_text_min_avg_length:
             return assign(ColumnRole.FREE_TEXT, "property", 0.8, "free-text column name or long values", include_datatype=True)
         if _CATEGORICAL_NAME_RE.search(column):
-            return self._categorical(features, datatype, 0.9, "categorical column name")
+            return self._categorical(
+                features,
+                datatype,
+                0.9,
+                "categorical column name",
+                promote_to_node=bool(_REUSABLE_DIMENSION_NAME_RE.search(column)),
+            )
         if features.distinct_ratio >= _NEAR_UNIQUE_RATIO:
             return assign(ColumnRole.FREE_TEXT, "property", 0.6, "near-unique text (label/identifier-like value)", include_datatype=True)
         if self._is_low_cardinality(features):
@@ -522,11 +545,18 @@ class SemanticColumnProfiler:
         return assign(ColumnRole.FREE_TEXT, "property", 0.4, "unclassified string defaults to free text", include_datatype=True)
 
     def _categorical(
-        self, features: ColumnFeatures, datatype: JsonType, confidence: float, rationale: str
+        self,
+        features: ColumnFeatures,
+        datatype: JsonType,
+        confidence: float,
+        rationale: str,
+        *,
+        promote_to_node: bool = False,
     ) -> ColumnRoleAssignment:
         thresholds = self.thresholds
         as_property = (
-            not thresholds.promote_categoricals_to_nodes
+            not promote_to_node
+            or not thresholds.promote_categoricals_to_nodes
             or features.distinct_count <= thresholds.keep_as_property_max_distinct
         )
         materialization: Materialization = "property" if as_property else "node"
@@ -540,7 +570,9 @@ class SemanticColumnProfiler:
             datatype=datatype if as_property else None,
             rationale=rationale
             + (
-                " (materialise as property: distinct count within supernode guard)"
+                " (materialise as property: no independent reusable dimension semantics)"
+                if not promote_to_node
+                else " (materialise as property: distinct count within supernode guard)"
                 if as_property
                 else " (promote to shared reference node)"
             ),

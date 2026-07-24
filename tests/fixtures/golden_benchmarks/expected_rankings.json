@@ -2,8 +2,8 @@
   "text": {
     "ranking": [
       "gazetteer_entity_extractor",
-      "hybrid_rules_gazetteer_regex",
-      "regex_entity_extractor"
+      "regex_entity_extractor",
+      "hybrid_rules_gazetteer_regex"
     ]
   },
   "csv": {
@@ -22,11 +22,9 @@
   },
   "mixed": {
     "ranking": [
-      "hybrid_rules_gazetteer_regex",
       "semantic_table_mapper",
       "gazetteer_entity_extractor",
       "regex_entity_extractor",
-      "hybrid_structured_then_text",
       "jsonpath_mapper",
       "direct_table_mapper"
     ]

@@ -1,0 +1,161 @@
+# Human-authored model and platform contract.
+#
+# `scripts/lock_models.py` resolves every selected artifact to an immutable
+# revision and SHA-256 for every file. `scripts/hydrate_models.py` then provisions
+# that lock once and validates the same bytes with model registries disabled. A
+# certified run never selects another device or downloads on first use.
+version: 2
+
+profiles:
+  - name: darwin-arm64
+    selector:
+      system: Darwin
+      machine: arm64
+      accelerator: mps
+    mandatory_backends: [mlx, mps, ollama, gliner, transformers, sentence-transformers, spacy]
+    mandatory_services: [ollama, neo4j, memgraph, ladybug]
+  - name: linux-cpu
+    selector:
+      system: Linux
+      machine: x86_64
+      accelerator: cpu
+    mandatory_backends: [torch-cpu, ollama, gliner, transformers, sentence-transformers, spacy]
+    mandatory_services: [ollama, neo4j, memgraph, ladybug]
+  - name: linux-cuda
+    selector:
+      system: Linux
+      machine: x86_64
+      accelerator: cuda
+    mandatory_backends: [cuda, ollama, gliner, transformers, sentence-transformers, spacy]
+    mandatory_services: [ollama, neo4j, memgraph, ladybug]
+
+models:
+  - name: gliner_entity_extractor
+    repo_id: gliner-community/gliner_small-v2.5
+    ref: main
+    backend: gliner
+    task: token-classification
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: apache-2.0
+    smoke:
+      text: Alan Turing worked at Bletchley Park.
+      labels: [Person, Organization]
+      expect_entities: [Alan Turing, Bletchley Park]
+
+  - name: gliner_relex_extractor
+    repo_id: knowledgator/gliner-relex-large-v1.0
+    ref: main
+    backend: gliner
+    task: relation-extraction
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: apache-2.0
+    smoke:
+      text: Alan Turing worked at Bletchley Park.
+      expect_relation: [Alan Turing, worked_at, Bletchley Park]
+
+  - name: structured_transformer_extractor
+    repo_id: Qwen/Qwen3-1.7B
+    ref: main
+    backend: transformers
+    task: text-generation
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: apache-2.0
+    smoke:
+      prompt: 'Extract entities as JSON from: "Ada Lovelace wrote an algorithm."'
+      expect_contains: Ada Lovelace
+
+  - name: transformer_ner
+    repo_id: dslim/bert-base-NER
+    ref: main
+    backend: transformers
+    task: token-classification
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: mit
+    smoke:
+      text: Ada Lovelace visited London.
+      expect_entities: [Ada Lovelace, London]
+
+  - name: embedding_resolver
+    repo_id: sentence-transformers/all-MiniLM-L6-v2
+    ref: main
+    backend: sentence-transformers
+    task: feature-extraction
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: apache-2.0
+    smoke:
+      text: knowledge graph
+      expect_dim: 384
+
+  - name: cross_encoder_resolver
+    repo_id: cross-encoder/stsb-roberta-base
+    ref: main
+    backend: sentence-transformers
+    task: text-ranking
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: mps
+      linux-cpu: cpu
+      linux-cuda: cuda:0
+    license: apache-2.0
+    smoke:
+      pair: [a cat sits, a cat is sitting]
+      expect_score_min: 0.5
+
+  - name: spacy_pipeline
+    repo_id: spacy/en_core_web_sm
+    ref: main
+    backend: spacy
+    task: sentence-pos-ner
+    accelerator_policy: cpu_only
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    device_by_profile:
+      darwin-arm64: cpu
+      linux-cpu: cpu
+      linux-cuda: cpu
+    license: mit
+    smoke:
+      text: Ada Lovelace visited London.
+      expect_entities: [Ada Lovelace, London]
+
+  - name: mlx_structured_extractor
+    repo_id: mlx-community/Qwen3-1.7B-4bit
+    ref: main
+    backend: mlx
+    task: text-generation
+    profiles: [darwin-arm64]
+    device_by_profile:
+      darwin-arm64: mlx
+    license: apache-2.0
+    smoke:
+      prompt: 'Return the JSON object {"ok": true} and nothing else.'
+      expect_contains: ok
+
+service_models:
+  - name: ollama_structured_extractor
+    service: ollama
+    model: qwen3:1.7b-q4_K_M
+    profiles: [darwin-arm64, linux-cpu, linux-cuda]
+    license: apache-2.0
+    smoke:
+      prompt: 'Return the JSON object {"ok": true} and nothing else.'
+      expect_contains: ok

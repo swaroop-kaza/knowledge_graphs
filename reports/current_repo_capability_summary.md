@@ -6,10 +6,8 @@ This report is generated from the live `kg_construction.application.registry.def
 
 ## Registry totals
 
-- Total registered techniques: 153
-- adapter: 17
-- implemented: 107
-- stub: 29
+- Total registered techniques: 105
+- implemented: 105
 
 ## Public support levels
 
@@ -17,140 +15,119 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 | Support level | Count | Meaning |
 | --- | ---: | --- |
-| Stable | 79 | Safe to use now with the documented API and normal test coverage. |
-| Optional adapter | 29 | Works when the required dependency, model, service, or project wiring is configured. |
-| Experimental | 16 | Implemented for research/prototyping, but API, scoring, or model behavior may change. |
-| Planned | 29 | Registered as a roadmap extension point, but not implemented for normal use. |
+| Mandatory | 105 | Part of the executable release contract; certification permits no skip or fallback. |
+| Research inventory | 0 | Implemented or adapted outside the focused release contract; retained for comparative research. |
+| Roadmap | 0 | A non-executable extension point kept outside the release registry. |
 
 ## Categories
 
 | Category | Count |
 | --- | ---: |
-| enrichment | 24 |
-| evaluation | 2 |
-| extractor | 20 |
+| evaluation | 6 |
+| extractor | 17 |
 | graph_builder | 3 |
-| graph_store | 8 |
-| hybrid | 8 |
+| graph_store | 9 |
+| hybrid | 1 |
 | llm | 1 |
-| loader | 20 |
-| mapper | 25 |
+| loader | 19 |
+| mapper | 21 |
 | production | 9 |
-| resolution | 16 |
-| schema | 8 |
-| validation | 9 |
+| resolution | 10 |
+| schema | 4 |
+| validation | 5 |
 
 ## Method types
 
 | Method type | Count |
 | --- | ---: |
-| deterministic | 47 |
-| embedding | 8 |
-| evaluation | 3 |
-| human | 7 |
-| hybrid | 1 |
-| llm | 14 |
-| ml | 23 |
-| nlp | 5 |
+| deterministic | 37 |
+| embedding | 2 |
+| evaluation | 6 |
+| human | 5 |
+| hybrid | 5 |
+| llm | 6 |
+| ml | 4 |
+| nlp | 2 |
 | observability | 1 |
-| ontology | 13 |
+| ontology | 12 |
 | privacy | 1 |
 | reproducibility | 1 |
 | resilience | 4 |
-| rules | 25 |
+| rules | 19 |
 
 ## Capability groups
 
-### enrichment
-
-- Stable: graph_analytics_enricher
-- Optional adapter: graphsage_pyg_adapter
-- Experimental: community_detection_enricher, connected_components_enricher, pagerank_enricher, graph_train_validation_splitter, jaccard_link_prediction, link_prediction_enricher, node_embedding_enricher, resource_allocation_link_prediction, spectral_node_embedding_enricher, structural_hash_node_embedding_enricher, knowledge_graph_embedding_adapter, node2vec_embedding_adapter, hybrid_topology_embedding_link_prediction, graphsage_link_prediction_trainer, large_graph_analytics_backend, graph_retrieval_benchmark
-- Planned: external_kg_link_enricher, temporal_event_enricher, chunk_embedding_enricher, entity_embedding_enricher, community_summary_enricher, entity_summary_enricher
-
 ### evaluation
 
-- Stable: benchmark_runner, construction_metrics_evaluator
-- Optional adapter: none
-- Experimental: none
-- Planned: none
+- Mandatory: benchmark_runner, claim_evaluation_suite, construction_metrics_evaluator, intended_use_metrics_evaluator, knowledge_graph_quality_evaluator, schema_quality_evaluator
+- Research inventory: none
+- Roadmap: none
 
 ### extractor
 
-- Stable: gazetteer_entity_extractor, regex_entity_extractor, dependency_pattern_relation_extractor, openie_relation_extractor
-- Optional adapter: gliner_entity_extractor, rebel_relation_extractor, transformer_relation_extractor, gliner_ollama_relation_typing_extractor, ollama_graph_extractor, ollama_schema_guided_extraction, ollama_schema_later_extraction
-- Experimental: none
-- Planned: spacy_entity_ruler_extractor, pos_tagging_adapter, sentence_splitter_adapter, spacy_ner_extractor, coreference_adapter, transformer_ner_extractor, joint_entity_relation_extractor, pairwise_relation_classifier_adapter, supervised_relation_extractor
+- Mandatory: gazetteer_entity_extractor, regex_entity_extractor, dependency_pattern_relation_extractor, evidence_first_unstructured_pipeline, spacy_ner_extractor, openie_relation_extractor, gliner_entity_extractor, transformer_ner_extractor, gliner_relex_claim_extractor, mlx_qwen_claim_extractor, ollama_qwen_claim_extractor, transformers_qwen_claim_extractor, mandatory_claim_ensemble, mandatory_mention_ensemble, mandatory_composed_unstructured_runtime, gliner_ollama_relation_typing_extractor, ollama_graph_extractor
+- Research inventory: none
+- Roadmap: none
 
 ### graph_builder
 
-- Stable: evidence_graph_builder, property_graph_builder, rdf_graph_builder
-- Optional adapter: none
-- Experimental: none
-- Planned: none
+- Mandatory: evidence_graph_builder, property_graph_builder, rdf_graph_builder
+- Research inventory: none
+- Roadmap: none
 
 ### graph_store
 
-- Stable: kuzu_exporter, memgraph_exporter, neo4j_exporter, networkx_exporter, rdf_exporter
-- Optional adapter: rdflib_exporter, kuzu_ingestion_adapter, neo4j_ingestion_adapter
-- Experimental: none
-- Planned: none
+- Mandatory: ladybug_exporter, memgraph_exporter, neo4j_exporter, networkx_exporter, rdf_exporter, rdflib_exporter, ladybug_ingestion_adapter, neo4j_ingestion_adapter, neo4j_vector_store_adapter
+- Research inventory: none
+- Roadmap: none
 
 ### hybrid
 
-- Stable: hybrid_rules_gazetteer_regex
-- Optional adapter: hybrid_structured_then_text, hybrid_rules_ml_ollama, hybrid_deterministic_then_llm_enrichment, hybrid_gliner_then_ollama_relations, hybrid_ollama_schema_then_gliner, hybrid_openie_then_ollama_canonicalization, hybrid_human_reviewed_schema
-- Experimental: none
-- Planned: none
+- Mandatory: hybrid_gliner_then_ollama_relations
+- Research inventory: none
+- Roadmap: none
 
 ### llm
 
-- Stable: none
-- Optional adapter: ollama_provider
-- Experimental: none
-- Planned: none
+- Mandatory: ollama_provider
+- Research inventory: none
+- Roadmap: none
 
 ### loader
 
-- Stable: csv_loader, json_loader, markdown_loader, text_loader, api_response_loader, event_payload_loader, excel_loader, jsonld_loader, log_loader, sql_database_loader, xml_loader, structured_api_loader, html_loader, chat_transcript_loader, email_loader, pdf_loader, report_loader, webpage_loader, scientific_paper_loader
-- Optional adapter: none
-- Experimental: none
-- Planned: data_warehouse_export_loader
+- Mandatory: csv_loader, json_loader, markdown_loader, text_loader, api_response_loader, event_payload_loader, excel_loader, jsonld_loader, log_loader, sql_database_loader, xml_loader, structured_api_loader, html_loader, chat_transcript_loader, email_loader, pdf_loader, report_loader, webpage_loader, scientific_paper_loader
+- Research inventory: none
+- Roadmap: none
 
 ### mapper
 
-- Stable: semantic_column_profiler, semantic_table_mapper, source_catalog, column_to_property_mapping, column_type_inference, direct_table_mapper, foreign_key_to_edge_mapping, primary_key_to_id_mapping, row_to_entity_mapping, schema_profiling, table_to_node_mapping, csvw_mapper, event_graph_mapper, jsonld_mapper, jsonpath_mapper, log_event_mapper, r2rml_mapper, rml_mapper, dotted_path_json_mapper, obda_virtual_graph_mapper, html_metadata_mapper
-- Optional adapter: relationship_inference_from_keys
-- Experimental: none
-- Planned: api_response_mapper, xmlpath_mapper, incremental_watermark_sync
+- Mandatory: semantic_column_profiler, semantic_table_mapper, source_catalog, column_to_property_mapping, column_type_inference, direct_table_mapper, foreign_key_to_edge_mapping, primary_key_to_id_mapping, row_to_entity_mapping, schema_profiling, table_to_node_mapping, csvw_mapper, event_graph_mapper, jsonld_mapper, jsonpath_mapper, log_event_mapper, r2rml_mapper, rml_mapper, dotted_path_json_mapper, obda_virtual_graph_mapper, html_metadata_mapper
+- Research inventory: none
+- Roadmap: none
 
 ### production
 
-- Stable: run_manifest_writer, structured_logging, batch_retry_policy, dead_letter_queue, pii_redaction_policy, dead_letter_replay_tool, error_quarantine, incremental_sync_policy, watermark_store
-- Optional adapter: none
-- Experimental: none
-- Planned: none
+- Mandatory: run_manifest_writer, structured_logging, batch_retry_policy, dead_letter_queue, pii_redaction_policy, dead_letter_replay_tool, error_quarantine, incremental_sync_policy, watermark_store
+- Research inventory: none
+- Roadmap: none
 
 ### resolution
 
-- Stable: exact_key_entity_resolver, alias_table_resolver, normalized_string_resolver, fuzzy_string_resolver, rapidfuzz_resolver
-- Optional adapter: dbpedia_linker, wikidata_linker, probabilistic_linkage_resolver, splink_probabilistic_resolver, dedupe_active_learning_resolver, embedding_resolver, cross_encoder_resolver, openrefine_reconciler
-- Experimental: none
-- Planned: blocking_resolver, graph_neighborhood_resolver, human_review_resolver
+- Mandatory: exact_key_entity_resolver, alias_table_resolver, normalized_string_resolver, fuzzy_string_resolver, rapidfuzz_resolver, dbpedia_linker, wikidata_linker, embedding_resolver, cross_encoder_resolver, openrefine_reconciler
+- Research inventory: none
+- Roadmap: none
 
 ### schema
 
-- Stable: in_memory_schema_registry, schema_promotion_workflow, schema_proposal_workflow, schema_quarantine_namespace
-- Optional adapter: none
-- Experimental: none
-- Planned: owl_ontology_loader, ollama_entity_label_proposal, ollama_ontology_proposal, ollama_relationship_type_proposal
+- Mandatory: in_memory_schema_registry, schema_promotion_workflow, schema_proposal_workflow, schema_quarantine_namespace
+- Research inventory: none
+- Roadmap: none
 
 ### validation
 
-- Stable: evidence_required_validator, confidence_threshold_validator, schema_registry_validator, shacl_validator, human_review_queue
-- Optional adapter: hallucination_filter
-- Experimental: none
-- Planned: json_schema_validator, property_graph_validator, schema_drift_validator
+- Mandatory: evidence_required_validator, confidence_threshold_validator, schema_registry_validator, shacl_validator, human_review_queue
+- Research inventory: none
+- Roadmap: none
 
 ## Artifact policy
 

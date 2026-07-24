@@ -22,7 +22,9 @@ from kg_construction.infrastructure.evaluation.schema_quality import (
     SchemaQualityEvaluator,
     SchemaQualityReport,
 )
-from kg_construction.infrastructure.ontology.structured_ontology import propose_structured_ontology
+from kg_construction.infrastructure.ontology.structured_ontology import (
+    StructuredReleaseGate,
+)
 
 _SAMPLE = Path("examples/data_to_kg/sample.csv")
 _REPORTS = Path("reports")
@@ -32,14 +34,26 @@ def _report() -> tuple[SchemaQualityReport, dict]:
     records = list(csv.DictReader(_SAMPLE.read_text(encoding="utf-8").splitlines()))
     source = SourceRecord.from_rows(records, source_type="csv", source_name="sample.csv")
     modeling_plan = SemanticColumnProfiler().profile(records, table_name="sample", record_type="Employee")
-    policy = modeling_plan.to_modeling_policy()
     resolved = resolve_modeling_plan(modeling_plan, source_name="sample.csv")
-    ontology = propose_structured_ontology(policy).ontology
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
-    report = SchemaQualityEvaluator().evaluate(
-        graph, policy=policy, source_records=records, ontology=ontology
+    ontology = resolved.to_ontology_schema()
+    result = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source])
+    shacl = StructuredReleaseGate().validate(
+        result.rdf_graph,
+        shacl_turtle=resolved.to_shacl_shapes(),
     )
-    return report, {"record_count": len(records)}
+    report = SchemaQualityEvaluator().evaluate(
+        result.property_graph,
+        policy=resolved,
+        source_records=records,
+        ontology=ontology,
+        shacl_executed=True,
+        shacl_violation_count=shacl.violation_count,
+    )
+    return report, {
+        "record_count": len(records),
+        "shacl_conforms": shacl.conforms,
+        "shacl_warning_count": shacl.warning_count,
+    }
 
 
 def _markdown(report: SchemaQualityReport, meta: dict) -> str:
@@ -47,6 +61,7 @@ def _markdown(report: SchemaQualityReport, meta: dict) -> str:
         "# Schema & Instance Quality Report",
         "",
         f"Generated: {date.today().isoformat()}",
+        f"Thresholds: `{report.thresholds_version}`",
         "",
         "Computed on the policy-driven semantic graph of `examples/data_to_kg/sample.csv` "
         "(the semantic mapper). Categorical duplication is policy-aware.",
@@ -80,6 +95,8 @@ def _markdown(report: SchemaQualityReport, meta: dict) -> str:
             "## Consistency",
             f"- domain_range_violation_rate: {report.domain_range_violation_rate}",
             f"- cardinality_violation_rate: {report.cardinality_violation_rate}",
+            f"- shacl_executed: {report.shacl_executed}",
+            f"- shacl_violation_count: {report.shacl_violation_count}",
             f"- consistency_violation_count: {report.consistency_violation_count}",
             "",
             "## Structure (OntoQA)",
@@ -95,7 +112,7 @@ def _markdown(report: SchemaQualityReport, meta: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main() -> None:
+def main() -> int:
     report, meta = _report()
     _REPORTS.mkdir(exist_ok=True)
     (_REPORTS / "schema_quality.json").write_text(
@@ -103,7 +120,8 @@ def main() -> None:
     )
     (_REPORTS / "schema_quality.md").write_text(_markdown(report, meta), encoding="utf-8")
     print(f"schema-quality-ok: overall={'PASS' if report.passed else 'FAIL'}; gates={len(report.gates)}")
+    return 0 if report.passed else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

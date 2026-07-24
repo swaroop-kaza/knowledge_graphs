@@ -23,9 +23,17 @@ from kg_construction.application.benchmark_runner import TechniqueEvaluationConf
 from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.graph_ml import graph_ml_workflow_config_from_dict
 from kg_construction.application.hybrid_gliner import HybridGlinerPipelineConfig
+from kg_construction.certification.preflight import (
+    check_model_lock,
+    check_model_manifest,
+    check_models_present,
+)
+from kg_construction.infrastructure.extractors.model_backed.factory import (
+    detect_mandatory_profile,
+)
 from kg_construction.infrastructure.extractors.relations import RelationTypingConfig
 
-DoctorStatus = Literal["ok", "warn", "fail", "skip"]
+DoctorStatus = Literal["ok", "fail"]
 JsonDict = dict[str, Any]
 
 
@@ -76,6 +84,10 @@ CORE_IMPORTS: tuple[DependencyProbe, ...] = (
     DependencyProbe("rapidfuzz", "rapidfuzz"),
     DependencyProbe("rdflib", "rdflib"),
     DependencyProbe("pyshacl", "pyshacl"),
+    DependencyProbe("PyLD", "pyld"),
+    DependencyProbe("huggingface-hub", "huggingface_hub"),
+    DependencyProbe("pandas", "pandas"),
+    DependencyProbe("pyarrow", "pyarrow"),
 )
 
 EXTRA_IMPORTS: dict[str, tuple[DependencyProbe, ...]] = {
@@ -99,7 +111,7 @@ EXTRA_IMPORTS: dict[str, tuple[DependencyProbe, ...]] = {
         DependencyProbe("networkx", "networkx"),
         DependencyProbe("neo4j", "neo4j"),
         DependencyProbe("numpy", "numpy"),
-        DependencyProbe("kuzu", "kuzu"),
+        DependencyProbe("ladybug", "ladybug"),
     ),
     "rdf": (
         DependencyProbe("rdflib", "rdflib"),
@@ -133,7 +145,7 @@ CONFIG_VALIDATORS = {
     "production_ingestion.example.yaml",
 }
 
-STATUS_ORDER: dict[DoctorStatus, int] = {"fail": 0, "warn": 1, "ok": 2, "skip": 3}
+STATUS_ORDER: dict[DoctorStatus, int] = {"fail": 0, "ok": 1}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -141,14 +153,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description="Diagnose kg-construction installation and runtime setup.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
-    parser.add_argument("--strict", action="store_true", help="Return non-zero when warnings are present.")
-    parser.add_argument("--skip-services", action="store_true", help="Skip Ollama, Neo4j, and Kuzu runtime checks.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Retained for CLI compatibility; doctor is always strict.",
+    )
     parser.add_argument("--timeout", type=float, default=2.0, help="Service timeout in seconds.")
     parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
-    parser.add_argument("--neo4j-uri", default=os.getenv("NEO4J_URI"))
-    parser.add_argument("--neo4j-user", default=os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME"))
+    parser.add_argument(
+        "--ollama-model",
+        default=os.getenv("OLLAMA_MODEL", "qwen3:1.7b-q4_K_M"),
+    )
+    parser.add_argument("--neo4j-uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7687"))
+    parser.add_argument(
+        "--neo4j-user",
+        default=os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME") or "neo4j",
+    )
     parser.add_argument("--neo4j-password-env", default="NEO4J_PASSWORD")
+    parser.add_argument("--memgraph-uri", default=os.getenv("MEMGRAPH_URI", "bolt://localhost:7688"))
     parser.add_argument("--config-dir", default="configs", help="Directory containing public YAML configs.")
+    parser.add_argument("--models-manifest", default="models.manifest.yaml")
+    parser.add_argument("--models-lock", default="models.lock.yaml")
+    parser.add_argument("--model-cache-root", default=os.getenv("HF_HUB_CACHE"))
     parser.add_argument(
         "--config",
         action="append",
@@ -167,20 +193,22 @@ def main(argv: list[str] | None = None) -> int:
         config_paths=[Path(path) for path in args.config],
         timeout=max(0.1, args.timeout),
         ollama_url=args.ollama_url,
+        ollama_model=args.ollama_model,
         neo4j_uri=args.neo4j_uri,
         neo4j_user=args.neo4j_user,
         neo4j_password_env=args.neo4j_password_env,
-        skip_services=args.skip_services,
+        memgraph_uri=args.memgraph_uri,
+        models_manifest_path=Path(args.models_manifest),
+        models_lock_path=Path(args.models_lock),
+        model_cache_root=(
+            Path(args.model_cache_root) if args.model_cache_root else None
+        ),
     )
     if args.json:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     else:
         print(_format_report(report))
-    if report.summary.get("fail", 0) > 0:
-        return 1
-    if args.strict and report.summary.get("warn", 0) > 0:
-        return 1
-    return 0
+    return 0 if all(check.status == "ok" for check in report.checks) else 1
 
 
 def run_doctor(
@@ -189,45 +217,54 @@ def run_doctor(
     config_paths: list[Path] | None = None,
     timeout: float = 2.0,
     ollama_url: str = "http://localhost:11434",
+    ollama_model: str = "qwen3:1.7b-q4_K_M",
     neo4j_uri: str | None = None,
     neo4j_user: str | None = None,
     neo4j_password_env: str = "NEO4J_PASSWORD",
-    skip_services: bool = False,
+    memgraph_uri: str = "bolt://localhost:7688",
+    models_manifest_path: Path = Path("models.manifest.yaml"),
+    models_lock_path: Path = Path("models.lock.yaml"),
+    model_cache_root: Path | None = None,
 ) -> DoctorReport:
     """Run all doctor checks and return a structured report."""
 
+    locked_models = _check_locked_model_artifacts(
+        models_manifest_path,
+        models_lock_path,
+        cache_root=model_cache_root,
+    )
+    expected_ollama_digest = (
+        str(locked_models.metadata.get("ollama_digest"))
+        if locked_models.status == "ok"
+        and locked_models.metadata.get("ollama_digest")
+        else None
+    )
     checks: list[DoctorCheck] = [
         _check_python_version(),
         _check_distribution(),
         _check_core_imports(),
         _check_public_api_exports(),
         _check_installed_extras(),
-        _check_optional_imports(),
+        _check_platform_runtime(),
         _check_rdf_shacl(),
         _check_notebook_dependencies(),
         _check_config_validity(config_dir, config_paths or []),
+        locked_models,
+        _check_ollama(
+            ollama_url,
+            model=ollama_model,
+            expected_digest=expected_ollama_digest,
+            timeout=timeout,
+        ),
+        _check_neo4j(
+            neo4j_uri,
+            neo4j_user=neo4j_user,
+            password_env=neo4j_password_env,
+            timeout=timeout,
+        ),
+        _check_memgraph(memgraph_uri, timeout=timeout),
+        _check_ladybug(),
     ]
-    if skip_services:
-        checks.extend(
-            [
-                DoctorCheck("ollama", "service", "skip", "Service checks were skipped."),
-                DoctorCheck("neo4j", "service", "skip", "Service checks were skipped."),
-                DoctorCheck("kuzu", "service", "skip", "Service checks were skipped."),
-            ]
-        )
-    else:
-        checks.extend(
-            [
-                _check_ollama(ollama_url, timeout=timeout),
-                _check_neo4j(
-                    neo4j_uri,
-                    neo4j_user=neo4j_user,
-                    password_env=neo4j_password_env,
-                    timeout=timeout,
-                ),
-                _check_kuzu(),
-            ]
-        )
 
     summary: dict[str, int] = {
         status: sum(1 for check in checks if check.status == status) for status in STATUS_ORDER
@@ -265,9 +302,9 @@ def _check_distribution() -> DoctorCheck:
         return DoctorCheck(
             "package_distribution",
             "package",
-            "warn",
+            "fail",
             "kg-construction is importable from source, but no installed distribution metadata was found.",
-            hint="Run `python -m pip install -e .` from the repo root.",
+            hint="Run `uv sync --frozen --all-groups` from the repo root.",
         )
     return DoctorCheck(
         "package_distribution",
@@ -344,33 +381,77 @@ def _check_installed_extras() -> DoctorCheck:
             status = "partial"
         payload[extra_name] = {"status": status, "dependencies": results}
 
-    message = f"Inferred extras installed: {installed or ['none']}."
+    message = f"Mandatory dependency groups installed: {installed or ['none']}."
     if partial:
-        message += f" Partial extras: {partial}."
+        message += f" Partial groups: {partial}."
+    if missing:
+        message += f" Missing groups: {missing}."
     return DoctorCheck(
-        "installed_extras",
+        "mandatory_dependency_groups",
         "dependencies",
-        "ok",
+        "fail" if partial or missing else "ok",
         message,
         metadata={"extras": payload, "installed": installed, "partial": partial, "missing": missing},
     )
 
 
-def _check_optional_imports() -> DoctorCheck:
-    groups: dict[str, JsonDict] = {}
-    available_count = 0
-    total_count = 0
-    for group_name, probes in EXTRA_IMPORTS.items():
-        results = [_probe_dependency(item) for item in probes]
-        available_count += sum(1 for item in results if item["available"])
-        total_count += len(results)
-        groups[group_name] = {"dependencies": results}
+def _check_platform_runtime() -> DoctorCheck:
+    system = platform.system()
+    machine = platform.machine().lower()
+    if system == "Darwin" and machine == "arm64":
+        missing = [
+            module
+            for module in ("mlx", "mlx_lm")
+            if not _module_available(module)
+        ]
+        try:
+            import torch
+
+            mps_built = bool(torch.backends.mps.is_built())
+            mps_available = bool(torch.backends.mps.is_available())
+        except ImportError:
+            mps_built = False
+            mps_available = False
+        if missing or not mps_built or not mps_available:
+            return DoctorCheck(
+                "platform_runtime",
+                "runtime",
+                "fail",
+                "Darwin ARM64 requires MLX, MLX-LM, and an available Torch MPS device.",
+                metadata={
+                    "profile": "darwin-arm64",
+                    "missing_modules": missing,
+                    "mps_built": mps_built,
+                    "mps_available": mps_available,
+                },
+            )
+        return DoctorCheck(
+            "platform_runtime",
+            "runtime",
+            "ok",
+            "Darwin ARM64 MLX and MPS runtimes are available.",
+            metadata={"profile": "darwin-arm64"},
+        )
+    if system == "Linux" and machine in {"x86_64", "amd64"}:
+        try:
+            import torch
+
+            cuda = bool(torch.cuda.is_available())
+        except ImportError:
+            cuda = False
+        profile_name = "linux-cuda" if cuda else "linux-cpu"
+        return DoctorCheck(
+            "platform_runtime",
+            "runtime",
+            "ok",
+            f"{profile_name} runtime selected without fallback.",
+            metadata={"profile": profile_name, "cuda_available": cuda},
+        )
     return DoctorCheck(
-        "optional_imports",
-        "dependencies",
-        "ok",
-        f"{available_count}/{total_count} optional imports are available.",
-        metadata={"groups": groups},
+        "platform_runtime",
+        "runtime",
+        "fail",
+        f"No mandatory certification profile exists for {system}/{machine}.",
     )
 
 
@@ -417,9 +498,9 @@ def _check_notebook_dependencies() -> DoctorCheck:
         return DoctorCheck(
             "notebook_dependencies",
             "dependencies",
-            "skip",
-            f"Notebook extra is not fully installed. Missing: {', '.join(missing)}.",
-            hint='Install with `python -m pip install -e ".[notebook]"`.',
+            "fail",
+            f"Mandatory notebook dependencies are missing: {', '.join(missing)}.",
+            hint="Run `uv sync --frozen --all-groups`.",
             metadata={"dependencies": results},
         )
     return DoctorCheck(
@@ -440,7 +521,7 @@ def _check_config_validity(config_dir: Path, extra_paths: list[Path]) -> DoctorC
         return DoctorCheck(
             "config_validity",
             "config",
-            "skip",
+            "fail",
             f"No YAML configs found under {config_dir}.",
         )
 
@@ -481,7 +562,109 @@ def _check_config_validity(config_dir: Path, extra_paths: list[Path]) -> DoctorC
     )
 
 
-def _check_ollama(base_url: str, *, timeout: float) -> DoctorCheck:
+def _check_locked_model_artifacts(
+    manifest_path: Path,
+    lock_path: Path,
+    *,
+    cache_root: Path | None,
+) -> DoctorCheck:
+    """Verify the selected profile's manifest, lock, file set, bytes, and hashes."""
+
+    try:
+        profile = detect_mandatory_profile()
+        manifest = check_model_manifest(manifest_path)
+        lock = check_model_lock(manifest_path, lock_path, profile=profile)
+        hydrated = check_models_present(
+            lock_path,
+            profile=profile,
+            cache_root=cache_root,
+        )
+        payload = _load_yaml(lock_path)
+    except Exception as exc:  # noqa: BLE001 - doctor reports exact lock failures
+        return DoctorCheck(
+            "locked_model_artifacts",
+            "models",
+            "fail",
+            f"Locked model verification failed: {type(exc).__name__}: {exc}",
+            hint="Run scripts/hydrate_models.py --offline --validate-only.",
+        )
+    selected = [
+        row
+        for row in payload.get("models", [])
+        if isinstance(row, dict) and profile in row.get("profiles", [])
+    ]
+    service_models = [
+        row
+        for row in payload.get("service_models", [])
+        if isinstance(row, dict) and profile in row.get("profiles", [])
+    ]
+    failed = [check for check in (manifest, lock, hydrated) if not check.passed]
+    if failed:
+        return DoctorCheck(
+            "locked_model_artifacts",
+            "models",
+            "fail",
+            "; ".join(check.detail for check in failed),
+            hint="Re-lock online, hydrate once, then validate the exact bytes offline.",
+            metadata={
+                "profile": profile,
+                "checks": {
+                    check.name: {"passed": check.passed, "detail": check.detail}
+                    for check in (manifest, lock, hydrated)
+                },
+            },
+        )
+    file_count = sum(
+        len(row.get("files", []))
+        for row in selected
+        if isinstance(row.get("files", []), list)
+    )
+    byte_count = sum(
+        int(file_row.get("size", 0))
+        for row in selected
+        for file_row in row.get("files", [])
+        if isinstance(file_row, dict)
+    )
+    ollama = next(
+        (
+            row
+            for row in service_models
+            if row.get("service") == "ollama"
+        ),
+        {},
+    )
+    return DoctorCheck(
+        "locked_model_artifacts",
+        "models",
+        "ok",
+        f"{len(selected)} selected snapshots, {file_count} files, and "
+        f"{byte_count} bytes match their locked SHA-256 values.",
+        metadata={
+            "profile": profile,
+            "snapshot_count": len(selected),
+            "file_count": file_count,
+            "byte_count": byte_count,
+            "selected_models": [
+                {
+                    "name": row.get("name"),
+                    "revision": row.get("revision"),
+                    "device": row.get("device"),
+                }
+                for row in selected
+            ],
+            "ollama_model": ollama.get("model"),
+            "ollama_digest": ollama.get("digest"),
+        },
+    )
+
+
+def _check_ollama(
+    base_url: str,
+    *,
+    model: str,
+    timeout: float,
+    expected_digest: str | None = None,
+) -> DoctorCheck:
     url = f"{base_url.rstrip('/')}/api/tags"
     request = urllib.request.Request(url, method="GET")
     try:
@@ -491,19 +674,71 @@ def _check_ollama(base_url: str, *, timeout: float) -> DoctorCheck:
         return DoctorCheck(
             "ollama",
             "service",
-            "skip",
+            "fail",
             f"Ollama is not reachable at {base_url}: {type(exc).__name__}: {exc}",
-            hint="Start Ollama or set OLLAMA_BASE_URL. This is optional unless you use LLM extractors.",
+            hint="Start the locked Ollama service and hydrate its locked model.",
             metadata={"base_url": base_url},
         )
     models = payload.get("models", []) if isinstance(payload, dict) else []
+    names = {
+        str(row.get("name") or row.get("model"))
+        for row in models
+        if isinstance(row, dict) and (row.get("name") or row.get("model"))
+    }
+    if model not in names:
+        return DoctorCheck(
+            "ollama",
+            "service",
+            "fail",
+            f"Ollama is reachable, but mandatory model {model!r} is absent.",
+            hint="Run scripts/hydrate_models.py during the online provisioning phase.",
+            metadata={"base_url": base_url, "models": sorted(names), "required_model": model},
+        )
+    selected = next(
+        (
+            row
+            for row in models
+            if isinstance(row, dict)
+            and str(row.get("name") or row.get("model")) == model
+        ),
+        {},
+    )
+    actual_digest = _canonical_ollama_digest(selected.get("digest"))
+    if expected_digest is not None and actual_digest != expected_digest:
+        return DoctorCheck(
+            "ollama",
+            "service",
+            "fail",
+            f"Ollama model {model!r} digest does not match the model lock.",
+            hint="Rehydrate the locked Ollama model; do not accept tag drift.",
+            metadata={
+                "base_url": base_url,
+                "required_model": model,
+                "expected_digest": expected_digest,
+                "actual_digest": actual_digest,
+            },
+        )
     return DoctorCheck(
         "ollama",
         "service",
         "ok",
-        f"Ollama is reachable at {base_url}; {len(models)} model(s) reported.",
-        metadata={"base_url": base_url, "model_count": len(models)},
+        f"Ollama is reachable and reports mandatory model {model!r}.",
+        metadata={
+            "base_url": base_url,
+            "model_count": len(models),
+            "required_model": model,
+            "digest": actual_digest,
+        },
     )
+
+
+def _canonical_ollama_digest(value: object) -> str:
+    digest = str(value or "").lower()
+    if len(digest) == 64 and all(
+        character in "0123456789abcdef" for character in digest
+    ):
+        return f"sha256:{digest}"
+    return digest
 
 
 def _check_neo4j(
@@ -517,15 +752,15 @@ def _check_neo4j(
         return DoctorCheck(
             "neo4j",
             "service",
-            "skip",
+            "fail",
             "Neo4j Python driver is not installed.",
-            hint='Install graph extras with `python -m pip install -e ".[graph]"`.',
+            hint="Run `uv sync --frozen --all-groups`.",
         )
     if not uri:
         return DoctorCheck(
             "neo4j",
             "service",
-            "skip",
+            "fail",
             "NEO4J_URI is not set.",
             hint="Set NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD to verify live connectivity.",
         )
@@ -534,7 +769,7 @@ def _check_neo4j(
         return DoctorCheck(
             "neo4j",
             "service",
-            "warn",
+            "fail",
             f"Neo4j URI/user are configured, but {password_env} is not set.",
             hint=f"Export {password_env} before running doctor.",
             metadata={"uri": uri, "user": neo4j_user, "password_env": password_env},
@@ -555,7 +790,7 @@ def _check_neo4j(
         return DoctorCheck(
             "neo4j",
             "service",
-            "warn",
+            "fail",
             f"Neo4j driver is installed, but connectivity failed: {type(exc).__name__}: {exc}",
             hint="Check NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, and whether the database is running.",
             metadata={"uri": uri, "user": neo4j_user},
@@ -569,31 +804,84 @@ def _check_neo4j(
     )
 
 
-def _check_kuzu() -> DoctorCheck:
-    if not _module_available("kuzu"):
+def _check_memgraph(uri: str, *, timeout: float) -> DoctorCheck:
+    if not _module_available("neo4j"):
         return DoctorCheck(
-            "kuzu",
+            "memgraph",
             "service",
-            "skip",
-            "Kuzu Python package is not installed.",
-            hint='Install graph extras with `python -m pip install -e ".[graph]"`.',
+            "fail",
+            "Neo4j-compatible Bolt driver is not installed.",
+            hint="Run `uv sync --frozen --all-groups`.",
         )
     try:
-        import kuzu
+        from neo4j import GraphDatabase
 
-        with tempfile.TemporaryDirectory(prefix="kg-construction-kuzu-doctor-") as directory:
-            database = kuzu.Database(directory)
-            connection = kuzu.Connection(database)
-            connection.execute("RETURN 1 AS ok")
+        try:
+            driver = GraphDatabase.driver(uri, auth=None, connection_timeout=timeout)
+        except TypeError:
+            driver = GraphDatabase.driver(uri, auth=None)
+        try:
+            with driver.session() as session:
+                record = session.run("RETURN 1 AS ok").single()
+        finally:
+            driver.close()
+        if record is None or record["ok"] != 1:
+            raise RuntimeError("semantic query returned the wrong result")
+    except Exception as exc:  # noqa: BLE001 - every service error is a hard diagnostic failure.
+        return DoctorCheck(
+            "memgraph",
+            "service",
+            "fail",
+            f"Memgraph connectivity/query failed: {type(exc).__name__}: {exc}",
+            metadata={"uri": uri},
+        )
+    return DoctorCheck(
+        "memgraph",
+        "service",
+        "ok",
+        "Memgraph connectivity and semantic query succeeded.",
+        metadata={"uri": uri},
+    )
+
+
+def _check_ladybug() -> DoctorCheck:
+    if not _module_available("ladybug"):
+        return DoctorCheck(
+            "ladybug",
+            "service",
+            "fail",
+            "Ladybug Python package is not installed.",
+            hint="Run `uv sync --frozen --all-groups`.",
+        )
+    try:
+        import ladybug
+
+        with tempfile.TemporaryDirectory(prefix="kg-construction-ladybug-doctor-") as directory:
+            database = ladybug.Database(str(Path(directory) / "doctor.lbdb"))
+            connection = ladybug.Connection(database)
+            result = connection.execute("RETURN 1 AS ok")
+            if isinstance(result, list):
+                raise RuntimeError("semantic query unexpectedly returned multiple results")
+            if not result.has_next():
+                raise RuntimeError("semantic query returned no result")
+            row = result.get_next()
+            value = row.get("ok") if isinstance(row, dict) else row[0]
+            if value != 1:
+                raise RuntimeError("semantic query returned the wrong result")
     except Exception as exc:  # noqa: BLE001 - doctor reports optional backend failures.
         return DoctorCheck(
-            "kuzu",
+            "ladybug",
             "service",
-            "warn",
-            f"Kuzu is installed, but an embedded smoke query failed: {type(exc).__name__}: {exc}",
-            hint="Check the installed Kuzu package and local filesystem permissions.",
+            "fail",
+            f"Ladybug embedded smoke query failed: {type(exc).__name__}: {exc}",
+            hint="Check the locked Ladybug package and local filesystem permissions.",
         )
-    return DoctorCheck("kuzu", "service", "ok", "Kuzu embedded database smoke query succeeded.")
+    return DoctorCheck(
+        "ladybug",
+        "service",
+        "ok",
+        "Ladybug embedded database smoke query succeeded.",
+    )
 
 
 def _probe_dependency(probe: DependencyProbe) -> JsonDict:
@@ -643,9 +931,23 @@ def _validate_config_payload(filename: str, payload: JsonDict) -> None:
     elif filename == "graph_ml.example.yaml" or "graph_ml" in payload:
         graph_ml_workflow_config_from_dict(payload)
     elif filename == "production_ingestion.example.yaml":
-        _require_sections(payload, "production_ingestion", "retry", "dead_letter", "neo4j", "kuzu", "replay")
+        _require_sections(
+            payload,
+            "production_ingestion",
+            "retry",
+            "dead_letter",
+            "neo4j",
+            "ladybug",
+            "replay",
+        )
     elif filename == "integration_profiles.example.yaml":
-        _require_sections(payload, "integration_profiles", "neo4j_live", "kuzu_live", "graph_store_batch_benchmark")
+        _require_sections(
+            payload,
+            "integration_profiles",
+            "neo4j_live",
+            "ladybug_live",
+            "graph_store_batch_benchmark",
+        )
     else:
         if filename.endswith(".yaml") and not payload:
             raise ValueError("YAML config must not be empty")
@@ -663,8 +965,6 @@ def _require_sections(payload: JsonDict, root_key: str, *sections: str) -> None:
 def _overall_status(checks: list[DoctorCheck]) -> DoctorStatus:
     if any(check.status == "fail" for check in checks):
         return "fail"
-    if any(check.status == "warn" for check in checks):
-        return "warn"
     return "ok"
 
 
@@ -679,7 +979,7 @@ def _format_report(report: DoctorReport) -> str:
         [
             "",
             "Summary: "
-            + ", ".join(f"{status}={report.summary.get(status, 0)}" for status in ("ok", "warn", "fail", "skip")),
+            + ", ".join(f"{status}={report.summary.get(status, 0)}" for status in ("ok", "fail")),
         ]
     )
     return "\n".join(lines)

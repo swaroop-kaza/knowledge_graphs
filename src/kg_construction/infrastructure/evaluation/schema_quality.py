@@ -21,11 +21,17 @@ from __future__ import annotations
 
 import logging
 from collections import Counter, defaultdict
+from datetime import date, datetime
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
-from kg_construction.domain.modeling import ColumnRole, OntologySchema
+from kg_construction.domain.modeling import (
+    ColumnRole,
+    OntologyPredicate,
+    OntologySchema,
+)
 from kg_construction.infrastructure.resolution.common import resolution_key
 
 JsonDict = dict[str, object]
@@ -35,7 +41,7 @@ logger = logging.getLogger(__name__)
 _NON_DOMAIN_LABELS = {"Fact", "RelationshipFact", "Literal", "Resource"}
 _PROVENANCE_PREFIXES = (
     "_", "canonical", "identity", "evidence", "source_", "merged", "merge_", "resolution",
-    "survivor", "candidate", "property_sources", "assertion", "semantic_relation",
+    "survivor", "candidate", "property_sources", "assertion", "semantic_relation", "raw_",
 )
 _PROVENANCE_KEYS = frozenset(
     {
@@ -54,10 +60,20 @@ class SchemaQualityGateSettings(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    thresholds_version: str = "schema-quality-v2"
     maximum_categorical_duplication_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    minimum_categorical_source_occurrence_coverage: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+    )
     maximum_duplicate_node_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     maximum_orphan_rate: float = Field(default=0.05, ge=0.0, le=1.0)
     maximum_consistency_violation_count: int = Field(default=0, ge=0)
+    minimum_property_completeness: float = Field(default=1.0, ge=0.0, le=1.0)
+    minimum_relationship_completeness: float = Field(default=1.0, ge=0.0, le=1.0)
+    maximum_shacl_violation_count: int = Field(default=0, ge=0)
+    require_shacl_execution: Literal[True] = True
 
 
 class SchemaQualityGate(BaseModel):
@@ -67,10 +83,24 @@ class SchemaQualityGate(BaseModel):
 
     gate: str
     metric: str
-    operator: str
+    operator: Literal[">=", "<="]
     threshold: float
     actual: float
     passed: bool
+
+    @model_validator(mode="after")
+    def _pass_state_matches_observation(self) -> SchemaQualityGate:
+        expected = (
+            self.actual >= self.threshold
+            if self.operator == ">="
+            else self.actual <= self.threshold
+        )
+        if self.passed != expected:
+            raise ValueError(
+                "schema-quality gate pass state must match its actual value, "
+                "operator, and threshold"
+            )
+        return self
 
 
 class SchemaQualityReport(BaseModel):
@@ -78,8 +108,10 @@ class SchemaQualityReport(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    thresholds_version: str = "schema-quality-v2"
     # conciseness
     categorical_duplication_rate: float | None = None
+    categorical_source_occurrence_coverage: float | None = None
     literal_that_should_be_node_rate: float | None = None
     duplicate_node_rate: float = 0.0
     # completeness
@@ -91,6 +123,8 @@ class SchemaQualityReport(BaseModel):
     domain_range_violation_rate: float | None = None
     cardinality_violation_rate: float | None = None
     shacl_violation_count: int | None = None
+    shacl_executed: bool = False
+    ontology_evaluated: bool = False
     consistency_violation_count: int = 0
     # structure (OntoQA)
     node_count: int = 0
@@ -104,7 +138,23 @@ class SchemaQualityReport(BaseModel):
     attribute_richness: float = 0.0
     # gates
     gates: list[SchemaQualityGate] = Field(default_factory=list)
-    passed: bool = True
+    passed: bool = False
+
+    @model_validator(mode="after")
+    def _pass_state_is_conjunctive(self) -> SchemaQualityReport:
+        if not self.gates:
+            if self.passed:
+                raise ValueError(
+                    "a schema-quality report without evaluated gates cannot pass"
+                )
+            return self
+        expected = all(gate.passed for gate in self.gates)
+        if self.passed != expected:
+            raise ValueError(
+                "schema-quality report pass state must equal the conjunction "
+                "of every evaluated gate"
+            )
+        return self
 
     def metric_payload(self) -> dict[str, float]:
         """Return the numeric metrics usable as benchmark hard-gate inputs."""
@@ -116,9 +166,20 @@ class SchemaQualityReport(BaseModel):
             "average_degree": self.average_degree,
             "relationship_richness": self.relationship_richness,
             "attribute_richness": self.attribute_richness,
+            "property_completeness": self.property_completeness,
+            "relationship_completeness": self.relationship_completeness,
+            "shacl_executed": float(self.shacl_executed),
         }
         if self.categorical_duplication_rate is not None:
             payload["categorical_duplication_rate"] = self.categorical_duplication_rate
+        if self.categorical_source_occurrence_coverage is not None:
+            payload["categorical_source_occurrence_coverage"] = (
+                self.categorical_source_occurrence_coverage
+            )
+        if self.schema_completeness is not None:
+            payload["schema_completeness"] = self.schema_completeness
+        if self.shacl_violation_count is not None:
+            payload["shacl_violation_count"] = float(self.shacl_violation_count)
         return payload
 
 
@@ -135,32 +196,47 @@ class SchemaQualityEvaluator:
         source_records: list[JsonDict] | None = None,
         ontology: OntologySchema | None = None,
         shacl_violation_count: int | None = None,
+        shacl_executed: bool = False,
         gate_settings: SchemaQualityGateSettings | None = None,
     ) -> SchemaQualityReport:
         domain_nodes = self._domain_nodes(graph)
-        report = self._base_report(graph, domain_nodes)
-        report.property_completeness = self._property_completeness(domain_nodes)
+        settings = gate_settings or SchemaQualityGateSettings()
+        report = self._base_report(graph, domain_nodes, ontology=ontology)
+        report.thresholds_version = settings.thresholds_version
+        report.property_completeness = self._property_completeness(domain_nodes, ontology)
 
         if policy is not None and source_records is not None:
-            duplication, literal_rate, relationship_completeness = self._policy_conciseness(
+            (
+                duplication,
+                literal_rate,
+                relationship_completeness,
+                occurrence_coverage,
+            ) = self._policy_conciseness(
                 graph, policy, source_records
             )
             report.categorical_duplication_rate = duplication
+            report.categorical_source_occurrence_coverage = occurrence_coverage
             report.literal_that_should_be_node_rate = literal_rate
-            report.relationship_completeness = relationship_completeness
+            if ontology is None:
+                report.relationship_completeness = relationship_completeness
 
         if ontology is not None:
+            report.ontology_evaluated = True
             report.schema_completeness = self._schema_completeness(graph, domain_nodes, ontology)
+            report.relationship_completeness = self._relationship_completeness(
+                graph, ontology
+            )
             dr_count, dr_rate, card_count, card_rate = self._consistency(graph, ontology)
             report.domain_range_violation_rate = dr_rate
             report.cardinality_violation_rate = card_rate
             report.class_richness = self._class_richness(domain_nodes, ontology)
             report.consistency_violation_count += dr_count + card_count
+        report.shacl_executed = shacl_executed or shacl_violation_count is not None
         if shacl_violation_count is not None:
             report.shacl_violation_count = shacl_violation_count
             report.consistency_violation_count += shacl_violation_count
 
-        report.gates = self._gates(report, gate_settings or SchemaQualityGateSettings())
+        report.gates = self._gates(report, settings)
         report.passed = all(gate.passed for gate in report.gates)
         logger.info(
             "Schema quality: categorical_duplication=%s duplicate_nodes=%.3f "
@@ -171,12 +247,17 @@ class SchemaQualityEvaluator:
             report.consistency_violation_count,
             report.passed,
         )
-        return report
+        # Mutating the local draft keeps the metric implementation readable.
+        # Re-validation here makes the externally returned artifact immutable
+        # with respect to the conjunctive pass-state contract.
+        return SchemaQualityReport.model_validate(report.model_dump())
 
     def structural_metrics(self, graph: PropertyGraph) -> dict[str, float]:
         """Graph-only metrics for the benchmark runner (no policy/ontology needed)."""
 
-        return self._base_report(graph, self._domain_nodes(graph)).metric_payload()
+        return self._base_report(
+            graph, self._domain_nodes(graph), ontology=None
+        ).metric_payload()
 
     # -- structure -------------------------------------------------------------
 
@@ -185,7 +266,11 @@ class SchemaQualityEvaluator:
         return [node for node in graph.nodes if not (_NON_DOMAIN_LABELS & set(node.labels))]
 
     def _base_report(
-        self, graph: PropertyGraph, domain_nodes: list[PropertyNode]
+        self,
+        graph: PropertyGraph,
+        domain_nodes: list[PropertyNode],
+        *,
+        ontology: OntologySchema | None,
     ) -> SchemaQualityReport:
         node_ids = {node.node_id for node in domain_nodes}
         edges = [edge for edge in graph.edges if edge.source_id in node_ids and edge.target_id in node_ids]
@@ -204,7 +289,7 @@ class SchemaQualityEvaluator:
         report.connected_component_count = self._connected_components(node_ids, edges)
         report.relationship_richness = self._relationship_richness(domain_nodes, edges)
         report.attribute_richness = self._attribute_richness(domain_nodes)
-        report.duplicate_node_rate = self._duplicate_node_rate(domain_nodes)
+        report.duplicate_node_rate = self._duplicate_node_rate(domain_nodes, ontology)
         report.class_population = population
         report.distinct_class_count = len(population)
         return report
@@ -246,28 +331,95 @@ class SchemaQualityEvaluator:
     # -- conciseness -----------------------------------------------------------
 
     @staticmethod
-    def _duplicate_node_rate(domain_nodes: list[PropertyNode]) -> float:
+    def _duplicate_node_rate(
+        domain_nodes: list[PropertyNode],
+        ontology: OntologySchema | None,
+    ) -> float:
+        """Return duplicate rate using declared/business identity, never display name."""
+
         if not domain_nodes:
             return 0.0
-        signatures = {
-            (
-                tuple(sorted(label for label in node.labels if label != "Entity")),
-                resolution_key(str(node.properties.get("name", ""))),
+        class_by_name = {
+            item.name: item for item in ontology.classes
+        } if ontology is not None else {}
+        signatures: list[tuple[str, tuple[tuple[str, str], ...]]] = []
+        for node in domain_nodes:
+            class_names = [
+                label for label in node.labels if label != "Entity" and label in class_by_name
+            ]
+            if not class_names:
+                class_names = [label for label in node.labels if label != "Entity"]
+            class_name = sorted(class_names)[0] if class_names else ""
+            ontology_class = class_by_name.get(class_name)
+            if (
+                node.properties.get("concept_scheme") not in (None, "")
+                and (
+                    node.properties.get("code") not in (None, "")
+                    or node.properties.get("canonical_value") not in (None, "")
+                )
+            ):
+                code = node.properties.get(
+                    "code",
+                    node.properties.get("canonical_value"),
+                )
+                signatures.append(
+                    (
+                        class_name,
+                        (
+                            (
+                                "concept_scheme",
+                                resolution_key(
+                                    str(node.properties["concept_scheme"])
+                                ),
+                            ),
+                            ("code", resolution_key(str(code))),
+                        ),
+                    )
+                )
+                continue
+            key_names = list(ontology_class.key_properties) if ontology_class else []
+            if not key_names:
+                key_names = [
+                    key
+                    for key in ("identity_key", "canonical_entity_id", "canonical_value")
+                    if node.properties.get(key) not in (None, "")
+                ]
+            if (
+                not key_names
+                and ontology_class is not None
+                and ontology_class.role == "reference"
+                and node.properties.get("value") not in (None, "")
+            ):
+                key_names = ["value"]
+            if not key_names or any(node.properties.get(key) in (None, "") for key in key_names):
+                continue
+            signatures.append(
+                (
+                    class_name,
+                    tuple(
+                        (key, resolution_key(str(node.properties[key])))
+                        for key in key_names
+                    ),
+                )
             )
-            for node in domain_nodes
-        }
-        return 1.0 - (len(signatures) / len(domain_nodes))
+        if not signatures:
+            return 0.0
+        duplicate_count = sum(count - 1 for count in Counter(signatures).values())
+        return duplicate_count / len(signatures)
 
     def _policy_conciseness(
         self, graph: PropertyGraph, policy: object, source_records: list[JsonDict]
-    ) -> tuple[float, float, float]:
-        record_type = getattr(policy, "record_type", "Record")
+    ) -> tuple[float, float, float, float]:
+        record_type = getattr(
+            policy, "record_class", getattr(policy, "record_type", "Record")
+        )
         record_nodes = [node for node in graph.nodes if record_type in node.labels]
         node_columns = self._node_columns(policy, source_records)
 
         total_mentions = 0
         redundant = 0
         literal_cells = 0
+        covered_occurrences: set[tuple[str, int, str]] = set()
         for column in node_columns:
             mentions = sum(1 for row in source_records if row.get(column) not in (None, ""))
             total_mentions += mentions
@@ -280,17 +432,107 @@ class SchemaQualityEvaluator:
                 literal_cells += len(values)
                 counts = Counter(values)
                 redundant += sum(count - 1 for count in counts.values())
-        duplication = (redundant / total_mentions) if total_mentions else 0.0
+            for node in graph.nodes:
+                supported_locations = False
+                for support in node.properties.get("evidence_support", []):
+                    if not isinstance(support, dict):
+                        continue
+                    location = support.get("location")
+                    if (
+                        isinstance(location, dict)
+                        and location.get("kind") == "cell"
+                        and location.get("column") == column
+                        and isinstance(location.get("row_index"), int)
+                    ):
+                        supported_locations = True
+                        covered_occurrences.add(
+                            (
+                                str(support.get("source_id", "")),
+                                int(location["row_index"]),
+                                column,
+                            )
+                        )
+                if supported_locations:
+                    continue
+                for location in node.properties.get("evidence_locations", []):
+                    if (
+                        isinstance(location, dict)
+                        and location.get("kind") == "cell"
+                        and location.get("column") == column
+                        and isinstance(location.get("row_index"), int)
+                    ):
+                        covered_occurrences.add(
+                            (
+                                "",
+                                int(location["row_index"]),
+                                column,
+                            )
+                        )
+
+        concept_signatures: Counter[tuple[str, str, str]] = Counter()
+        node_targets = self._node_targets(policy, source_records)
+        for target in node_targets.values():
+            for node in graph.nodes:
+                if target not in node.labels:
+                    continue
+                scheme = node.properties.get("concept_scheme", target)
+                code = node.properties.get(
+                    "code",
+                    node.properties.get("canonical_value"),
+                )
+                if code in (None, ""):
+                    continue
+                concept_signatures[
+                    (
+                        target,
+                        resolution_key(str(scheme)),
+                        resolution_key(str(code)),
+                    )
+                ] += 1
+        redundant += sum(
+            count - 1 for count in concept_signatures.values()
+        )
+        duplication = (
+            min(1.0, redundant / total_mentions)
+            if total_mentions
+            else 0.0
+        )
         literal_rate = (literal_cells / total_mentions) if total_mentions else 0.0
+        occurrence_coverage = (
+            min(1.0, len(covered_occurrences) / total_mentions)
+            if total_mentions
+            else 1.0
+        )
         connected_records = sum(
             1 for node in record_nodes
             if any(edge.source_id == node.node_id for edge in graph.edges)
         )
         relationship_completeness = (connected_records / len(record_nodes)) if record_nodes else 1.0
-        return duplication, literal_rate, relationship_completeness
+        return (
+            duplication,
+            literal_rate,
+            relationship_completeness,
+            occurrence_coverage,
+        )
 
     @staticmethod
     def _node_columns(policy: object, source_records: list[JsonDict]) -> list[str]:
+        resolved_attributes = getattr(policy, "attributes", None)
+        if resolved_attributes is not None:
+            materialized_columns: list[str] = []
+            for attribute in resolved_attributes:
+                column = str(getattr(attribute, "column", "")).strip()
+                materialization = str(
+                    getattr(attribute, "materialization", "")
+                )
+                if (
+                    column
+                    and materialization == "node"
+                    and getattr(attribute, "semantic_role", None)
+                    == ColumnRole.CATEGORICAL_DIMENSION
+                ):
+                    materialized_columns.append(column)
+            return materialized_columns
         columns = getattr(policy, "columns", [])
         thresholds = getattr(policy, "thresholds", None)
         keep_as_property = getattr(thresholds, "keep_as_property_max_distinct", 2)
@@ -299,13 +541,37 @@ class SchemaQualityEvaluator:
         for column_policy in columns:
             role = getattr(column_policy, "role", None)
             name = getattr(column_policy, "column", "")
-            if role == ColumnRole.ENTITY_REFERENCE:
-                result.append(name)
-            elif role == ColumnRole.CATEGORICAL_DIMENSION:
+            if role == ColumnRole.CATEGORICAL_DIMENSION:
                 distinct = len({str(row.get(name)) for row in source_records if row.get(name) not in (None, "")})
                 if promote and distinct > keep_as_property:
                     result.append(name)
         return result
+
+    @staticmethod
+    def _node_targets(
+        policy: object,
+        source_records: list[JsonDict],
+    ) -> dict[str, str]:
+        resolved_attributes = getattr(policy, "attributes", None)
+        if resolved_attributes is not None:
+            return {
+                str(attribute.column): str(attribute.target)
+                for attribute in resolved_attributes
+                if str(getattr(attribute, "materialization", "")) == "node"
+                and getattr(attribute, "target", None)
+            }
+        columns = getattr(policy, "columns", [])
+        promoted = set(
+            SchemaQualityEvaluator._node_columns(policy, source_records)
+        )
+        return {
+            str(column.column): str(column.reference_type)
+            for column in columns
+            if str(getattr(column, "column", "")) in promoted
+            and getattr(column, "reference_type", None)
+            and getattr(column, "role", None)
+            == ColumnRole.CATEGORICAL_DIMENSION
+        }
 
     # -- completeness ----------------------------------------------------------
 
@@ -318,14 +584,58 @@ class SchemaQualityEvaluator:
                     population[label] += 1
         return dict(sorted(population.items()))
 
-    def _property_completeness(self, domain_nodes: list[PropertyNode]) -> float:
+    def _property_completeness(
+        self,
+        domain_nodes: list[PropertyNode],
+        ontology: OntologySchema | None,
+    ) -> float:
+        """Measure declared datatype obligations, including properties that are absent."""
+
+        if ontology is None:
+            return 1.0
+        predicates = [item for item in ontology.predicates if item.kind == "datatype"]
         filled = 0
         possible = 0
         for node in domain_nodes:
-            domain_keys = [key for key in node.properties if _is_domain_property(key)]
-            possible += max(1, len(domain_keys))
-            filled += sum(1 for key in domain_keys if node.properties[key] not in (None, ""))
+            labels = set(node.labels)
+            applicable = [item for item in predicates if item.domain in labels]
+            possible += len(applicable)
+            filled += sum(
+                1 for item in applicable if node.properties.get(item.name) not in (None, "")
+            )
         return (filled / possible) if possible else 1.0
+
+    @staticmethod
+    def _relationship_completeness(
+        graph: PropertyGraph,
+        ontology: OntologySchema,
+    ) -> float:
+        """Measure required object-predicate obligations from declared minCount."""
+
+        required = [
+            item
+            for item in ontology.predicates
+            if item.kind == "object" and item.cardinality.min_count >= 1
+        ]
+        if not required:
+            return 1.0
+        outgoing: Counter[tuple[str, str]] = Counter(
+            (edge.source_id, resolution_key(edge.type)) for edge in graph.edges
+        )
+        satisfied = 0
+        possible = 0
+        for node in graph.nodes:
+            labels = set(node.labels)
+            for predicate in required:
+                if predicate.domain not in labels:
+                    continue
+                possible += 1
+                if (
+                    outgoing[(node.node_id, resolution_key(predicate.name))]
+                    >= predicate.cardinality.min_count
+                ):
+                    satisfied += 1
+        return satisfied / possible if possible else 1.0
 
     def _schema_completeness(
         self, graph: PropertyGraph, domain_nodes: list[PropertyNode], ontology: OntologySchema
@@ -365,22 +675,50 @@ class SchemaQualityEvaluator:
             node.node_id: {label for label in node.labels if label != "Entity"}
             for node in graph.nodes
         }
-        object_predicates = {
-            resolution_key(predicate.name): predicate
-            for predicate in ontology.predicates
-            if predicate.kind == "object"
-        }
+        object_predicates: dict[str, list[OntologyPredicate]] = defaultdict(list)
+        datatype_predicates: dict[str, list[OntologyPredicate]] = defaultdict(list)
+        for predicate in ontology.predicates:
+            target = object_predicates if predicate.kind == "object" else datatype_predicates
+            target[resolution_key(predicate.name)].append(predicate)
         domain_violations = 0
         checked = 0
         for edge in graph.edges:
-            predicate = object_predicates.get(resolution_key(edge.type))
-            if predicate is None:
+            candidates = object_predicates.get(resolution_key(edge.type), [])
+            if not candidates:
                 continue
             checked += 1
-            source_ok = predicate.domain in node_labels.get(edge.source_id, set())
-            target_ok = predicate.range in node_labels.get(edge.target_id, set())
-            if not (source_ok and target_ok):
+            source_labels = node_labels.get(edge.source_id, set())
+            target_labels = node_labels.get(edge.target_id, set())
+            if not any(
+                predicate.domain in source_labels
+                and predicate.range in target_labels
+                for predicate in candidates
+            ):
                 domain_violations += 1
+        for node in graph.nodes:
+            labels = node_labels.get(node.node_id, set())
+            for key, value in node.properties.items():
+                candidates = datatype_predicates.get(resolution_key(key), [])
+                if not candidates or value in (None, ""):
+                    continue
+                # Generic graph metadata such as ``name`` may share a local key
+                # with a declared predicate on another class.  It is not an
+                # off-domain assertion unless it is a domain property here.
+                applicable = [
+                    predicate
+                    for predicate in candidates
+                    if predicate.domain in labels
+                ]
+                if not applicable and not _is_domain_property(key):
+                    continue
+                values = value if isinstance(value, list) else [value]
+                for item in values:
+                    checked += 1
+                    if not applicable or not any(
+                        self._matches_datatype(item, predicate.range)
+                        for predicate in applicable
+                    ):
+                        domain_violations += 1
         domain_range_rate = (domain_violations / checked) if checked else 0.0
 
         cardinality_violations = 0
@@ -391,16 +729,63 @@ class SchemaQualityEvaluator:
         for node in graph.nodes:
             labels = node_labels.get(node.node_id, set())
             for predicate in ontology.predicates:
-                if predicate.kind != "object" or predicate.domain not in labels:
+                if predicate.domain not in labels:
                     continue
                 cardinality_checked += 1
-                count = outgoing.get((node.node_id, resolution_key(predicate.name)), 0)
+                if predicate.kind == "object":
+                    count = outgoing.get(
+                        (node.node_id, resolution_key(predicate.name)), 0
+                    )
+                else:
+                    count = self._value_count(node.properties.get(predicate.name))
                 below = count < predicate.cardinality.min_count
                 above = predicate.cardinality.max_count is not None and count > predicate.cardinality.max_count
                 if below or above:
                     cardinality_violations += 1
         cardinality_rate = (cardinality_violations / cardinality_checked) if cardinality_checked else 0.0
         return domain_violations, domain_range_rate, cardinality_violations, cardinality_rate
+
+    @staticmethod
+    def _value_count(value: object) -> int:
+        if value in (None, ""):
+            return 0
+        return len(value) if isinstance(value, list) else 1
+
+    @staticmethod
+    def _matches_datatype(value: Any, expected: str) -> bool:
+        if expected == "string":
+            return isinstance(value, str)
+        if expected == "integer":
+            return isinstance(value, int) and not isinstance(value, bool)
+        if expected == "number":
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if expected == "boolean":
+            return isinstance(value, bool)
+        if expected == "object":
+            return isinstance(value, dict)
+        if expected == "array":
+            return isinstance(value, list)
+        if expected == "date":
+            if isinstance(value, date) and not isinstance(value, datetime):
+                return True
+            if isinstance(value, str):
+                try:
+                    date.fromisoformat(value)
+                except ValueError:
+                    return False
+                return True
+            return False
+        if expected == "datetime":
+            if isinstance(value, datetime):
+                return True
+            if isinstance(value, str):
+                try:
+                    datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return False
+                return True
+            return False
+        return False
 
     # -- gates -----------------------------------------------------------------
 
@@ -433,6 +818,82 @@ class SchemaQualityEvaluator:
                     passed=report.categorical_duplication_rate <= settings.maximum_categorical_duplication_rate,
                 )
             )
+        if report.categorical_source_occurrence_coverage is not None:
+            gates.append(
+                SchemaQualityGate(
+                    gate="categorical_occurrence_reconciliation",
+                    metric="categorical_source_occurrence_coverage",
+                    operator=">=",
+                    threshold=(
+                        settings.minimum_categorical_source_occurrence_coverage
+                    ),
+                    actual=report.categorical_source_occurrence_coverage,
+                    passed=(
+                        report.categorical_source_occurrence_coverage
+                        >= settings.minimum_categorical_source_occurrence_coverage
+                    ),
+                )
+            )
+        if report.ontology_evaluated:
+            gates.extend(
+                [
+                    SchemaQualityGate(
+                        gate="property_completeness",
+                        metric="property_completeness",
+                        operator=">=",
+                        threshold=settings.minimum_property_completeness,
+                        actual=report.property_completeness,
+                        passed=(
+                            report.property_completeness
+                            >= settings.minimum_property_completeness
+                        ),
+                    ),
+                    SchemaQualityGate(
+                        gate="relationship_completeness",
+                        metric="relationship_completeness",
+                        operator=">=",
+                        threshold=settings.minimum_relationship_completeness,
+                        actual=report.relationship_completeness,
+                        passed=(
+                            report.relationship_completeness
+                            >= settings.minimum_relationship_completeness
+                        ),
+                    ),
+                ]
+            )
+        # SHACL is a universal release condition. Keeping it outside the
+        # ontology branch prevents a graph-only invocation from reporting a
+        # successful schema evaluation merely because validation was omitted.
+        gates.extend(
+            [
+                SchemaQualityGate(
+                    gate="shacl_execution",
+                    metric="shacl_executed",
+                    operator=">=",
+                    threshold=1.0,
+                    actual=float(report.shacl_executed),
+                    passed=report.shacl_executed,
+                ),
+                SchemaQualityGate(
+                    gate="shacl_conformance",
+                    metric="shacl_violation_count",
+                    operator="<=",
+                    threshold=float(settings.maximum_shacl_violation_count),
+                    # Missing SHACL execution is an observed failure, not a
+                    # vacuous zero-violation result.
+                    actual=(
+                        float(report.shacl_violation_count or 0)
+                        if report.shacl_executed
+                        else float(settings.maximum_shacl_violation_count + 1)
+                    ),
+                    passed=(
+                        report.shacl_executed
+                        and (report.shacl_violation_count or 0)
+                        <= settings.maximum_shacl_violation_count
+                    ),
+                ),
+            ]
+        )
         return gates
 
 

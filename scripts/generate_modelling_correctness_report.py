@@ -19,6 +19,9 @@ from kg_construction.application.modelling_correctness import (
     evaluate_structured_case,
     evaluate_unstructured_case,
 )
+from kg_construction.infrastructure.evaluation.quality_gates import (
+    QUALITY_THRESHOLDS_VERSION,
+)
 
 _FIXTURES = Path("tests/fixtures/gold_standards")
 _REPORTS = Path("reports")
@@ -40,6 +43,8 @@ def _run_cases() -> list[ModellingCase]:
             text=unstructured["text"],
             gold_entities=unstructured["gold_entities"],
             minimum_entity_coverage=unstructured["minimum_entity_coverage"],
+            gold_claims=unstructured.get("gold_claims", []),
+            gold_intents=unstructured.get("gold_intents", []),
         ),
     ]
 
@@ -49,6 +54,7 @@ def _markdown(cases: list[ModellingCase], overall: bool) -> str:
         "# Modelling Correctness Report",
         "",
         f"Generated: {date.today().isoformat()}",
+        f"Thresholds: `{QUALITY_THRESHOLDS_VERSION}`",
         "",
         "Runs the gold modelling cases through the real pipeline and verifies the output "
         "conforms to the expected graph (RML/R2RML conformance style). CI fails on regression.",
@@ -74,7 +80,12 @@ def main() -> int:
     cases = _run_cases()
     overall = all(case.passed for case in cases)
     _REPORTS.mkdir(exist_ok=True)
-    payload = {"generated": date.today().isoformat(), "overall_passed": overall, "cases": [case.model_dump(mode="json") for case in cases]}
+    payload = {
+        "generated": date.today().isoformat(),
+        "thresholds_version": QUALITY_THRESHOLDS_VERSION,
+        "overall_passed": overall,
+        "cases": [case.model_dump(mode="json") for case in cases],
+    }
     (_REPORTS / "modelling_correctness.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

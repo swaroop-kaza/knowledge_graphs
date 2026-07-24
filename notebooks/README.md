@@ -33,7 +33,7 @@ python -m pip install -e ".[gliner,llm,linking,dedup,ml]"
 | `07_standards_mapping_and_virtual_kg.ipynb` | Run R2RML, RML, CSVW, JSON-LD, and OBDA/virtual graph mapping examples. |
 | `08_relation_extraction_and_entity_linking.ipynb` | Run OpenIE, dependency-pattern relations, GLiNER plus Ollama relation typing, REBEL adapters, external linkers, embedding/cross-encoder resolution, and Splink/Dedupe adapter boundaries. |
 | `09_enterprise_events_and_observability.ipynb` | Run web/HTML/log/event/scientific/JSON-LD loaders plus HTML metadata, log event, trace/span, and event graph mappers. |
-| `10_graph_store_ingestion_and_exports.ipynb` | Run graph store exporters, offline Neo4j/Kuzu ingestion, RDF-to-Neo4j neosemantics calls, Kuzu bulk import, retries, and dead-letter replay. |
+| `10_graph_store_ingestion_and_exports.ipynb` | Run graph store exporters, Neo4j/Ladybug ingestion, RDF-to-Neo4j neosemantics calls, Ladybug bulk import, retries, and dead-letter replay. |
 | `11_gold_benchmarks_and_retrieval.ipynb` | Run gold benchmark evaluation, graph train/validation splits, node2vec/KG embeddings, GraphSAGE prep, large-graph backends, retrieval comparison, and graph-store benchmark fixtures. |
 
 ## Capability coverage

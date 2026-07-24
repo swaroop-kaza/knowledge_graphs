@@ -1,0 +1,37 @@
+# Generated digest-pinned Docker Compose lock. Do not hand-edit.
+services:
+  ollama:
+    image: ollama/ollama@sha256:57f573b47f1f71ebb445789f279fe3e596a8beab182f7cf486db9205bad87c5a
+    ports:
+    - 11434:11434
+    volumes:
+    - ollama-models:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+  neo4j:
+    image: neo4j@sha256:0b5d3ab6ec1b866890dbfb53bf4fe1cf039f9e03c96165599a403005b7e7bcc3
+    ports:
+    - 7474:7474
+    - 7687:7687
+    environment:
+      NEO4J_AUTH: neo4j/certification
+  memgraph:
+    image: memgraph/memgraph@sha256:042c8642954a7bde971a9c7683c8b1360e7fcf129a5fae36d63f12449e7154aa
+    ports:
+    - 7688:7687
+volumes:
+  ollama-models: null
+x-certification-lock:
+  version: 2
+  generated_by: scripts/lock_service_digests.py
+  source_sha256: 7b931326275c3bff3f543f2e4ec8aa3728060b58a8cd3f71bc38c1cef2491f38
+  services:
+    ollama:
+      source_image: ollama/ollama:0.32.0
+      digest: sha256:57f573b47f1f71ebb445789f279fe3e596a8beab182f7cf486db9205bad87c5a
+    neo4j:
+      source_image: neo4j:5.26.26
+      digest: sha256:0b5d3ab6ec1b866890dbfb53bf4fe1cf039f9e03c96165599a403005b7e7bcc3
+    memgraph:
+      source_image: memgraph/memgraph:3.10.1
+      digest: sha256:042c8642954a7bde971a9c7683c8b1360e7fcf129a5fae36d63f12449e7154aa

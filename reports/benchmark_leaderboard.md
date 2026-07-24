@@ -19,16 +19,16 @@ make benchmark-leaderboard
 | Dataset type | Rank | Technique | Entity coverage | Relation coverage | Evidence coverage | Validation pass rate | Latency | Memory/resource | Final score |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | text | 1 | `gazetteer_entity_extractor` | 1.000 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.777 |
-| text | 2 | `hybrid_rules_gazetteer_regex` | 1.000 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.777 |
-| text | 3 | `regex_entity_extractor` | 1.000 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.777 |
+| text | 2 | `regex_entity_extractor` | 1.000 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.777 |
+| text | 3 | `hybrid_rules_gazetteer_regex` | 1.000 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.767 |
 | csv | 1 | `direct_table_mapper` | 0.214 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.752 |
 | csv | 2 | `jsonpath_mapper` | 0.214 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.752 |
 | json | 1 | `jsonpath_mapper` | 0.125 | 1.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.816 |
 | json | 2 | `direct_table_mapper` | 0.062 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.747 |
-| mixed | 1 | `hybrid_rules_gazetteer_regex` | 0.643 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.764 |
+| mixed | 1 | `hybrid_rules_gazetteer_regex` | 0.643 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.754 |
 | mixed | 2 | `gazetteer_entity_extractor` | 0.357 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.753 |
 | mixed | 3 | `regex_entity_extractor` | 0.286 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.750 |
-| mixed | 4 | `hybrid_structured_then_text` | 0.429 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.748 |
+| mixed | 4 | `hybrid_structured_then_text` | 0.429 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.745 |
 | mixed | 5 | `jsonpath_mapper` | 0.214 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.740 |
 | mixed | 6 | `direct_table_mapper` | 0.143 | 0.000 | 1.000 | 1.000 | 0.010s | 0.250 MB | 0.724 |
 

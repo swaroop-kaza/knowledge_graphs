@@ -18,10 +18,14 @@ from kg_construction.application.benchmark_runner import TechniqueEvaluationConf
 from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.graph_ml import graph_ml_workflow_config_from_dict
 from kg_construction.application.hybrid_gliner import HybridGlinerPipelineConfig
+from kg_construction.infrastructure.evaluation import VersionedGraphEvaluationSuite
 from kg_construction.infrastructure.extractors.relations import RelationTypingConfig
 from kg_construction.infrastructure.graph_stores.ingestion import (
-    KuzuIngestionConfig,
+    LadybugIngestionConfig,
     Neo4jIngestionConfig,
+)
+from kg_construction.infrastructure.ontology.unstructured_governance import (
+    GovernedUnstructuredSchema,
 )
 from kg_construction.infrastructure.production.retry import RetryPolicyConfig
 
@@ -60,6 +64,9 @@ EXPECTED_CONFIGS = {
     "data_to_kg_complete.example.yaml",
     "evaluation.example.yaml",
     "gliner_ollama_relation_typing.example.yaml",
+    "governed_unstructured_ontology.yaml",
+    "graph_evaluation_suite.sample_csv.yaml",
+    "graph_evaluation_suite.sample_text.yaml",
     "graph_ml.example.yaml",
     "integration_profiles.example.yaml",
     "ollama_gliner_label_proposal.example.yaml",
@@ -135,6 +142,10 @@ def _validate_known_config(filename: str, payload: JsonDict) -> None:
         _validate_production_ingestion(payload)
     elif filename == "integration_profiles.example.yaml":
         _validate_integration_profiles(payload)
+    elif filename == "governed_unstructured_ontology.yaml":
+        GovernedUnstructuredSchema.from_yaml(CONFIG_DIR / filename)
+    elif filename.startswith("graph_evaluation_suite."):
+        VersionedGraphEvaluationSuite.model_validate(payload)
     else:
         raise ValueError(f"no checker registered for {filename}")
 
@@ -147,13 +158,15 @@ def _validate_production_ingestion(payload: JsonDict) -> None:
         "retry",
         "dead_letter",
         "neo4j",
-        "kuzu",
+        "ladybug",
         "replay",
     )
 
     RetryPolicyConfig(**{**_mapping(root, "retry"), "sleep": False})
     DeadLetterConfig.model_validate(_mapping(root, "dead_letter"))
-    KuzuIngestionConfig(**_dataclass_kwargs(KuzuIngestionConfig, _mapping(root, "kuzu")))
+    LadybugIngestionConfig(
+        **_dataclass_kwargs(LadybugIngestionConfig, _mapping(root, "ladybug"))
+    )
     _validate_neo4j_ingestion_config(_mapping(root, "neo4j"))
     replay = ProductionReplayConfig.model_validate(_mapping(root, "replay"))
     if not replay.command_examples:
@@ -177,7 +190,7 @@ def _validate_integration_profiles(payload: JsonDict) -> None:
         "integration_profiles.example.yaml",
         root,
         "neo4j_live",
-        "kuzu_live",
+        "ladybug_live",
         "graph_store_batch_benchmark",
     )
     neo4j = _mapping(root, "neo4j_live")
@@ -186,13 +199,17 @@ def _validate_integration_profiles(payload: JsonDict) -> None:
     if not isinstance(neo4j["tests"], list) or not neo4j["tests"]:
         raise ValueError("integration_profiles.neo4j_live.tests must be a non-empty list")
 
-    kuzu = _mapping(root, "kuzu_live")
+    ladybug = _mapping(root, "ladybug_live")
     for key in ("enabled_env", "database_path", "tests"):
-        _require_key("integration_profiles.kuzu_live", kuzu, key)
-    if not str(kuzu["database_path"]).startswith("data/processed/"):
-        raise ValueError("integration_profiles.kuzu_live.database_path must be under data/processed/")
-    if not isinstance(kuzu["tests"], list) or not kuzu["tests"]:
-        raise ValueError("integration_profiles.kuzu_live.tests must be a non-empty list")
+        _require_key("integration_profiles.ladybug_live", ladybug, key)
+    if not str(ladybug["database_path"]).startswith("data/processed/"):
+        raise ValueError(
+            "integration_profiles.ladybug_live.database_path must be under data/processed/"
+        )
+    if not isinstance(ladybug["tests"], list) or not ladybug["tests"]:
+        raise ValueError(
+            "integration_profiles.ladybug_live.tests must be a non-empty list"
+        )
 
     benchmark = GraphStoreBatchBenchmarkConfig.model_validate(
         _mapping(root, "graph_store_batch_benchmark")
@@ -210,6 +227,13 @@ def _validate_generated_paths(filename: str, payload: Any) -> None:
         if not isinstance(value, str):
             continue
         key = dotted_path.rsplit(".", maxsplit=1)[-1]
+        if key in {
+            "evaluation_suite_path",
+            "governed_schema_path",
+            "held_out_gold_path",
+            "models_lock_path",
+        }:
+            continue
         if key not in {"path", "output", "output_dir", "database_path", "watermark_path"}:
             continue
         if value.startswith(("http://", "https://", "bolt://", "neo4j://", "memory")):

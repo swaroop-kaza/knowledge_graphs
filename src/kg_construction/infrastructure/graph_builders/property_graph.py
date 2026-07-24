@@ -33,6 +33,9 @@ class _PropertyValueSupport(TypedDict):
 _SURVIVORSHIP_POLICY = (
     "highest_confidence_then_evidence_count_then_candidate_id_then_canonical_payload"
 )
+_UNION_COLLECTION_PROPERTIES = frozenset(
+    {"raw_values", "source_occurrences"}
+)
 
 # These fields describe where/how an assertion was extracted.  They must be
 # retained as assertion support, but they do not change a timeless semantic
@@ -232,6 +235,21 @@ def _merge_properties(
     property_sources: dict[str, str] = {}
     keys = sorted({key for candidate in ranked for key in candidate.properties})
     for key in keys:
+        if key in _UNION_COLLECTION_PROPERTIES:
+            items: list[object] = []
+            supporting_candidate_ids: list[str] = []
+            for candidate in ranked:
+                value = candidate.properties.get(key)
+                if not isinstance(value, list):
+                    continue
+                items.extend(value)
+                supporting_candidate_ids.append(_assertion_id(candidate))
+            if items:
+                merged[key] = _dedupe_json_values(items)
+                property_sources[key] = ",".join(
+                    sorted(set(supporting_candidate_ids))
+                )
+            continue
         supporting_values: dict[str, _PropertyValueSupport] = {}
         winner_found = False
         for candidate in ranked:

@@ -1,17 +1,10 @@
-"""Generate the machine-readable capability manifest from the live registry.
+"""Generate the mandatory executable capability and roadmap inventories.
 
-The manifest freezes the release scope: every technique, dependency, service,
-store, report, and notebook is classified as exactly one of
-
-* ``required`` — installable and executable in the release with no optional
-  extra and no silent skip, or
-* ``removed`` — a non-implemented roadmap idea that must live in documentation,
-  not as an executable product capability.
-
-Doctrine (full release): every implemented or adapter technique is ``required``;
-only non-implemented stubs are ``removed``. Regenerate after registry changes;
-``tests/test_capability_manifest.py`` fails if the committed manifest drifts from
-the registry or violates the doctrine.
+``capability_manifest.yaml`` is deliberately *not* a catalogue of aspirations.
+It contains only executable release capabilities and every row is mandatory.
+Research and roadmap entries are written to
+``certification/research_inventory.yaml`` so they remain visible without
+contaminating certification counts.
 """
 
 from __future__ import annotations
@@ -22,31 +15,41 @@ from typing import Any
 
 import yaml
 
-from kg_construction.application.registry import TechniqueDescriptor, default_registry
+from kg_construction.application.registry import (
+    TechniqueDescriptor,
+    default_registry,
+    research_registry,
+)
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "capability_manifest.yaml"
+_RESEARCH_INVENTORY = _ROOT / "certification" / "research_inventory.yaml"
 
 # Composite pipelines are wired from other techniques rather than a single class.
 _COMPOSITION_OWNER = "composition"
 
 # Runtime services required for a zero-skip release run.
 _SERVICES = [
-    {"name": "ollama", "kind": "external_service", "disposition": "required",
+    {"name": "ollama", "kind": "external_service", "disposition": "mandatory",
      "provisioning": "A local Ollama server must be running for llm/ollama techniques."},
-    {"name": "neo4j", "kind": "external_service", "disposition": "required",
+    {"name": "neo4j", "kind": "external_service", "disposition": "mandatory",
      "provisioning": "A Neo4j instance must be reachable for Neo4j export/ingestion."},
-    {"name": "memgraph", "kind": "external_service", "disposition": "required",
+    {"name": "memgraph", "kind": "external_service", "disposition": "mandatory",
      "provisioning": "A Memgraph instance must be reachable for Memgraph export."},
-    {"name": "kuzu", "kind": "embedded", "disposition": "required",
+    {"name": "ladybug", "kind": "embedded", "disposition": "mandatory",
      "provisioning": "Embedded on-disk database; no server process required."},
 ]
 
 # Graph store backends the release writes to.
 _STORES = [
-    {"name": name, "disposition": "required"}
-    for name in ("neo4j", "memgraph", "kuzu", "networkx", "rdf")
+    {"name": name, "disposition": "mandatory"}
+    for name in ("neo4j", "memgraph", "ladybug", "networkx", "rdf")
 ]
+
+_RENAMED_CAPABILITIES = {
+    "kuzu_exporter": "ladybug_exporter",
+    "kuzu_ingestion_adapter": "ladybug_ingestion_adapter",
+}
 
 
 def _owner(descriptor: TechniqueDescriptor) -> str | None:
@@ -58,43 +61,74 @@ def _owner(descriptor: TechniqueDescriptor) -> str | None:
     return None
 
 
-def _disposition(descriptor: TechniqueDescriptor) -> str:
-    return "removed" if descriptor.status == "stub" else "required"
-
-
 def _techniques() -> list[dict[str, Any]]:
     registry = default_registry()
     rows: list[dict[str, Any]] = []
     for descriptor in sorted(registry.techniques, key=lambda item: item.name):
+        if descriptor.status == "stub":
+            continue
+        owner = _owner(descriptor)
+        if owner:
+            owner = owner.replace("Kuzu", "Ladybug")
         rows.append(
             {
-                "name": descriptor.name,
+                "name": _RENAMED_CAPABILITIES.get(descriptor.name, descriptor.name),
                 "category": descriptor.category,
                 "method_type": descriptor.method_type,
                 "status": descriptor.status,
-                "disposition": _disposition(descriptor),
-                "owner": _owner(descriptor),
+                "disposition": "mandatory",
+                "profiles": list(descriptor.profiles),
+                "owner": owner,
             }
         )
     return rows
+
+
+def build_research_inventory() -> dict[str, Any]:
+    """Return every research/roadmap entry outside the release registry."""
+
+    release_names = default_registry().names()
+    rows = []
+    for descriptor in sorted(research_registry().techniques, key=lambda item: item.name):
+        if descriptor.name in release_names:
+            continue
+        owner = _owner(descriptor)
+        if owner:
+            owner = owner.replace("Kuzu", "Ladybug")
+        rows.append(
+            {
+                "name": _RENAMED_CAPABILITIES.get(descriptor.name, descriptor.name),
+                "category": descriptor.category,
+                "method_type": descriptor.method_type,
+                "status": descriptor.status,
+                "support_level": descriptor.public_support_level,
+                "profiles": list(descriptor.profiles),
+                "owner": owner,
+                "certified": False,
+            }
+        )
+    return {
+        "version": 1,
+        "purpose": "research_and_roadmap_only",
+        "generated_by": "scripts/generate_capability_manifest.py",
+        "count": len(rows),
+        "techniques": rows,
+    }
 
 
 def _dependencies() -> list[dict[str, Any]]:
     pyproject = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     project = pyproject["project"]
     rows: list[dict[str, Any]] = [
-        {"group": "core", "kind": "runtime", "disposition": "required",
+        {"group": "core", "kind": "runtime", "disposition": "mandatory",
          "packages": list(project.get("dependencies", []))}
     ]
-    tooling = {"dev", "notebook"}
-    for group, packages in sorted(project.get("optional-dependencies", {}).items()):
+    # Product dependencies are all required (no optional extras); tooling lives in
+    # PEP 735 dependency-groups and is part of the certified hard pass.
+    for group, members in sorted(pyproject.get("dependency-groups", {}).items()):
+        packages = [item for item in members if isinstance(item, str)]
         rows.append(
-            {
-                "group": group,
-                "kind": "tooling" if group in tooling else "runtime",
-                "disposition": "required",
-                "packages": list(packages),
-            }
+            {"group": group, "kind": "tooling", "disposition": "mandatory", "packages": packages}
         )
     return rows
 
@@ -105,7 +139,7 @@ def _files(subdir: str, patterns: tuple[str, ...]) -> list[dict[str, Any]]:
     for pattern in patterns:
         paths.update(base.glob(pattern))
     return [
-        {"path": str(path.relative_to(_ROOT)), "disposition": "required"}
+        {"path": str(path.relative_to(_ROOT)), "disposition": "mandatory"}
         for path in sorted(paths)
     ]
 
@@ -117,12 +151,12 @@ def build_manifest() -> dict[str, Any]:
     notebooks = _files("notebooks", ("*.ipynb",))
 
     def _count(rows: list[dict[str, Any]]) -> dict[str, int]:
-        required = sum(1 for row in rows if row["disposition"] == "required")
-        return {"total": len(rows), "required": required, "removed": len(rows) - required}
+        mandatory = sum(1 for row in rows if row["disposition"] == "mandatory")
+        return {"total": len(rows), "mandatory": mandatory}
 
     return {
         "version": 1,
-        "doctrine": "full_release",
+        "doctrine": "mandatory_executable_release",
         "generated_by": "scripts/generate_capability_manifest.py",
         "summary": {
             "techniques": _count(techniques),
@@ -142,15 +176,11 @@ def build_manifest() -> dict[str, Any]:
 
 
 _HEADER = (
-    "# Capability manifest — the frozen release scope.\n"
+    "# Capability manifest — mandatory executable release scope.\n"
     "#\n"
-    "# Each capability is classified as exactly one of:\n"
-    "#   required  installable and executable in the release, no optional extra, no silent skip\n"
-    "#   removed   a non-implemented roadmap idea that lives in docs, not as a product capability\n"
-    "#\n"
-    "# Doctrine (full_release): every implemented or adapter technique is required; only\n"
-    "# non-implemented stubs are removed. Regenerate with scripts/generate_capability_manifest.py;\n"
-    "# tests/test_capability_manifest.py fails if this file drifts from the live registry.\n"
+    "# Every row is mandatory. Research and roadmap entries are kept separately in\n"
+    "# certification/research_inventory.yaml and never enter certification counts.\n"
+    "# Regenerate with scripts/generate_capability_manifest.py.\n"
 )
 
 
@@ -158,6 +188,17 @@ def write_manifest() -> Path:
     manifest = build_manifest()
     body = yaml.safe_dump(manifest, sort_keys=False, default_flow_style=False, width=100)
     _MANIFEST.write_text(_HEADER + body, encoding="utf-8")
+    _RESEARCH_INVENTORY.parent.mkdir(parents=True, exist_ok=True)
+    roadmap = yaml.safe_dump(
+        build_research_inventory(),
+        sort_keys=False,
+        default_flow_style=False,
+        width=100,
+    )
+    _RESEARCH_INVENTORY.write_text(
+        "# Research and roadmap inventory; excluded from release certification.\n" + roadmap,
+        encoding="utf-8",
+    )
     return _MANIFEST
 
 
@@ -167,7 +208,8 @@ def main() -> None:
     summary = manifest["summary"]["techniques"]
     print(
         f"capability-manifest-ok: {path.name} "
-        f"({summary['total']} techniques, {summary['required']} required, {summary['removed']} removed)"
+        f"({summary['total']} mandatory executable techniques; "
+        f"{build_research_inventory()['count']} research/roadmap entries)"
     )
 
 

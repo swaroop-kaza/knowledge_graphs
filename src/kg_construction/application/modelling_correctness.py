@@ -20,8 +20,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
+from kg_construction.application.unstructured_pipeline import UnstructuredPipeline
 from kg_construction.application.workflow import ConstructionWorkflow
 from kg_construction.domain.models import SourceRecord
+from kg_construction.infrastructure.evaluation.claim_evaluations import ClaimEvaluationSuite
 from kg_construction.infrastructure.evaluation.extraction_coverage import CoverageEvaluator
 from kg_construction.infrastructure.evaluation.schema_quality import SchemaQualityEvaluator
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
@@ -102,21 +104,47 @@ def evaluate_unstructured_case(
     text: str,
     gold_entities: list[JsonDict],
     minimum_entity_coverage: float,
+    gold_claims: list[JsonDict] | None = None,
+    gold_intents: list[str] | None = None,
 ) -> ModellingCase:
-    """Extract, canonicalise, and verify entity coverage meets the minimum."""
+    """Verify entity coverage, and score claims and intents on the same document.
+
+    Entity recall is measured on the extracted batch; claims and intents are
+    scored through the evidence-first pipeline, so gold claims and gold intents
+    both affect the result and every promoted claim carries complete provenance.
+    """
 
     source = SourceRecord.from_text(text, source_name=f"{case_id}.txt")
     batch = RegexEntityExtractor().extract(source)
     canonical = UnstructuredCanonicalizer().resolve(batch)
-    report = CoverageEvaluator().evaluate(canonical, gold_entities=gold_entities)
+    coverage = CoverageEvaluator().evaluate(canonical, gold_entities=gold_entities)
 
-    checks = {"entity_coverage_meets_minimum": report.entity_coverage >= minimum_entity_coverage}
+    pipeline_result = UnstructuredPipeline().run(source)
+    scores = ClaimEvaluationSuite().evaluate(
+        pipeline_result,
+        {"gold_entities": gold_entities, "gold_claims": gold_claims or [], "gold_intents": gold_intents or []},
+    )
+    provenance_complete = all(
+        claim.has_complete_provenance(text) for claim in pipeline_result.promoted
+    )
+
+    checks = {
+        "entity_coverage_meets_minimum": coverage.entity_coverage >= minimum_entity_coverage,
+        "claims_have_complete_provenance": provenance_complete,
+    }
+    if gold_claims:
+        checks["claims_evaluated"] = scores["relation"].executed
+    if gold_intents:
+        checks["intents_evaluated"] = scores["intent_fact"].executed
     metrics = {
-        "entity_coverage": report.entity_coverage,
-        "matched_entity_count": float(report.matched_entity_count),
-        "gold_entity_count": float(report.gold_entity_count),
-        "nil_rate": report.nil_rate,
+        "entity_coverage": coverage.entity_coverage,
+        "matched_entity_count": float(coverage.matched_entity_count),
+        "gold_entity_count": float(coverage.gold_entity_count),
+        "nil_rate": coverage.nil_rate,
         "minimum_entity_coverage": minimum_entity_coverage,
+        "claim_coverage": scores["relation"].recall,
+        "intent_coverage": scores["intent_fact"].recall,
+        "promoted_claim_count": float(len(pipeline_result.promoted)),
     }
     return ModellingCase(
         case_id=case_id, kind="unstructured", passed=all(checks.values()), checks=checks, metrics=metrics

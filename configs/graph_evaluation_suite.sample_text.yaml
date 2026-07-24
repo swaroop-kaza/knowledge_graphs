@@ -1,0 +1,335 @@
+version: kg-graph-evaluation-suite-v1
+construction_profile: unstructured
+fixture_id: sample-text-publication-v2
+fixture_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+# Curated occurrence gold for source_7cbdc1a5851256d53232, the immutable
+# pii-redaction-v1 child of source_4d6ae89675d00a5386ee produced from
+# examples/data_to_kg/sample.txt by the complete profile. Internal gold IDs are
+# fixture-local; matching uses the derived source snapshot/version, exact
+# offsets, surface/type semantics, relation direction, and semantic qualifiers.
+quality:
+  expected_batch:
+    source_records: []
+    entities:
+      - candidate_id: gold-date
+        entity_type: Date
+        name: "2026-07-09"
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - &date_evidence
+            evidence_id: gold-evidence-date
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 3, end: 13}
+            text: "2026-07-09"
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-platform-team
+        entity_type: Person
+        name: Platform Team
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-platform-team
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 15, end: 28}
+            text: Platform Team
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-incident-first
+        entity_type: Identifier
+        name: INCIDENT-1042
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-incident-first
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 38, end: 51}
+            text: INCIDENT-1042
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-contact
+        entity_type: Entity
+        name: Contact
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-contact
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 53, end: 60}
+            text: Contact
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-redacted-contact
+        entity_type: Entity
+        name: REDACTED
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-redacted-contact
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 62, end: 70}
+            text: REDACTED
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-version
+        entity_type: Version
+        name: v2.4.1
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-version
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 132, end: 138}
+            text: v2.4.1
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-incident-second
+        entity_type: Identifier
+        name: INCIDENT-1042
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-incident-second
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 140, end: 153}
+            text: INCIDENT-1042
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+      - candidate_id: gold-recommendation-api
+        entity_type: Artifact
+        name: Recommendation API
+        properties: {document_version: source_7cbdc1a5851256d53232}
+        evidence:
+          - evidence_id: gold-evidence-recommendation-api
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 163, end: 181}
+            text: Recommendation API
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+    relations:
+      - candidate_id: gold-affected
+        source: gold-incident-second
+        relation_type: AFFECTED
+        target: gold-recommendation-api
+        properties:
+          claim_kind: relation
+          predicate: affected
+          negated: false
+          modality: asserted
+          attribution: null
+          temporal: null
+          quantity: null
+          event_roles: []
+        evidence:
+          - evidence_id: gold-evidence-affected
+            source_id: source_7cbdc1a5851256d53232
+            source_type: text
+            source_name: examples/data_to_kg/sample.txt
+            location: {kind: span, start: 140, end: 183}
+            text: INCIDENT-1042 affected Recommendation API.
+            metadata: {document_version: source_7cbdc1a5851256d53232}
+            created_at: "2026-07-24T00:00:00Z"
+        confidence: 1
+        extractor_name: curator
+        technique: gold
+        schema_version: v1
+        created_at: "2026-07-24T00:00:00Z"
+        provenance_metadata: {}
+    facts: []
+    metadata: {}
+  coreference_clusters:
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",3,13,"date"]': date
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",15,28,"person"]': platform-team
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",38,51,"identifier"]': incident
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",53,60,"entity"]': contact
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",62,70,"entity"]': redacted-contact
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",132,138,"version"]': version
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",140,153,"identifier"]': incident
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",163,181,"artifact"]': recommendation-api
+  entity_links:
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",3,13,"date"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",15,28,"person"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",38,51,"identifier"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",53,60,"entity"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",62,70,"entity"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",132,138,"version"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",140,153,"identifier"]': null
+    '["source_7cbdc1a5851256d53232","source_7cbdc1a5851256d53232",163,181,"artifact"]': null
+
+sql_like:
+  max_p95_latency_ms: 1000
+  cases:
+    - case_id: exact-date-mention
+      query:
+        selector:
+          labels: [Mention]
+          properties: {surface: "2026-07-09", start: 3, end: 13}
+        projections:
+          surface: $property.surface
+          detected_type: $property.detected_entity_type
+          start: $property.start
+          end: $property.end
+      expected_rows:
+        - {surface: "2026-07-09", detected_type: Date, start: 3, end: 13}
+      expected_aggregations: {mention_count: 1}
+
+nosql:
+  max_p95_latency_ms: 1000
+  cases:
+    - case_id: mention-denotation
+      query:
+        start: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        relationship_types: [DENOTES_OBSERVED_ENTITY]
+        max_depth: 1
+      expected_node_ids:
+        - entity_e226f7b5a85efcb57d2a
+        - entity_aefe2c0bb8db83c82be5
+      expected_paths:
+        - [entity_aefe2c0bb8db83c82be5, DENOTES_OBSERVED_ENTITY, entity_e226f7b5a85efcb57d2a]
+
+graphrag:
+  cases:
+    - case_id: evidence-grounded-date-answer
+      query:
+        query_text: "2026-07-09"
+        candidates: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+        k: 1
+        path_query: &date_path
+          start: {node_ids: [entity_b7a2fb501ab8e37e859d]}
+          end: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+          relationship_types: [HAS_MENTION, DENOTES_OBSERVED_ENTITY]
+          max_depth: 2
+        answer_query: *date_path
+      context_relevance: {entity_e226f7b5a85efcb57d2a: 3}
+      expected_paths:
+        - [entity_b7a2fb501ab8e37e859d, HAS_MENTION, entity_aefe2c0bb8db83c82be5, DENOTES_OBSERVED_ENTITY, entity_e226f7b5a85efcb57d2a]
+      expected_answer_node_ids: [entity_e226f7b5a85efcb57d2a]
+      expected_citation_ids: [source_7cbdc1a5851256d53232]
+      requires_multi_hop: true
+
+vector:
+  max_p95_latency_ms: 10000
+  max_peak_memory_bytes: 100000000
+  cases:
+    - case_id: date-vector-search
+      query:
+        query_text: "2026-07-09"
+        candidates: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+        allowed: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+        k: 1
+      relevance: {entity_e226f7b5a85efcb57d2a: 3}
+
+link_prediction:
+  cases:
+    - case_id: date-denotation
+      query: &date_neighbor
+        source: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        relationship_type: DENOTES_OBSERVED_ENTITY
+        candidates: &observed_candidates
+          node_ids:
+            - entity_e226f7b5a85efcb57d2a
+            - entity_3a11ade39c7e839359f2
+            - entity_e1671bbc38eb3afcfd9d
+        k: 3
+      true_entity_id: entity_e226f7b5a85efcb57d2a
+    - case_id: incident-denotation
+      query: &incident_neighbor
+        source: {node_ids: [entity_2e4a8b9684faf9bf9927]}
+        relationship_type: DENOTES_OBSERVED_ENTITY
+        candidates: *observed_candidates
+        k: 3
+      true_entity_id: entity_3a11ade39c7e839359f2
+    - case_id: recommendation-api-denotation
+      query: &recommendation_api_neighbor
+        source: {node_ids: [entity_43bc8790c56403147ae0]}
+        relationship_type: DENOTES_OBSERVED_ENTITY
+        candidates: *observed_candidates
+        k: 3
+      true_entity_id: entity_e1671bbc38eb3afcfd9d
+
+recommendation:
+  catalog: *observed_candidates
+  feature_properties: [name]
+  cases:
+    - case_id: date-neighbor-recommendation
+      query: *date_neighbor
+      relevant_item_ids: [entity_e226f7b5a85efcb57d2a]
+    - case_id: incident-neighbor-recommendation
+      query: *incident_neighbor
+      relevant_item_ids: [entity_3a11ade39c7e839359f2]
+    - case_id: recommendation-api-neighbor-recommendation
+      query: *recommendation_api_neighbor
+      relevant_item_ids: [entity_e1671bbc38eb3afcfd9d]
+
+reasoning:
+  max_p95_runtime_ms: 1000
+  cases:
+    - case_id: mention-denotes-date
+      query:
+        start: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        relationship_type_sequence: [DENOTES_OBSERVED_ENTITY]
+        inferred_predicate: denotes_date
+      expected_answers: [entity_e226f7b5a85efcb57d2a]
+      expected_inferred_facts:
+        - subject: entity_aefe2c0bb8db83c82be5
+          predicate: denotes_date
+          object: entity_e226f7b5a85efcb57d2a

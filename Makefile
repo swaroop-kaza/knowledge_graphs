@@ -1,5 +1,11 @@
 BASE_PYTHON ?= python3
 VENV ?= .venv
+UV ?= uv
+CERT_PROFILE ?=
+CERT_PROFILE_ARG = $(if $(CERT_PROFILE),--profile $(CERT_PROFILE),)
+CERT_SERVICE_LOCK ?= certification/services.lock.yaml
+CERT_EXECUTION_PLAN ?= certification/execution_plan.yaml
+CERT_EXECUTION_REPORT ?= certification/execution-report.yaml
 
 # Use the project virtualenv interpreter when it exists, otherwise fall back to
 # BASE_PYTHON. This is re-evaluated on each use, so `make setup quickstart` in a
@@ -12,15 +18,15 @@ endif
 PYTHONPATH ?= src
 
 .DEFAULT_GOAL := help
-.PHONY: benchmark-leaderboard capability-manifest clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help install install-dev modelling-correctness notebook-check package-check quality quickstart registry-reports schema-quality setup smoke test venv verify
+.PHONY: benchmark-leaderboard capability-manifest certify certify-preflight clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help hydrate install lock-check modelling-correctness notebook-check package-check quality quickstart registry-reports release-locks schema-quality services-start services-wait setup smoke test venv verify
 
 help:
 	@echo "kg-construction - common tasks"
 	@echo ""
-	@echo "  make setup         Create .venv, install the package, and run a health check"
-	@echo "  make install       Install the package (core, offline) into .venv"
-	@echo "  make install-dev   Install with dev, rdf, graph, and notebook extras"
-	@echo "  make doctor        Diagnose the install and optional services"
+	@echo "  make release-locks Create every release lock (online, large download)"
+	@echo "  make setup         Provision every locked dependency, model, and service"
+	@echo "  make install       Install the complete mandatory dependency set"
+	@echo "  make doctor        Hard-fail on any missing runtime, model, or service"
 	@echo "  make quickstart    Build sample graphs and print a summary"
 	@echo "  make test          Run the unit test suite"
 	@echo "  make smoke         Run construction + benchmark smoke flows"
@@ -37,20 +43,32 @@ $(VENV)/bin/python:
 
 venv: $(VENV)/bin/python
 
-setup: install
-	@$(PYTHON) -m kg_construction.interfaces.cli.doctor --skip-services || true
-	@echo ""
-	@echo "Setup complete. Next:  make quickstart"
-	@echo "To use the kg-construction command directly:  source $(VENV)/bin/activate"
+# Maintainer operation: resolve every supported profile, never a host-only subset.
+release-locks:
+	$(UV) lock
+	$(UV) sync --frozen --all-groups
+	$(UV) run python scripts/lock_service_digests.py
+	docker compose -f certification/services.lock.yaml up -d
+	$(UV) run python scripts/lock_models.py
 
-install: venv
-	$(PYTHON) -m pip install -e .
+setup: services-wait
+	$(UV) run --frozen python -m kg_construction.interfaces.cli.doctor --strict
+	@echo "Mandatory setup complete. Run: make certify"
 
-install-dev: venv
-	$(PYTHON) -m pip install -e ".[dev,rdf,graph,notebook]"
+install: lock-check
+	$(UV) sync --frozen --all-groups
+
+services-start: install
+	docker compose -f $(CERT_SERVICE_LOCK) up -d
+
+hydrate: services-start
+	PYTHONPATH=$(PYTHONPATH) $(UV) run --frozen python scripts/hydrate_models.py $(CERT_PROFILE_ARG)
+
+services-wait: hydrate
+	PYTHONPATH=$(PYTHONPATH) $(UV) run --frozen python scripts/wait_for_services.py $(CERT_PROFILE_ARG)
 
 doctor:
-	$(PYTHON) -m kg_construction.interfaces.cli.doctor
+	$(UV) run --frozen python -m kg_construction.interfaces.cli.doctor --strict
 
 quickstart:
 	$(PYTHON) examples/quickstart_60_second.py
@@ -59,12 +77,14 @@ compile:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m compileall -q src tests
 
 test: compile
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -v
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
 
 smoke:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m kg_construction.interfaces.cli.construct \
 		--input examples/data_to_kg/sample.txt \
 		--source-type text \
+		--config configs/data_to_kg_complete.example.yaml \
+		--evaluation-suite configs/graph_evaluation_suite.sample_text.yaml \
 		--output data/processed/data_to_kg_text_property_graph.json \
 		--rdf-output data/processed/data_to_kg_text_rdf.json \
 		--evidence-output data/processed/data_to_kg_text_evidence_graph.json \
@@ -121,6 +141,33 @@ quality:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_notebook_coverage.py
 
 verify: test smoke
+
+# Package/model/container artifacts stay offline; live remote-linking certifiers
+# remain network checks and are never replaced by cached or static fallbacks.
+certify-preflight: lock-check
+	UV_OFFLINE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 $(UV) sync --frozen --offline --all-groups
+	UV_OFFLINE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=$(PYTHONPATH) \
+		$(UV) run --frozen --offline python scripts/hydrate_models.py \
+		--offline --validate-only $(CERT_PROFILE_ARG)
+	UV_OFFLINE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=$(PYTHONPATH) \
+		$(UV) run --frozen --offline python scripts/wait_for_services.py $(CERT_PROFILE_ARG)
+	UV_OFFLINE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=$(PYTHONPATH) \
+		$(UV) run --frozen --offline python scripts/certify.py \
+		--phase preflight $(CERT_PROFILE_ARG)
+
+certify: certify-preflight
+	$(MAKE) quality
+	$(MAKE) verify
+	UV_OFFLINE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=$(PYTHONPATH) \
+		$(UV) run --frozen --offline python scripts/certify.py \
+		--phase final --execution-plan $(CERT_EXECUTION_PLAN) \
+		--report-output $(CERT_EXECUTION_REPORT) $(CERT_PROFILE_ARG)
+
+# Fail fast when any lock is missing or a floating tag slipped in.
+lock-check:
+	@test -f uv.lock || { echo "missing uv.lock (run: uv lock)"; exit 1; }
+	@test -f models.lock.yaml || { echo "missing models.lock.yaml (run: python scripts/lock_models.py)"; exit 1; }
+	@test -f certification/services.lock.yaml || { echo "missing certification/services.lock.yaml (run: python scripts/lock_service_digests.py)"; exit 1; }
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

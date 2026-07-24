@@ -1,0 +1,149 @@
+version: kg-graph-evaluation-suite-v1
+construction_profile: structured
+fixture_id: sample-csv-publication-v1
+fixture_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+quality:
+  structured_formation:
+    record_label: Person
+    expected_record_count: 3
+    expected_node_counts: {Person: 3, Team: 3}
+    expected_relationship_counts: {reports_to: 2, has_team: 3}
+    required_properties:
+      Person: [id, name, email]
+      Team: [code, concept_scheme, name]
+    forbidden_properties:
+      Person: [manager_id, team]
+      Team: [email]
+    identity_keys:
+      Person: [business_key]
+      Team: [concept_scheme, code]
+sql_like:
+  max_p95_latency_ms: 1000
+  cases:
+    - case_id: people-table
+      query:
+        selector:
+          labels: [Person]
+        projections:
+          id: $property.id
+          name: $property.name
+      expected_rows:
+        - {id: "1", name: Ada Lovelace}
+        - {id: "2", name: Grace Hopper}
+        - {id: "3", name: Katherine Johnson}
+      expected_aggregations:
+        person_count: 3
+nosql:
+  max_p95_latency_ms: 1000
+  cases:
+    - case_id: manager-traversal
+      query:
+        start:
+          node_ids: [canonical_entity_aee2143b3557f6f3e818]
+        relationship_types: [reports_to]
+        max_depth: 1
+      expected_node_ids:
+        - canonical_entity_9bc22b3686b86d75c502
+        - canonical_entity_aee2143b3557f6f3e818
+      expected_paths:
+        - [canonical_entity_aee2143b3557f6f3e818, reports_to, canonical_entity_9bc22b3686b86d75c502]
+graphrag:
+  cases:
+    - case_id: team-grounded-answer
+      query:
+        query_text: Research
+        candidates:
+          labels: [Team]
+        k: 1
+        path_query:
+          start:
+            node_ids: [canonical_entity_ab47d808a80383042e91]
+          end:
+            node_ids: [canonical_entity_18ed407039df781d32dd]
+          relationship_types: [reports_to, has_team]
+          max_depth: 2
+        answer_query:
+          start:
+            node_ids: [canonical_entity_ab47d808a80383042e91]
+          end:
+            node_ids: [canonical_entity_18ed407039df781d32dd]
+          relationship_types: [reports_to, has_team]
+          max_depth: 2
+      context_relevance:
+        canonical_entity_18ed407039df781d32dd: 3
+      expected_paths:
+        - [canonical_entity_ab47d808a80383042e91, reports_to, canonical_entity_9bc22b3686b86d75c502, has_team, canonical_entity_18ed407039df781d32dd]
+      expected_answer_node_ids: [canonical_entity_18ed407039df781d32dd]
+      expected_citation_ids: [source_cb6633698c4b12e43c3d]
+      requires_multi_hop: true
+vector:
+  max_p95_latency_ms: 10000
+  max_peak_memory_bytes: 100000000
+  cases:
+    - case_id: team-vector-search
+      query:
+        query_text: Research
+        candidates:
+          labels: [Team]
+        allowed:
+          labels: [Team]
+        k: 1
+      relevance:
+        canonical_entity_18ed407039df781d32dd: 3
+link_prediction:
+  cases:
+    - case_id: ada-team
+      query: &ada_team_query
+        source:
+          node_ids: [canonical_entity_9bc22b3686b86d75c502]
+        relationship_type: has_team
+        candidates:
+          labels: [Team]
+        k: 3
+      true_entity_id: canonical_entity_18ed407039df781d32dd
+    - case_id: grace-team
+      query: &grace_team_query
+        source:
+          node_ids: [canonical_entity_aee2143b3557f6f3e818]
+        relationship_type: has_team
+        candidates:
+          labels: [Team]
+        k: 3
+      true_entity_id: canonical_entity_4e39c27cfd0c0372fd20
+    - case_id: katherine-team
+      query: &katherine_team_query
+        source:
+          node_ids: [canonical_entity_ab47d808a80383042e91]
+        relationship_type: has_team
+        candidates:
+          labels: [Team]
+        k: 3
+      true_entity_id: canonical_entity_bf010a70a464cb44c3dd
+recommendation:
+  catalog:
+    labels: [Team]
+  feature_properties: [code]
+  cases:
+    - case_id: ada-team-recommendation
+      query: *ada_team_query
+      relevant_item_ids: [canonical_entity_18ed407039df781d32dd]
+    - case_id: grace-team-recommendation
+      query: *grace_team_query
+      relevant_item_ids: [canonical_entity_4e39c27cfd0c0372fd20]
+    - case_id: katherine-team-recommendation
+      query: *katherine_team_query
+      relevant_item_ids: [canonical_entity_bf010a70a464cb44c3dd]
+reasoning:
+  max_p95_runtime_ms: 1000
+  cases:
+    - case_id: inherited-manager-team
+      query:
+        start:
+          node_ids: [canonical_entity_ab47d808a80383042e91]
+        relationship_type_sequence: [reports_to, has_team]
+        inferred_predicate: manager_has_team
+      expected_answers: [canonical_entity_18ed407039df781d32dd]
+      expected_inferred_facts:
+        - subject: canonical_entity_ab47d808a80383042e91
+          predicate: manager_has_team
+          object: canonical_entity_18ed407039df781d32dd

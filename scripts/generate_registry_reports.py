@@ -19,10 +19,9 @@ from kg_construction.application.registry import (
 
 REPORTS_DIR = Path("reports")
 SUPPORT_LEVEL_ORDER: tuple[SupportLevel, ...] = (
-    "stable",
-    "optional_adapter",
-    "experimental",
-    "planned",
+    "mandatory",
+    "research",
+    "roadmap",
 )
 
 
@@ -49,6 +48,7 @@ def _technique_payload(technique: TechniqueDescriptor) -> dict[str, Any]:
         "input_types": list(technique.input_types),
         "adapter": _adapter_name(technique),
         "tags": list(technique.tags),
+        "profiles": list(technique.profiles),
         "notes": technique.notes,
     }
 
@@ -107,6 +107,7 @@ def _write_csv_report(techniques: list[TechniqueDescriptor]) -> None:
                 "input_types",
                 "adapter",
                 "tags",
+                "profiles",
             ],
         )
         writer.writeheader()
@@ -123,6 +124,7 @@ def _write_csv_report(techniques: list[TechniqueDescriptor]) -> None:
                     "input_types": "|".join(technique.input_types),
                     "adapter": _adapter_name(technique),
                     "tags": "|".join(technique.tags),
+                    "profiles": "|".join(technique.profiles),
                 }
             )
 

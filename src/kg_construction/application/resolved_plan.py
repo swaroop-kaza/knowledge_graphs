@@ -118,6 +118,9 @@ class ClassKind(StrEnum):
     EVENT = "event"
     """An occurrence/association carrying its own attributes."""
 
+    ASSOCIATION = "association"
+    """A qualified n-ary relationship with identity, attributes, or validity."""
+
 
 class OnMissingTarget(StrEnum):
     """What to do when a foreign key has no resolvable target."""
@@ -139,7 +142,12 @@ class ReviewState(StrEnum):
     PROMOTED = "promoted"
 
 
-_CLASS_ROLE = {ClassKind.ENTITY: "record", ClassKind.CONCEPT: "reference", ClassKind.EVENT: "event"}
+_CLASS_ROLE = {
+    ClassKind.ENTITY: "record",
+    ClassKind.CONCEPT: "reference",
+    ClassKind.EVENT: "event",
+    ClassKind.ASSOCIATION: "event",
+}
 
 
 class ResolvedClass(BaseModel):
@@ -200,6 +208,7 @@ class ResolvedRelationship(BaseModel):
     via: str = "foreign_key"  # foreign_key | categorical | association | declared
     source_columns: list[str] = Field(default_factory=list)
     target_columns: list[str] = Field(default_factory=list)
+    controlled_vocabulary: str | None = None
     on_missing_target: OnMissingTarget = OnMissingTarget.SKIP
     provenance_required: bool = True
     description: str | None = None
@@ -214,6 +223,12 @@ class ForeignKeyResolution(BaseModel):
     source_class: str
     target_class: str
     target_key: list[str] = Field(default_factory=list)
+    target_key_datatypes: list[JsonType] = Field(default_factory=list)
+    """Datatypes of the referenced columns, in ``target_key`` order."""
+    target_source_name: str | None = None
+    """Source/table namespace that owns the referenced business entity."""
+    target_identity_scope: IdentityScope = IdentityScope.SOURCE
+    """Identity scope declared by the referenced class, not the child table."""
     relationship_name: str
     cardinality: Cardinality = Field(default_factory=Cardinality.zero_or_one)
     on_missing: OnMissingTarget = OnMissingTarget.SKIP
@@ -318,7 +333,8 @@ class ResolvedModelingPlan(BaseModel):
 
     @model_validator(mode="after")
     def _check_references(self) -> ResolvedModelingPlan:
-        names = {item.name for item in self.classes}
+        classes_by_name = {item.name: item for item in self.classes}
+        names = set(classes_by_name)
         if self.record_class not in names:
             raise ValueError(f"record_class {self.record_class!r} is not among declared classes")
         for prop in self.properties:
@@ -328,6 +344,34 @@ class ResolvedModelingPlan(BaseModel):
             missing = {rel.domain, rel.range} - names
             if missing:
                 raise ValueError(f"relationship {rel.name!r} references unknown class(es) {sorted(missing)}")
+        for foreign_key in self.foreign_keys:
+            if foreign_key.target_key and len(foreign_key.columns) != len(
+                foreign_key.target_key
+            ):
+                raise ValueError(
+                    f"foreign key {foreign_key.columns!r} has target key "
+                    f"{foreign_key.target_key!r} with different arity"
+                )
+            if foreign_key.target_key_datatypes and len(
+                foreign_key.target_key_datatypes
+            ) != len(foreign_key.target_key):
+                raise ValueError(
+                    f"foreign key target key {foreign_key.target_key!r} has "
+                    "a different number of datatype declarations"
+                )
+            target = classes_by_name.get(foreign_key.target_class)
+            if target is None or not foreign_key.target_key:
+                continue
+            declared_keys = {
+                tuple(target.identity_keys),
+                *(tuple(key) for key in target.alternate_keys),
+            }
+            declared_keys.discard(())
+            if declared_keys and tuple(foreign_key.target_key) not in declared_keys:
+                raise ValueError(
+                    f"foreign key target key {foreign_key.target_key!r} is not a "
+                    f"declared primary or alternate key of {target.name!r}"
+                )
         return self
 
     def clazz(self, name: str) -> ResolvedClass:
@@ -358,6 +402,7 @@ class ResolvedModelingPlan(BaseModel):
                     kind="datatype",
                     cardinality=prop.cardinality,
                     source_columns=[prop.source_column] if prop.source_column else [],
+                    controlled_vocabulary=prop.controlled_vocabulary,
                 )
             )
         for rel in self.relationships:
@@ -370,6 +415,7 @@ class ResolvedModelingPlan(BaseModel):
                     cardinality=rel.cardinality,
                     source_columns=list(rel.source_columns),
                     target_columns=list(rel.target_columns),
+                    controlled_vocabulary=rel.controlled_vocabulary,
                     description=rel.description,
                 )
             )

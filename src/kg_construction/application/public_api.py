@@ -13,12 +13,46 @@ from kg_construction.application.benchmark_runner import (
 )
 from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.dataset_profiler import DatasetProfile, DatasetProfiler
+from kg_construction.application.mandatory_unstructured_runtime import (
+    MandatoryUnstructuredRuntime,
+)
 from kg_construction.application.production import build_production_services
+from kg_construction.application.publication_contract import (
+    PublicationContractRegistry,
+    TrustedPublicationBinding,
+)
 from kg_construction.application.registry import PluginRegistry, default_registry
-from kg_construction.application.source_catalog import CatalogTableMapper
-from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
+from kg_construction.application.source_catalog import (
+    CatalogTableMapper,
+    DeclaredForeignKey,
+    SourceCatalog,
+    TableDeclaration,
+)
+from kg_construction.application.workflow import (
+    ConstructionResult,
+    ConstructionWorkflow,
+    PublicationGateError,
+)
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
-from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
+from kg_construction.infrastructure.evaluation import (
+    GraphBoundIntendedUseEvaluator,
+    GraphWorkloadRunner,
+    Neo4jVectorWorkloadBackend,
+    VersionedGraphEvaluationSuite,
+)
+from kg_construction.infrastructure.extractors.model_backed.contracts import (
+    HydratedModelSet,
+)
+from kg_construction.infrastructure.extractors.model_backed.factory import (
+    detect_mandatory_profile,
+)
+from kg_construction.infrastructure.extractors.model_backed.identity import (
+    LockedEmbeddingIdentityProvider,
+)
+from kg_construction.infrastructure.graph_stores import (
+    Neo4jVectorStoreAdapter,
+    Neo4jVectorStoreConfig,
+)
 from kg_construction.infrastructure.loaders import (
     APIResponseLoader,
     ChatTranscriptLoader,
@@ -180,27 +214,65 @@ def construct_kg(
     *,
     source_type: str | None = None,
     config: ConfigInput = None,
-    workflow: ConstructionWorkflow | None = None,
     source_name: str | None = None,
+    source_catalog: SourceCatalog | None = None,
+    evaluation_suite_path: PathLike | None = None,
 ) -> ConstructionResult:
     """Construct property, RDF, and evidence graphs from one input.
 
-    The default workflow is intentionally local-first and deterministic. Provide
-    a custom ``ConstructionWorkflow`` when a project needs specialized mappers,
-    extractors, resolvers, validators, or graph builders.
+    Structured inputs use the semantic source-catalog path. Unstructured inputs
+    use every model provider required by the detected platform profile and fail
+    when the immutable model lock, a model artifact, or Ollama is unavailable.
+    Every public run requires a sealed, versioned evaluation suite loaded from a
+    file before construction. Self-sealing is not trust: the repository-owned
+    publication registry must also bind the exact suite file, source snapshot,
+    semantic config, model lock, governed schema, held-out gold, builder
+    contract, and non-weakenable policy. The suite contains only gold judgments
+    and declarative queries; observations are computed from the frozen
+    constructed graph. Validation, quality, held-out extraction, all
+    intended-use families, and the live workload backend form one conjunctive
+    publication gate.
+
+    Use ``ConstructionWorkflow(require_publication_gates=False).run(...)``
+    directly when an explicitly non-publishable draft is needed for exploration
+    or unit tests.
     """
 
     sources = load_sources(input_data, source_type=source_type, source_name=source_name)
-    if workflow is None:
-        resolved_config = _data_config(config)
-        primary_source_type = _primary_source_type(sources, source_type)
-        production_kwargs = build_production_services(resolved_config).workflow_kwargs()
-        workflow = default_workflow_for_source_type(
-            primary_source_type,
-            resolved_config,
-            production_kwargs=production_kwargs,
+    resolved_config = _data_config(config)
+    suite_path = evaluation_suite_path or resolved_config.evaluation_suite_path
+    if suite_path is None:
+        raise ValueError(
+            "public construct_kg requires evaluation_suite_path; "
+            "unscored draft graphs cannot be published"
         )
-    return workflow.run(sources)
+    suite = VersionedGraphEvaluationSuite.from_path(suite_path)
+    publication_contract = PublicationContractRegistry.from_package_resource().authorize(
+        suite=suite,
+        suite_path=suite_path,
+        sources=sources,
+        config=resolved_config,
+        source_catalog=source_catalog,
+    )
+    primary_source_type = _primary_source_type(sources, source_type)
+    production_kwargs = build_production_services(resolved_config).workflow_kwargs()
+    workflow = default_workflow_for_source_type(
+        primary_source_type,
+        resolved_config,
+        source_catalog=source_catalog,
+        graph_evaluation_suite=suite,
+        publication_contract=publication_contract,
+        require_publication_gates=True,
+        production_kwargs=production_kwargs,
+    )
+    result = workflow.run(sources, graph_evaluation_suite=suite)
+    if not result.publication_gate.passed:
+        raise PublicationGateError(result)
+    if not result.release_eligible:
+        raise RuntimeError(
+            "public construction completed without trusted release-contract evidence"
+        )
+    return result
 
 
 def evaluate_techniques(
@@ -233,21 +305,38 @@ def evaluate_techniques(
     )
 
 
-def _structured_mappers(config: DataToKGConfig) -> list[Any]:
+def _structured_mappers(
+    config: DataToKGConfig,
+    source_catalog: SourceCatalog | None = None,
+) -> list[Any]:
     """Return the structured-table mapper: semantic by default, direct baseline on request."""
 
     if config.pipeline.structured_mapping == "direct":
         return [DirectTableMapper()]
-    return [CatalogTableMapper()]
+    catalog = source_catalog or _catalog_from_config(config)
+    if config.structured.require_declarations and not catalog.declarations:
+        raise ValueError(
+            "structured.require_declarations=true but no structured.tables were declared"
+        )
+    return [
+        CatalogTableMapper(
+            catalog,
+            require_declarations=config.structured.require_declarations,
+        )
+    ]
 
 
 def default_workflow_for_source_type(
     source_type: str | None,
     config: DataToKGConfig | None = None,
     *,
+    source_catalog: SourceCatalog | None = None,
+    graph_evaluation_suite: VersionedGraphEvaluationSuite | None = None,
+    publication_contract: TrustedPublicationBinding | None = None,
+    require_publication_gates: bool = False,
     production_kwargs: dict[str, Any] | None = None,
 ) -> ConstructionWorkflow:
-    """Create the conservative default workflow used by ``construct_kg``."""
+    """Create the mandatory, fail-closed workflow used by ``construct_kg``."""
 
     resolved_config = config or DataToKGConfig()
     normalized_type = _normalize_source_type(source_type) or "text"
@@ -256,25 +345,38 @@ def default_workflow_for_source_type(
     common_kwargs: dict[str, Any] = {
         "pipeline_name": resolved_config.pipeline.name,
         "config_payload": resolved_config.model_dump(mode="json"),
+        "graph_evaluation_suite": graph_evaluation_suite,
+        "publication_contract": publication_contract,
+        "require_publication_gates": require_publication_gates,
         **(production_kwargs or {}),
     }
+    if require_publication_gates:
+        common_kwargs["graph_bound_evaluator"] = _live_graph_bound_evaluator(
+            resolved_config
+        )
 
     if normalized_type == "mixed":
+        unstructured = _mandatory_unstructured_pipeline(resolved_config)
         return ConstructionWorkflow(
-            mappers=[_DefaultSourceMapperRouter()],
-            extractors=[_DefaultSourceExtractorRouter()],
+            mappers=[
+                _DefaultSourceMapperRouter(
+                    resolved_config,
+                    source_catalog=source_catalog,
+                )
+            ],
+            extractors=[_DefaultSourceExtractorRouter(unstructured)],
             resolvers=resolvers,
             validators=validators,
             **common_kwargs,
         )
     if normalized_type in {"csv", "excel", "sql", "structured_api"}:
         return ConstructionWorkflow(
-            mappers=_structured_mappers(resolved_config),
+            mappers=_structured_mappers(resolved_config, source_catalog),
             resolvers=resolvers,
             validators=validators,
             **common_kwargs,
         )
-    if normalized_type in {"xml", "chat_transcript"}:
+    if normalized_type == "xml":
         return ConstructionWorkflow(
             mappers=[DirectTableMapper()],
             resolvers=resolvers,
@@ -312,14 +414,14 @@ def default_workflow_for_source_type(
     if normalized_type in {"html", "webpage"}:
         return ConstructionWorkflow(
             mappers=[HTMLMetadataMapper()],
-            extractors=[RegexEntityExtractor()],
-            resolvers=resolvers,
+            extractors=[_mandatory_unstructured_pipeline(resolved_config)],
+            resolvers=[],
             validators=validators,
             **common_kwargs,
         )
     return ConstructionWorkflow(
-        extractors=[RegexEntityExtractor()],
-        resolvers=resolvers,
+        extractors=[_mandatory_unstructured_pipeline(resolved_config)],
+        resolvers=[],
         validators=validators,
         **common_kwargs,
     )
@@ -404,23 +506,46 @@ class _DefaultSourceMapperRouter:
     name = "default_source_mapper_router"
     technique = "source_type_routed_mapping"
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        config: DataToKGConfig,
+        *,
+        source_catalog: SourceCatalog | None = None,
+    ) -> None:
         direct = DirectTableMapper()
+        semantic = _structured_mappers(config, source_catalog)[0]
         self._delegates: dict[str, Any] = {
             "api_response": JsonPathMapper(),
-            "chat_transcript": direct,
-            "csv": direct,
+            "csv": semantic,
             "event_payload": EventGraphMapper(),
-            "excel": direct,
+            "excel": semantic,
             "html": HTMLMetadataMapper(),
             "json": JsonPathMapper(),
             "jsonld": JSONLDMapper(),
             "logs": LogEventMapper(),
-            "sql": direct,
-            "structured_api": direct,
+            "sql": semantic,
+            "structured_api": semantic,
             "webpage": HTMLMetadataMapper(),
             "xml": direct,
         }
+
+    def prepare_sources(self, sources: list[SourceRecord]) -> None:
+        """Prepare each unique delegate once with only its applicable sources."""
+
+        delegates = {id(delegate): delegate for delegate in self._delegates.values()}
+        for delegate in delegates.values():
+            prepare = getattr(delegate, "prepare_sources", None)
+            if not callable(prepare):
+                continue
+            applicable = [
+                source
+                for source in sources
+                if self._delegates.get(
+                    _normalize_source_type(source.source_type) or source.source_type
+                )
+                is delegate
+            ]
+            prepare(applicable)
 
     def map_source(self, source: SourceRecord) -> ConstructionBatch:
         source_type = _normalize_source_type(source.source_type) or source.source_type
@@ -449,6 +574,7 @@ class _DefaultSourceExtractorRouter:
     technique = "source_type_routed_extraction"
 
     _TEXT_SOURCE_TYPES = {
+        "chat_transcript",
         "email",
         "html",
         "markdown",
@@ -459,8 +585,26 @@ class _DefaultSourceExtractorRouter:
         "webpage",
     }
 
-    def __init__(self) -> None:
-        self._delegate = RegexEntityExtractor()
+    def __init__(self, delegate: MandatoryUnstructuredRuntime) -> None:
+        self._delegate = delegate
+
+    def prepare_sources(self, sources: list[SourceRecord]) -> None:
+        applicable = [
+            source
+            for source in sources
+            if (_normalize_source_type(source.source_type) or source.source_type)
+            in self._TEXT_SOURCE_TYPES
+        ]
+        prepare = getattr(self._delegate, "prepare_sources", None)
+        if applicable and callable(prepare):
+            prepare(applicable)
+
+    def reset_results(self) -> None:
+        self._delegate.reset_results()
+
+    @property
+    def pipeline_results(self):
+        return self._delegate.pipeline_results
 
     def extract(self, source: SourceRecord) -> ConstructionBatch:
         source_type = _normalize_source_type(source.source_type) or source.source_type
@@ -481,12 +625,109 @@ class _DefaultSourceExtractorRouter:
         )
 
 
+def _mandatory_unstructured_pipeline(
+    config: DataToKGConfig,
+) -> MandatoryUnstructuredRuntime:
+    """Build the one governed, locked, conjunctive unstructured runtime."""
+
+    settings = config.unstructured
+    cache_root = Path(settings.cache_root).expanduser() if settings.cache_root else None
+    return MandatoryUnstructuredRuntime.from_lock(
+        Path(settings.models_lock_path).expanduser(),
+        cache_root=cache_root,
+        governed_schema_path=(
+            Path(settings.governed_schema_path).expanduser()
+            if settings.governed_schema_path
+            else None
+        ),
+        held_out_gold_path=(
+            Path(settings.held_out_gold_path).expanduser()
+            if settings.held_out_gold_path
+            else None
+        ),
+        entity_labels=settings.entity_labels,
+        ollama_base_url=config.llm.base_url,
+        ollama_retry_on_invalid_output=config.llm.retry_on_invalid_output,
+        ollama_max_retries=config.llm.max_retries,
+    )
+
+
 def _data_config(config: ConfigInput) -> DataToKGConfig:
     if config is None:
         return DataToKGConfig()
     if isinstance(config, DataToKGConfig):
         return config
     return DataToKGConfig.from_yaml(config)
+
+
+def _live_graph_bound_evaluator(
+    config: DataToKGConfig,
+) -> GraphBoundIntendedUseEvaluator:
+    """Build the mandatory locked-embedding + live-Neo4j workload evaluator."""
+
+    profile = detect_mandatory_profile()
+    cache_root = (
+        Path(config.unstructured.cache_root).expanduser()
+        if config.unstructured.cache_root
+        else None
+    )
+    models = HydratedModelSet.from_lock(
+        Path(config.unstructured.models_lock_path).expanduser(),
+        profile=profile,
+        cache_root=cache_root,
+    )
+    artifact = models.artifact("embedding_resolver")
+    embedding_model = LockedEmbeddingIdentityProvider(artifact)
+    store = Neo4jVectorStoreAdapter(
+        Neo4jVectorStoreConfig(
+            uri="bolt://localhost:7687",
+            user="neo4j",
+            password="certification",
+            index_name="kg_publication_vector_index",
+            node_label="KGPublicationVector",
+            dimensions=384,
+        )
+    )
+    vector_backend = Neo4jVectorWorkloadBackend(
+        store=store,
+        embedding_model=embedding_model,
+        model_id=artifact.model_version,
+    )
+    return GraphBoundIntendedUseEvaluator(
+        runner=GraphWorkloadRunner(vector_backend=vector_backend)
+    )
+
+
+def _catalog_from_config(config: DataToKGConfig) -> SourceCatalog:
+    catalog = SourceCatalog()
+    for table in config.structured.tables:
+        catalog.declare(
+            TableDeclaration(
+                table_name=table.table_name,
+                record_type=table.record_type,
+                primary_key=list(table.primary_key),
+                alternate_keys=[
+                    list(key) for key in table.alternate_keys
+                ],
+                foreign_keys=[
+                    DeclaredForeignKey(
+                        columns=list(foreign_key.columns),
+                        target_table=foreign_key.target_table,
+                        target_key=list(foreign_key.target_key),
+                        relationship_name=foreign_key.relationship_name,
+                    )
+                    for foreign_key in table.foreign_keys
+                ],
+                datatypes=dict(table.datatypes),
+                column_mappings=dict(table.column_mappings),
+                identity_scope=table.identity_scope,
+                controlled_vocabularies=list(table.controlled_vocabularies),
+                table_kind=table.table_kind,
+                association_relationship_name=table.association_relationship_name,
+                origin="user",
+            )
+        )
+    return catalog
 
 
 def _evaluation_config(config: EvaluationConfigInput) -> TechniqueEvaluationConfig:

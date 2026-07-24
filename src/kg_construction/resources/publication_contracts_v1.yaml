@@ -1,0 +1,112 @@
+version: kg-publication-contract-registry-v1
+registry_sha256: 69b1111c73c416713883a5c66ae43b80c0a74f8037bae0e468387fd803b7a5da
+
+# These floors and ceilings are code-independent release policy. A custom suite
+# may demand more, but cannot lower a floor or raise a resource/latency ceiling.
+policy:
+  policy_id: kg-publication-minima-v1
+  policy_sha256: 35b4c40b5647b0fb65f59572df86112110ebc9b6efda0e3e0461075a09ff3bef
+  quality_thresholds_version: kg-quality-v3
+  quality_thresholds_sha256: cca0ed6ce03eb9a1168c86b5f542e8a90a60f92d3be82857dee5840ba60b3a20
+  suite_minimums:
+    sql_like.min_query_result_exact_match: 1.0
+    sql_like.min_aggregation_accuracy: 1.0
+    nosql.min_traversal_result_exact_match: 1.0
+    nosql.min_traversal_coverage: 1.0
+    nosql.min_path_f1: 1.0
+    graphrag.min_recall_at_k: 0.70
+    graphrag.min_mrr: 0.60
+    graphrag.min_ndcg_at_k: 0.70
+    graphrag.min_path_f1: 0.70
+    graphrag.min_multi_hop_success_rate: 0.70
+    graphrag.min_answer_faithfulness: 0.80
+    graphrag.min_citation_f1: 0.80
+    vector.min_index_coverage: 1.0
+    vector.min_recall_at_k: 0.70
+    vector.min_mrr: 0.60
+    vector.min_ndcg_at_k: 0.70
+    vector.min_filter_correctness: 1.0
+    link_prediction.min_filtered_mrr: 0.20
+    link_prediction.min_filtered_hits_at_k.1: 0.10
+    link_prediction.min_filtered_hits_at_k.3: 0.20
+    link_prediction.min_filtered_hits_at_k.10: 0.30
+    recommendation.min_precision_at_k: 0.01
+    recommendation.min_recall_at_k: 0.01
+    recommendation.min_ndcg_at_k: 0.01
+    recommendation.min_catalog_coverage: 0.01
+    recommendation.min_novelty: 0.0
+    recommendation.min_intra_list_diversity: 0.0
+    reasoning.min_competency_question_accuracy: 0.80
+    reasoning.min_inferred_fact_f1: 0.80
+  suite_maximums:
+    sql_like.max_p95_latency_ms: 10000
+    nosql.max_p95_latency_ms: 10000
+    vector.max_p95_latency_ms: 10000
+    vector.max_peak_memory_bytes: 100000000
+    reasoning.max_p95_runtime_ms: 10000
+  held_out_minimums:
+    entity: 0.80
+    entity_span: 0.80
+    relation: 0.80
+    event_role: 0.80
+    intent: 0.80
+    fact: 0.80
+    negation: 0.80
+    modality: 0.80
+    temporal: 0.80
+    attribution: 0.80
+    quantity: 0.80
+    evidence: 1.0
+    provenance: 1.0
+    claim_coverage: 0.80
+  held_out_maximums:
+    maximum_unsupported_claim_rate: 0.02
+
+contracts:
+  - contract_id: sample-csv-release-v1
+    construction_profile: structured
+    fixture_id: sample-csv-publication-v1
+    evaluation_fixture_sha256: 4702bed9f75451ca321028036c712d997660cfaf07065ac6e4e214dd93c53c40
+    evaluation_file_sha256: 7ed642190ce65276a4c7ac69519b4eadbf4953fac76f74b5b32ee54224375e01
+    source_snapshot_sha256:
+      - 95459293d4f9d00286c94b19083c926b0e40dc32ff6ad85f83d0e789b4f6bd59
+    runtime_source_snapshot_sha256:
+      - 8401a943e80bd6a6085c775ad10997b7311e79b6e4cf632f01cbb3edd996e8cf
+    allowed_config_sha256:
+      - 09f6242d93aef1811f6cb5d74decd423a7c8efba55e3ad87919903a610952962
+      - a6d052568c47982442f7d226eb7d8e5fc276e33b26d68e64dd9833141ba3efc7
+    allowed_source_catalog_sha256:
+      - 130dbc6fda2f985d1a6ee6313aba1b04c6ae95b68c68d27c45d8f6bad0e60fef
+      - 8ae83b570059ccc653dc6faf804b30396ed36960c99a647fc8264661356190a6
+    model_lock_sha256: 2ee066dfb218f41207070aa25d32aa99575fed4c38c5af3ac7b8b70e7943c4a0
+    governed_schema_sha256: null
+    held_out_gold_sha256: null
+    required_gold_paths:
+      - quality.expected_batch.entities
+      - quality.expected_batch.relations
+    graph_builder_contract_version: property-rdf-evidence-builders-v1
+
+  - contract_id: sample-text-release-v2
+    construction_profile: unstructured
+    fixture_id: sample-text-publication-v2
+    evaluation_fixture_sha256: af2bb73e2193c222c2cd9be9725db5d7a260f4f2284eccab25cfcd9f4180173d
+    evaluation_file_sha256: 287d1825d3ffd98a1f2a8554a18ee95c254d03d211edafee70509f6b36fcafbf
+    source_snapshot_sha256:
+      - 12be81d6f4bec8ccfe57072437628c0ec6a5918a92dccf469b1f0acaeaf28c32
+    runtime_source_snapshot_sha256:
+      - d55b9889c2d0ba93c011287453391453d690ffabbc0c32a3e42521ab8d5aaef5
+    allowed_config_sha256:
+      - 09f6242d93aef1811f6cb5d74decd423a7c8efba55e3ad87919903a610952962
+      - a6d052568c47982442f7d226eb7d8e5fc276e33b26d68e64dd9833141ba3efc7
+    allowed_source_catalog_sha256:
+      - 130dbc6fda2f985d1a6ee6313aba1b04c6ae95b68c68d27c45d8f6bad0e60fef
+      - 8ae83b570059ccc653dc6faf804b30396ed36960c99a647fc8264661356190a6
+    model_lock_sha256: 2ee066dfb218f41207070aa25d32aa99575fed4c38c5af3ac7b8b70e7943c4a0
+    governed_schema_sha256: 3bb5760ee34d11aa2acfd4c58976f876f94ccb6eeae359c9b3b3c0da2380dde5
+    held_out_gold_sha256: 7f625e2036bbbf2dcee40c962a7383b1832541ddb2f84a805764c7ba476491ed
+    required_gold_paths:
+      - quality.expected_batch.entities
+      - quality.expected_batch.relations
+      - quality.coreference_clusters
+      - quality.entity_links
+    graph_builder_contract_version: property-rdf-evidence-builders-v1
