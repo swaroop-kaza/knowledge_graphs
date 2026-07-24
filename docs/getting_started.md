@@ -1,543 +1,276 @@
-# Getting Started (From Zero)
+# Getting started: mandatory, zero-skip runtime
 
-This is a complete, beginner-friendly walkthrough that assumes you have **nothing
-installed** yet. By the end you will be able to:
+This repository has one product contract: construct a well-formed graph from
+structured and unstructured data, evaluate it, and fail when a required provider
+did not run. There is no reduced “core install”, no model-download-on-first-use,
+and no successful result containing skipped capabilities.
 
-- install Python and the framework,
-- turn a CSV / JSON / text file into a knowledge graph with the core (offline) install,
-- optionally set up **Ollama** (local LLM extraction), **Neo4j** (graph database),
-  **Kuzu** (embedded graph), and **GLiNER** (model-based entity extraction), and
-- verify everything with the built-in `doctor` command.
+Research and roadmap code remains visible in `research_registry()`, but it is not
+part of the release registry and is never counted as certified.
 
-You do **not** need any of the optional services to try the framework. The core
-install runs fully offline. Add optional pieces only when you need them.
+## 1. Supported execution profiles
 
-> Want to understand how the framework forms graphs? See
-> [`knowledge_graph_modelling.md`](knowledge_graph_modelling.md).
+The hard pass selects exactly one profile from `models.manifest.yaml`.
 
----
+| Host | Required execution |
+| --- | --- |
+| Apple Silicon macOS | Torch MPS, MLX/MLX-LM, GLiNER, Transformers, spaCy, Qwen3 through Transformers + MLX + Ollama |
+| Linux x86-64 with CUDA | CUDA, GLiNER, Transformers, spaCy, Qwen3 through Transformers + Ollama |
+| Linux x86-64 without CUDA | Torch CPU, GLiNER, Transformers, spaCy, Qwen3 through Transformers + Ollama |
 
-## Table of contents
+Every profile also requires Ollama, Neo4j, Memgraph, and embedded Ladybug. A
+requested profile that does not match the detected host is rejected; an
+accelerated profile never silently falls back to CPU.
 
-1. [Step 1 — Install the basics (Python, git)](#step-1--install-the-basics-python-git)
-2. [Step 2 — Get the code and create a virtual environment](#step-2--get-the-code-and-create-a-virtual-environment)
-3. [Step 3 — Install the framework (core, offline)](#step-3--install-the-framework-core-offline)
-4. [Step 4 — Run your first knowledge graph](#step-4--run-your-first-knowledge-graph)
-5. [Step 5 — Check your setup with `doctor`](#step-5--check-your-setup-with-doctor)
-6. [Which install do I need? (extras map)](#which-install-do-i-need-extras-map)
-7. [Optional service — Ollama (local LLM extraction)](#optional-service--ollama-local-llm-extraction)
-8. [Optional service — Neo4j (graph database ingestion)](#optional-service--neo4j-graph-database-ingestion)
-9. [Optional service — Kuzu (embedded graph, no server)](#optional-service--kuzu-embedded-graph-no-server)
-10. [Optional — GLiNER and transformer models](#optional--gliner-and-transformer-models)
-11. [Environment variables and the `.env` file](#environment-variables-and-the-env-file)
-12. [Running everything (CLI, Python, notebooks)](#running-everything-cli-python-notebooks)
-13. [Troubleshooting](#troubleshooting)
+Windows is not a certification profile. Use a supported Linux environment rather
+than treating a partial Windows run as equivalent.
 
----
+## 2. Install the bootstrap tools
 
-## Step 1 — Install the basics (Python, git)
+Install Python 3.11 or 3.12, Git, Docker with the Buildx and Compose plugins, and
+[`uv`](https://docs.astral.sh/uv/).
 
-You need **Python 3.11 or 3.12** and **git**. Pick your operating system.
-
-### macOS
-
-Install [Homebrew](https://brew.sh) first if you do not have it, then:
+On Apple Silicon:
 
 ```bash
-brew install python@3.12 git
-python3.12 --version   # should print Python 3.12.x
+brew install python@3.12 git uv
+brew install --cask docker
 ```
 
-### Ubuntu / Debian Linux
+On Linux, install Docker Engine from its distribution instructions, then:
 
 ```bash
-sudo apt update
-sudo apt install -y python3.12 python3.12-venv python3-pip git
-# If your distro does not ship 3.12, python3.11 works too:
-# sudo apt install -y python3.11 python3.11-venv python3-pip git
-python3.12 --version
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Windows
+Verify the host tools before provisioning:
 
-1. Install **Python 3.12** from <https://www.python.org/downloads/windows/>.
-   On the first installer screen, tick **“Add python.exe to PATH.”**
-2. Install **Git** from <https://git-scm.com/download/win>.
-3. Use **PowerShell** for the commands below. Where this guide shows
-   `source .venv/bin/activate`, use `.\.venv\Scripts\Activate.ps1` instead.
+```bash
+python3 --version
+uv --version
+docker version
+docker buildx version
+docker compose version
+```
 
-> The `make` targets in this guide are a convenience for macOS/Linux. On Windows,
-> either use **WSL** (Windows Subsystem for Linux) or run the underlying `python`
-> commands directly — nothing in the core workflow requires `make`.
-
----
-
-## Step 2 — Get the code and set it up
+## 3. Clone and create immutable locks
 
 ```bash
 git clone https://github.com/swaroop-kaza/knowledge_graphs.git
 cd knowledge_graphs
+make release-locks
 ```
 
-### The one-command path (recommended)
+This one maintainer target resolves every container tag, starts the
+version-pinned bootstrap services, resolves every Hugging Face model to an
+immutable commit, downloads and hashes every artifact, pulls any missing
+mandatory Ollama model, and records its content digest. It always locks all
+three profiles; a host-only/partial release lock is rejected.
+
+The generated inputs are:
+
+- `uv.lock`: every Python distribution;
+- `certification/services.lock.yaml`: every container image by immutable digest;
+- `models.lock.yaml`: model commit, file list, SHA-256, size, device, license, and
+  Ollama digest.
+
+Commit all three locks for a reproducible release. Do not hand-edit them.
+
+## 4. Provision the selected profile
 
 ```bash
 make setup
 ```
 
-`make setup` creates an isolated virtual environment in `.venv`, installs the
-package into it (core, fully offline), and runs a quick health check. You do **not**
-need to create or activate a virtual environment yourself.
+`make setup` installs every dependency group, starts the digest-pinned services,
+hydrates the locked model snapshots, validates their bytes, waits for semantic
+service probes, and runs the strict doctor. The first provisioning run needs
+network access and significant disk space. The hard pass later disconnects
+package, model, and container registries; mandatory remote identity and
+reconciliation endpoint checks still require network access.
 
-> **Why a virtual environment?** On modern macOS (Homebrew) and Debian/Ubuntu, the
-> system Python is “externally managed”
-> ([PEP 668](https://peps.python.org/pep-0668/)), so a bare `pip install` outside a
-> virtual environment fails on purpose with an `externally-managed-environment`
-> error. `make setup` avoids this entirely by always installing into `.venv`.
+On Apple Silicon, the setup must find both `mlx` and `mlx_lm`, and Torch must
+report MPS as built and available. On CUDA Linux, CUDA must be available. These
+are hard conditions, not preferences.
 
-### Manual path (or Windows, where `make` may be unavailable)
+Inspect the selected contract:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate          # Windows PowerShell: .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e .
+uv run python -m kg_construction.interfaces.cli.doctor --strict
+uv run python -m kg_construction.interfaces.cli.doctor --strict --json
 ```
 
-### Optional: the fast path with `uv`
+Doctor has only `ok` and `fail` outcomes. Missing models, services, packages, or
+configuration are failures.
 
-If you use [uv](https://docs.astral.sh/uv/) (a fast Python package/venv manager):
+## 5. Construct graphs
+
+Structured sources use the semantic source catalog by default:
 
 ```bash
-uv venv && source .venv/bin/activate
-uv pip install -e .
+uv run kg-construction \
+  --input examples/data_to_kg/sample.csv \
+  --source-type csv \
+  --config configs/data_to_kg_complete.example.yaml \
+  --evaluation-suite configs/graph_evaluation_suite.sample_csv.yaml \
+  --output data/processed/sample.property.json \
+  --rdf-output data/processed/sample.rdf.json \
+  --evidence-output data/processed/sample.evidence.json \
+  --neo4j-output data/processed/sample.neo4j.cypher
 ```
 
-The core install pulls only lightweight, pure-Python dependencies (pydantic,
-PyYAML, jsonpath-ng, openpyxl, SQLAlchemy, pypdf, rapidfuzz, rdflib, pyshacl).
-**No database, model, or internet service is required.**
-
-### Just the CLI, without cloning (advanced)
-
-If you only want the `kg-construction` command to run on **your own** files — and do
-not need the bundled examples, configs, or notebooks — you can install straight from
-GitHub without cloning, using [pipx](https://pipx.pypa.io) or
-[uv](https://docs.astral.sh/uv/):
+Unstructured sources load the immutable model lock and run every provider required
+by the host:
 
 ```bash
-# Install the CLI into its own isolated environment:
-pipx install "git+https://github.com/swaroop-kaza/knowledge_graphs.git"
-
-# ...or run it once without installing anything permanently:
-uvx --from "git+https://github.com/swaroop-kaza/knowledge_graphs.git" kg-construction doctor
-```
-
-Then point it at your data:
-
-```bash
-kg-construction --input /path/to/your.csv --output graph.json
-```
-
-Caveats:
-
-- This installs the **core** framework only. To include an optional extra, use a
-  PEP 508 direct reference, e.g.
-  `pipx install "kg-construction[graph] @ git+https://github.com/swaroop-kaza/knowledge_graphs.git"`.
-- The `examples/`, `configs/`, and `notebooks/` referenced throughout this guide ship
-  only in a clone, so the walkthrough commands that use them need `git clone`.
-- The repository must be publicly reachable (or your git credentials configured).
-- The package is **not yet published to PyPI**, so `pip install kg-construction` by
-  name does not work yet — use the git URL above.
-
----
-
-## Step 3 — What you just installed
-
-The install puts four command-line tools onto your `PATH` (available once `.venv`
-is active — `source .venv/bin/activate`):
-
-| Command | What it does |
-| --- | --- |
-| `kg-construction` | Build a knowledge graph from a source file. |
-| `kg-construction doctor` | Diagnose your install and optional services. |
-
-Handy `make` shortcuts wrap the common tasks so they work whether or not the venv is
-activated (`make` uses `.venv` automatically): `make quickstart`, `make doctor`,
-`make test`, `make verify`, `make quality`. Run `make help` for the full list.
-
----
-
-## Step 4 — Run your first knowledge graph
-
-The 60-second quickstart builds graphs from the bundled sample files and prints a
-summary. It runs entirely offline:
-
-```bash
-make quickstart
-# equivalent to: python3 examples/quickstart_60_second.py
-```
-
-Or from the command line, turn a text file into property-graph, RDF, and evidence
-outputs:
-
-```bash
-kg-construction \
+uv run kg-construction \
   --input examples/data_to_kg/sample.txt \
   --source-type text \
-  --output data/processed/data_to_kg_text_property_graph.json \
-  --rdf-output data/processed/data_to_kg_text_rdf.json \
-  --evidence-output data/processed/data_to_kg_text_evidence_graph.json
+  --config configs/data_to_kg_complete.example.yaml \
+  --evaluation-suite configs/graph_evaluation_suite.sample_text.yaml \
+  --output data/processed/text.property.json \
+  --rdf-output data/processed/text.rdf.json \
+  --evidence-output data/processed/text.evidence.json
 ```
 
-Or from Python:
+The unstructured command runs GLiNER, Transformers NER, spaCy, GLiNER RelEx,
+Qwen3 Transformers, Qwen3 Ollama, and Qwen3 MLX on Apple Silicon. A provider
+failure is aggregated after all providers have been attempted, then fails the
+run. Output values and qualifiers are accepted only when their end-exclusive
+offsets quote the immutable source snapshot exactly.
+
+PII redaction creates a derived source snapshot whenever it changes text or
+rows. The derived `source_id` is also the new document version; it binds the
+redacted payload, transformation version, and parent source version. The safe
+metadata records `_source_lineage`, and the evidence graph materializes a
+`DERIVED_FROM` edge to a provenance-only parent snapshot node. Consequently, an
+evaluation suite for redacted text must use the post-redaction source/version
+and offsets. `graph_evaluation_suite.sample_text.yaml` is sealed against that
+derived snapshot, not the unredacted file identity.
+
+Python uses the same contract:
 
 ```python
 from kg_construction import construct_kg
 
-result = construct_kg("examples/data_to_kg/sample.csv")
-print(len(result.property_graph.nodes), len(result.property_graph.edges))
+result = construct_kg(
+    "examples/data_to_kg/sample.csv",
+    source_type="csv",
+    config="configs/data_to_kg_complete.example.yaml",
+    evaluation_suite_path="configs/graph_evaluation_suite.sample_csv.yaml",
+)
+assert result.validation_report.valid
+assert result.publication_gate.passed
+assert result.publication_contract is not None
+assert result.publication_contract.release_eligible
+print(result.quality_report)
+print(result.intended_use_report)
 ```
 
-> **Do I need `PYTHONPATH=src`?** No. After `pip install -e .`, the
-> `kg-construction` command, `import kg_construction`, and
-> `python3 -m kg_construction.interfaces.cli.construct` all work directly. You may
-> still see `PYTHONPATH=src python3 -m ...` in some older docs — that form runs the
-> code straight from the `src/` tree and also works, but it is not required.
+The fixture's own SHA-256 detects accidental edits but does not grant release
+trust. The package-owned
+`src/kg_construction/resources/publication_contracts_v1.yaml` also binds the
+fixture file, raw input snapshot, deterministic post-PII runtime snapshot,
+semantic configuration, `models.lock.yaml`,
+governed unstructured schema, held-out claim set, graph-builder version, and
+non-weakenable threshold policy. `construct_kg` checks that allowlist before
+models, services, graph construction, or output writes. A custom suite can still
+be loaded with `VersionedGraphEvaluationSuite.from_path` and used in an
+explicitly non-publishable `ConstructionWorkflow`; it is classified as
+research-only until maintainers review and commit a new release contract.
+The CLI persists the accepted binding beside the graph as
+`*.publication-contract.json` (or at `--publication-contract-output`) so the
+source/config/artifact/policy digests travel with the release evidence.
 
----
+For multi-table sources, declare primary keys, foreign keys, composite keys,
+identity scope, controlled vocabularies, and association-table semantics under
+`structured.tables` in the configuration. Undeclared structure can be profiled,
+but confidence is retained and missing foreign-key targets are never fabricated.
 
-## Step 5 — Check your setup with `doctor`
+## 6. Evaluate by intended use
 
-`doctor` is a read-only health check. It never changes anything and reports missing
-optional services as **skipped** rather than errors.
+Construction quality and downstream fitness are different questions. The hard
+evaluation suite records whether each metric actually executed.
+
+- Universal formation gates: evidence/provenance coverage, duplicate nodes and
+  edges, categorical duplication, dangling edges, SHACL conformance, datatype,
+  domain/range, cardinality, and orphan rates.
+- Structured gold data: key preservation, property/relationship completeness,
+  join accuracy, controlled-vocabulary uniqueness, and round-trip checks.
+- Unstructured gold data: entity/span, relation, event-role, intent, fact,
+  negation, modality, temporal, attribution, evidence, and provenance
+  precision/recall/F1.
+- Entity resolution: pairwise and cluster precision/recall/F1, false-merge and
+  false-split rates, and record-universe coverage.
+- Graph query / SQL-like use: row precision/recall/F1, exact result and
+  aggregation accuracy, and p50/p95 latency.
+- NoSQL traversal: node precision/coverage, exact traversal result, path F1, and
+  p50/p95 latency.
+- GraphRAG: Recall@k, MRR, nDCG, path F1, multi-hop success, citation F1, and
+  answer faithfulness.
+- Vector retrieval: index coverage, Recall@k, MRR, nDCG, filter correctness,
+  p50/p95 latency, and peak memory.
+- Link prediction: filtered MRR and Hits@k, reported separately for
+  head/torso/tail popularity strata.
+- Recommendation: Precision/Recall/nDCG@k, catalog coverage, novelty, and
+  intra-list diversity.
+- Reasoning: competency-question accuracy, inferred-fact F1, and p95 runtime.
+
+Run the repository reports:
 
 ```bash
-make doctor                            # activation-free (uses .venv automatically)
-
-# ...or, with the virtual environment activated (source .venv/bin/activate):
-kg-construction doctor                 # human-readable report
-kg-construction doctor --json          # machine-readable
-kg-construction doctor --skip-services # skip Ollama/Neo4j/Kuzu probes
+make modelling-correctness
+make schema-quality
+make benchmark-leaderboard
 ```
 
-It checks: Python version, the installed package, core imports, the public API,
-which optional extras are installed, an RDF/SHACL smoke validation, notebook
-dependencies, every YAML config under `configs/`, and — unless `--skip-services` —
-whether Ollama, Neo4j, and Kuzu are reachable.
+A missing gold fixture or judgment set is “not executed” and fails a hard gate
+that requires it; it is never converted into a zero score that looks measured.
 
-Run it now: a fresh core install should show core checks **OK** and optional
-services **SKIP**. That is expected and healthy.
+## 7. Run the complete hard pass
 
----
-
-## Which install do I need? (extras map)
-
-Install optional dependency groups (“extras”) only when you need the capability.
-Syntax: `python -m pip install -e ".[name1,name2]"`.
-
-| Extra | Install when you want to… | Notable packages | External service? |
-| --- | --- | --- | --- |
-| *(core)* | Load CSV/JSON/text/PDF/Excel/SQL, map, extract with rules, build property/RDF/evidence graphs, export Cypher/RDF | pydantic, rdflib, pyshacl | none |
-| `dev` | Run tests, linting, type checks, build the package | pytest, ruff, mypy, build | none |
-| `rdf` | Extra RDF/JSON-LD features | rdflib, pyshacl, pyld | none |
-| `graph` | Ingest into **Neo4j**/**Kuzu**, use NetworkX, numpy | neo4j, kuzu, networkx, numpy | Neo4j (Kuzu is embedded) |
-| `notebook` | Run the Jupyter notebooks | jupyter, ipykernel, nbformat | none |
-| `gliner` | Model-based zero-shot entity extraction | gliner (pulls torch, transformers) | downloads a model once |
-| `llm` | LangChain-based Ollama / Neo4j integrations | langchain-ollama, langchain-neo4j | Ollama |
-| `bert` | Transformer NER / REBEL relation extraction | transformers, torch | downloads models |
-| `linking` | Embedding-based entity linking | sentence-transformers | downloads models |
-| `dedup` | Probabilistic / active-learning entity resolution | splink, dedupe, datasketch | none |
-| `ml` | Graph ML: embeddings, link prediction, communities | torch, torch-geometric, pykeen, igraph, leidenalg | none |
-
-You can combine them, e.g. the full developer + notebook environment:
+After provisioning, disconnecting package/model/container registries must not
+change the result:
 
 ```bash
-python -m pip install -e ".[dev,rdf,graph,notebook]"
+bash run_all_approaches.sh
 ```
 
-> **Note on the built-in Ollama extractor:** it talks to Ollama over plain HTTP and
-> needs **no** extra Python packages — just the Ollama server and a pulled model
-> (see the next section). The `[llm]` extra is only for the LangChain-based
-> integrations.
+The script sets `UV_OFFLINE=1`, `HF_HUB_OFFLINE=1`, and
+`TRANSFORMERS_OFFLINE=1`, starts only locally cached digest-pinned images, verifies
+locked model bytes, runs quality and tests, dispatches every capability certifier
+with a fresh nonce, and validates:
 
----
-
-## Optional service — Ollama (local LLM extraction)
-
-[Ollama](https://ollama.com) runs open LLMs locally so the framework can do
-LLM-assisted entity/relation extraction and label proposal — no cloud, no API key.
-The default model is **`llama3.1`**.
-
-### 1. Install Ollama
-
-**macOS:**
-```bash
-brew install ollama
-```
-…or download the app from <https://ollama.com/download>.
-
-**Linux:**
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
+```text
+declared = configured = instantiated = executed = evaluated = passed
 ```
 
-**Windows:** download and run the installer from <https://ollama.com/download>.
-It runs as a background service.
-
-### 2. Start the server
-
-The macOS app and the Windows/Linux service usually start Ollama automatically. If
-not, start it manually (leave it running in its own terminal):
-
-```bash
-ollama serve
-```
-
-By default it listens on `http://localhost:11434`.
-
-### 3. Pull the model
-
-```bash
-ollama pull llama3.1
-```
-
-This downloads several gigabytes once. You can use a different model
-(`ollama pull mistral`, etc.) and point the framework at it via the config YAML
-(`llm.model`) — see `configs/ollama_gliner_label_proposal.example.yaml`.
-
-### 4. Tell the framework where Ollama is (optional)
-
-The default is already `http://localhost:11434`. Override only if you run Ollama
-elsewhere:
-
-```bash
-export OLLAMA_BASE_URL=http://localhost:11434
-```
-
-### 5. Verify
-
-```bash
-kg-construction doctor            # the "ollama" service check should now be OK
-# or directly:
-curl http://localhost:11434/api/tags
-```
-
-### 6. Use it
-
-Build a graph with an Ollama-backed extraction technique using the example config:
-
-```bash
-kg-construction \
-  --input examples/data_to_kg/sample.txt \
-  --source-type text \
-  --config configs/ollama_gliner_label_proposal.example.yaml \
-  --output data/processed/ollama_text_property_graph.json
-```
-
-If Ollama is not running, LLM-backed extraction is reported as skipped while the
-deterministic techniques still run — the framework never silently fabricates output.
-
----
-
-## Optional service — Neo4j (graph database ingestion)
-
-You only need Neo4j to **load graphs into a live database**. The framework can
-already **export** Neo4j Cypher with the core install (no database needed). Live
-ingestion additionally requires the `[graph]` extra (which installs the `neo4j`
-Python driver) plus a running database.
-
-```bash
-python -m pip install -e ".[graph]"
-```
-
-Then pick one way to run Neo4j:
-
-### Option A — Docker (fastest)
-
-```bash
-docker run --name kg-neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/please-change-me \
-  neo4j:5
-```
-
-- Browser UI: <http://localhost:7474>
-- Bolt endpoint (used by the driver): `bolt://localhost:7687`
-
-### Option B — Neo4j Desktop
-
-Install [Neo4j Desktop](https://neo4j.com/download/), create a local database, set a
-password, and start it. Note its Bolt URI (usually `bolt://localhost:7687`).
-
-### Option C — Neo4j Aura (cloud, no local install)
-
-Create a free instance at <https://neo4j.com/cloud/aura/>. Use the connection URI it
-gives you (starts with `neo4j+s://`).
-
-### Configure the connection
-
-The framework reads these from your environment (see the `.env` note below):
-
-```bash
-export NEO4J_URI=bolt://localhost:7687      # or your Aura neo4j+s://... URI
-export NEO4J_USER=neo4j
-export NEO4J_PASSWORD=please-change-me
-export NEO4J_DATABASE=neo4j
-```
-
-### Verify
-
-```bash
-kg-construction doctor   # the "neo4j" service check should now be OK
-```
-
-`doctor` reports **SKIP** if `NEO4J_URI` is unset, **WARN** if the URI/user are set
-but the password or connection is missing, and **OK** once connectivity is verified.
-
----
-
-## Optional service — Kuzu (embedded graph, no server)
-
-[Kuzu](https://kuzudb.com) is an **embedded** graph database — it is just a Python
-package with an on-disk file, so there is no server to run.
-
-```bash
-python -m pip install -e ".[graph]"
-```
-
-Kuzu is used as an embedded graph store: point ingestion at a database directory with
-`--kuzu-database data/processed/kuzu_graph`. `kg-construction doctor` runs a Kuzu smoke
-query automatically when the package is installed.
-
----
-
-## Optional — GLiNER and transformer models
-
-**GLiNER** does zero-shot, model-based entity extraction (no rules or gazetteers
-needed). The default model is **`gliner-community/gliner_small-v2.5`**.
-
-```bash
-python -m pip install -e ".[gliner]"
-```
-
-Notes:
-
-- This pulls **PyTorch and Transformers**, which are large downloads (hundreds of
-  MB to a few GB). Installing may take several minutes.
-- The **first run downloads the model** from Hugging Face, so you need internet
-  access once. After that it is cached locally (`~/.cache/huggingface`).
-- It runs on **CPU** out of the box (slower); a CUDA GPU speeds it up but is not
-  required.
-- The `[bert]` and `[linking]` extras behave the same way (transformer + first-run
-  model download). Install them only for REBEL/transformer relation extraction or
-  embedding-based linking respectively.
-
-Verify GLiNER is importable:
-
-```bash
-kg-construction doctor   # "installed_extras" should list gliner
-```
-
-A common high-quality combination is **Ollama label proposal → GLiNER extraction**,
-wired up in `configs/ollama_gliner_label_proposal.example.yaml`.
-
----
-
-## Environment variables and the `.env` file
-
-A template lives at [`.env.example`](../.env.example):
-
-```bash
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=
-NEO4J_DATABASE=neo4j
-KG_CONSTRUCTION_LOG_LEVEL=INFO
-```
-
-Important details:
-
-- **The framework does not auto-load `.env`.** It reads variables from your actual
-  shell environment. Copy the template and export the values:
-
-  ```bash
-  cp .env.example .env
-  # edit .env to add your real Neo4j password, then load it into the shell:
-  set -a; source .env; set +a
-  ```
-
-  (On Windows PowerShell, set each variable with `$Env:NEO4J_PASSWORD = "..."`.)
-
-- `OLLAMA_BASE_URL`, `NEO4J_URI`, `NEO4J_USER`, and `NEO4J_PASSWORD` are read by the
-  framework/`doctor`. `OLLAMA_MODEL` is a convenience placeholder for your own
-  scripts — the model actually used comes from the config YAML (`llm.model`) or
-  `OllamaConfig`, defaulting to `llama3.1`.
-- **Never commit real secrets.** `.env` is git-ignored; only `.env.example` (with
-  empty/placeholder values) is committed.
-
----
-
-## Running everything (CLI, Python, notebooks)
-
-### Build a graph (CLI)
-
-```bash
-kg-construction \
-  --input examples/data_to_kg/sample.txt \
-  --source-type text \
-  --output data/processed/data_to_kg_text_property_graph.json \
-  --rdf-output data/processed/data_to_kg_text_rdf.json \
-  --evidence-output data/processed/data_to_kg_text_evidence_graph.json \
-  --neo4j-output data/processed/data_to_kg_text_neo4j.cypher
-```
-
-### Python API
-
-```python
-from kg_construction import construct_kg, load_sources, profile_dataset
-
-sources = load_sources("examples/data_to_kg/sample.csv")
-profile = profile_dataset(sources)
-
-result = construct_kg("examples/data_to_kg/sample.csv")
-print(len(result.property_graph.nodes), len(result.property_graph.edges))
-```
-
-### Notebooks
-
-```bash
-python -m pip install -e ".[dev,rdf,graph,notebook]"
-jupyter lab
-```
-
-Start with `notebooks/01_data_loading_and_profiling.ipynb` and work upward.
-
-### Verify the whole install
-
-```bash
-kg-construction doctor
-make verify          # runs unit tests + a construction smoke flow (macOS/Linux)
-```
-
----
-
-## Troubleshooting
-
-| Symptom | Cause and fix |
+Live remote identity/reconciliation certifiers still use their documented
+endpoints; those calls are not model-artifact downloads. The final certificate
+requires zero skips and zero fallbacks. See
+[`../certification/README.md`](../certification/README.md) for the evidence
+format.
+
+The OpenRefine-compatible identity check uses the public Wikimedia Cloud
+Reconciliation API at
+`https://wikidata-reconciliation.wmcloud.org/en/api`. “OpenRefine-compatible”
+describes the batch reconciliation protocol; it does not imply that a local
+OpenRefine desktop server is running. Like the Wikidata and DBpedia linkers,
+this mandatory certifier requires live network access and upstream availability.
+
+## 8. Troubleshooting
+
+| Failure | Meaning and action |
 | --- | --- |
-| `command not found: kg-construction` | The virtual environment is not active, or `pip install -e .` was not run. Run `source .venv/bin/activate` then `python -m pip install -e .`. |
-| `ModuleNotFoundError: kg_construction` when running a script | Run from the repo root and prefix with `PYTHONPATH=src`, or use the `kg-construction` console command. |
-| `doctor` shows `ollama … not reachable` | Ollama is not running. Start it (`ollama serve`) and `ollama pull llama3.1`. Optional unless you use LLM techniques. |
-| `doctor` shows Neo4j **WARN** | `NEO4J_URI`/`NEO4J_USER` are set but `NEO4J_PASSWORD` is missing or the DB is down. Export the password and confirm the database is running. |
-| `pip install ".[gliner]"` / `".[ml]"` is slow or fails | These pull PyTorch. Ensure a recent `pip` (`python -m pip install --upgrade pip`) and enough disk space; on some platforms install `torch` first per the [PyTorch instructions](https://pytorch.org/get-started/locally/). |
-| An LLM/GLiNER extraction step is reported as skipped | Its optional dependency or service is not configured. Configure it (this guide) or ignore it — the deterministic techniques still run. |
-| `make: command not found` (Windows) | `make` is optional. Use WSL, or run the `python`/`kg-construction` commands directly. |
+| `missing uv.lock` | Run `uv lock` during the provisioning phase and commit it. |
+| `models.lock.yaml is missing` | Start Ollama with Qwen3 present, then run `uv run python scripts/lock_models.py`. |
+| model snapshot/file digest mismatch | Rehydrate from the committed lock; do not let runtime download another revision. |
+| service lock missing | Run `python3 scripts/lock_service_digests.py` with Docker Buildx online. |
+| Ollama digest mismatch | The local tag does not contain the locked model bytes; restore the locked artifact. |
+| MPS/MLX failure on Apple Silicon | Install the locked dependencies and run outside an environment that hides the GPU. |
+| Neo4j or Memgraph probe fails | Inspect `docker compose -f certification/services.lock.yaml ps` and service logs. |
+| certification plan mismatch | Every release-manifest capability needs an executable semantic certifier contract. |
+| SHACL or modelling gate fails | Fix the mapping/schema or quarantine the candidate; do not suppress the gate. |
 
----
-
-## Where to go next
-
-- [`knowledge_graph_modelling.md`](knowledge_graph_modelling.md) — how the framework forms graphs: the three modelling pillars and their code entry points.
-- [`../README.md`](../README.md) — project overview and quickstart.
+Research experiments can be run separately, but their outputs do not weaken or
+replace this release contract.
