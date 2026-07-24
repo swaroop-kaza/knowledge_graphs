@@ -206,4 +206,8 @@ make quality     # ruff, mypy, vulture, config and notebook checks
 ## Project info
 
 - License: Apache-2.0 (`LICENSE`).
-- Contributing: `CONTRIBUTING.md` · Security: `SECURITY.md` · Support: `SUPPORT.md` · Citation: `CITATION.cff` · Changelog: `CHANGELOG.md`.
+- Contributing: `CONTRIBUTING.md`
+- Security: `SECURITY.md`
+- Support: `SUPPORT.md`
+- Citation: `CITATION.cff`
+- Changelog: `CHANGELOG.md`.
