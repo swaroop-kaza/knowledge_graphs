@@ -26,7 +26,9 @@ The complete macOS/Linux walkthrough, lock semantics, disk requirements, and fai
 
 ## What it does: three pillars
 
-The framework focuses on getting the graph *formation* right — and measures each part. The modelling rules are in **[docs/knowledge_graph_modelling.md](docs/knowledge_graph_modelling.md)**; the implementation and release order is in **[docs/stage_by_stage_implementation.md](docs/stage_by_stage_implementation.md)**.
+The framework focuses on getting the graph *formation* right — and measures each part. 
+- The modelling rules are in **[docs/knowledge_graph_modelling.md](docs/knowledge_graph_modelling.md)**; 
+- The implementation and release order is in **[docs/stage_by_stage_implementation.md](docs/stage_by_stage_implementation.md)**.
 
 **1. Structured data → graph.**
 
