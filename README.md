@@ -136,9 +136,6 @@ print([entity.name for entity in text_result.batch.entities])
 print(text_result.quality_report)
 print(text_result.intended_use_report)
 ```
-
-Every public construction requires a sealed, dataset-specific evaluation suite and executes formation plus all seven intended-use evaluators against the frozen constructed graph. A self-computed fixture hash is integrity, not approval: `resources/publication_contracts_v1.yaml` separately allowlists the reviewed suite bytes, source snapshot, semantic configuration, model lock, governed schema, held-out gold, builder contract, and policy hash. Repository-owned threshold floors and ceilings cannot be weakened by editing and re-sealing a suite. Custom suites remain valid for research workflows, but the public API labels them research-only and refuses to publish. The suite contains gold judgments and declarative queries, never caller-supplied predictions. Missing support is recorded as `executed=false`, and no graph is published unless every applicable gate passes.
-
 Structured sources (CSV/Excel/SQL) are mapped semantically by default. To resolve foreign keys across tables, declare their structure in a source catalog:
 
 ```python
