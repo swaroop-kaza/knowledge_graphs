@@ -1,11 +1,15 @@
 # Data-to-Knowledge Graph Construction Framework
 
-`kg_construction` turns structured and unstructured data into **well-formed** knowledge graphs: deduplicated dimension nodes, relationships formed where they belong, canonicalised entities, and a schema whose quality is measured rather than assumed.
+`kg_construction` turns structured and unstructured data into **well-formed** knowledge graphs:
+
+- **deduplicated dimension nodes**;
+- **relationships formed where they belong**;
+- **canonicalised entities**; and
+- **a schema whose quality is measured, not assumed**.
 
 ## Provision and run the complete profile
 
-You need Python 3.11 or 3.12, `git`, `uv`, and Docker. The first provisioning
-run resolves immutable dependency/model/service locks and downloads all artifacts:
+You need Python 3.11 or 3.12, `git`, `uv`, and Docker. The first provisioning run resolves immutable dependency/model/service locks and downloads all artifacts:
 
 ```bash
 make release-locks
@@ -13,49 +17,44 @@ make setup
 bash run_all_approaches.sh
 ```
 
-There is no reduced install or successful model fallback. On Apple Silicon the
-profile runs Torch MPS and MLX; Linux selects the declared CPU or CUDA profile.
-Every applicable profile also runs GLiNER NER, GLiNER RelEx, Transformers NER,
-spaCy, Qwen3 through Transformers and Ollama, Neo4j, Memgraph, Ladybug, RDF, and
-the evaluation gates. A missing provider makes the run fail after all providers
-have been attempted.
+- **No reduced install, no model fallback.**
+- **Platform profile** — Apple Silicon runs Torch MPS and MLX; Linux selects the declared CPU or CUDA profile.
+- **Every applicable profile also runs** — GLiNER NER, GLiNER RelEx, Transformers NER, spaCy, Qwen3 (Transformers + Ollama), Neo4j, Memgraph, Ladybug, RDF, and the evaluation gates.
+- **A missing provider fails the run** — after all providers have been attempted.
 
-The complete macOS/Linux walkthrough, lock semantics, disk requirements, and
-failure diagnostics are in **[docs/getting_started.md](docs/getting_started.md)**.
+The complete macOS/Linux walkthrough, lock semantics, disk requirements, and failure diagnostics are in **[docs/getting_started.md](docs/getting_started.md)**.
 
 ## What it does: three pillars
 
-The framework focuses on getting the graph *formation* right — and measures each
-part. The modelling rules are in
-**[docs/knowledge_graph_modelling.md](docs/knowledge_graph_modelling.md)**; the
-implementation and release order is in
-**[docs/stage_by_stage_implementation.md](docs/stage_by_stage_implementation.md)**.
+The framework focuses on getting the graph *formation* right — and measures each part. The modelling rules are in **[docs/knowledge_graph_modelling.md](docs/knowledge_graph_modelling.md)**; the implementation and release order is in **[docs/stage_by_stage_implementation.md](docs/stage_by_stage_implementation.md)**.
 
-**1. Structured data → graph.** Each column is resolved into a separate semantic role and physical materialization: a categorical value like `"Engineering"` collapses into one shared `Department` node that every row links to (never a literal repeated thousands of times), a foreign key such as `manager_id` becomes a typed edge, and a scalar value with no identity stays a property. Foreign keys resolve across tables from declared structure (database constraints, CSVW, R2RML, or explicit policy) with a profiler fallback, missing targets are never fabricated, and business keys merge across files by declared identity scope.
+**1. Structured data → graph.**
 
-**2. Unstructured data → graph.** Text runs through an evidence-first pipeline (segment → mention/typing → coreference → relation/event/claim → temporal/negation/modality → evidence → identity → ontology alignment → SHACL → promote/quarantine). Every accepted claim carries exact supporting spans and complete provenance, uncertain mentions are never forced into an entity, and eight evaluations (entity, relation, event-role, intent/fact, negation, modality, temporal, attribution) run on held-out data.
+- **Role + materialization per column** — a categorical like `"Engineering"` collapses into one shared `Department` node every row links to (never a literal repeated thousands of times); a foreign key like `manager_id` becomes a typed edge; a scalar with no identity stays a property.
+- **Cross-table foreign keys** — resolved from declared structure (database constraints, CSVW, R2RML, or explicit policy) with a profiler fallback.
+- **No fabricated targets** — business keys merge across files by declared identity scope.
 
-**3. Formation and intended-use evaluation.** The resulting graph is scored on
-identity, conciseness, completeness, consistency, evidence, and structure, then
-evaluated for the declared consumer: SQL-like queries, traversals, GraphRAG,
-vector retrieval, link prediction, recommendation, or reasoning. Hard gates
-require zero categorical duplicates, dangling edges, unsupported promoted
-claims, and SHACL violations.
+**2. Unstructured data → graph.**
+
+- **Evidence-first pipeline** — segment → mention/typing → coreference → relation/event/claim → temporal/negation/modality → evidence → identity → ontology alignment → SHACL → promote/quarantine.
+- **Every accepted claim** carries exact supporting spans and complete provenance; uncertain mentions are never forced into an entity.
+- **Eight held-out evaluations** — entity, relation, event-role, intent/fact, negation, modality, temporal, attribution.
+
+**3. Formation and intended-use evaluation.**
+
+- **Scored on** — identity, conciseness, completeness, consistency, evidence, and structure.
+- **Evaluated for the declared consumer** — SQL-like queries, traversals, GraphRAG, vector retrieval, link prediction, recommendation, or reasoning.
+- **Hard gates** — zero categorical duplicates, dangling edges, unsupported promoted claims, and SHACL violations.
 
 Small gold fixtures pin the expected output, and CI enforces it (`make modelling-correctness`).
 
 ## Running every technique
 
-The mandatory release surface is **105 certifiable techniques** across loaders,
-mappers, extractors, resolvers, validators, graph stores, and evaluators (drawn
-from a broader research inventory of 165 — 123 implemented, plus adapters and
-roadmap stubs). You reach them three ways: construct a single graph, compare
-many techniques on one input, or run the full hard pass. Reproduce the live
-counts with `make registry-reports`.
+- **105 certifiable techniques** in the mandatory release surface — loaders, mappers, extractors, resolvers, validators, graph stores, and evaluators.
+- **From a 165-technique research inventory** — 123 implemented, plus adapters and roadmap stubs; reproduce the live counts with `make registry-reports`.
+- **Three ways to run them** — construct a single graph, compare many techniques on one input, or run the full hard pass.
 
-**1. Construct one graph** (`kg-construction` / `interfaces.cli.construct`). The
-same command handles all 20 source types via `--source-type`; structured sources
-use the semantic mapper by default, text runs the evidence-first pipeline.
+**1. Construct one graph** (`kg-construction` / `interfaces.cli.construct`). The same command handles all 20 source types via `--source-type`; structured sources use the semantic mapper by default, text runs the evidence-first pipeline.
 
 ```bash
 # Structured — semantic mapper (default). Also: excel, sql, json, xml, jsonld, html, logs, ...
@@ -73,13 +72,12 @@ uv run kg-construction \
   --output data/processed/text.property.json
 ```
 
-Select a specific technique by editing the config: structured
-`pipeline.structured_mapping` is `semantic` (default) or `direct` (baseline);
-mapping standards, extractor providers, and resolvers are declared under their
-config sections (see `configs/data_to_kg_complete.example.yaml`).
+Select a specific technique by editing the config:
 
-**2. Compare techniques on one input** (`interfaces.cli.benchmark`). Runs every
-*applicable* technique, scores them, and emits a ranked report.
+- **structured mapping** — `pipeline.structured_mapping` is `semantic` (default) or `direct` (baseline);
+- **mapping standards, extractor providers, and resolvers** — declared under their config sections (see `configs/data_to_kg_complete.example.yaml`).
+
+**2. Compare techniques on one input** (`interfaces.cli.benchmark`). Runs every *applicable* technique, scores them, and emits a ranked report.
 
 ```bash
 uv run python -m kg_construction.interfaces.cli.benchmark \
@@ -89,11 +87,9 @@ uv run python -m kg_construction.interfaces.cli.benchmark \
   --output data/processed/report.md --json-output data/processed/report.json
 ```
 
-`--techniques` accepts `applicable`, `all`, or a comma-separated list of
-technique names.
+`--techniques` accepts `applicable`, `all`, or a comma-separated list of technique names.
 
-**3. Run the complete, zero-skip hard pass** — every locked model, service,
-store, and evaluation gate, offline:
+**3. Run the complete, zero-skip hard pass** — every locked model, service, store, and evaluation gate, offline:
 
 ```bash
 make release-locks && make setup   # one-time, online
@@ -111,8 +107,7 @@ bash run_all_approaches.sh
 | Verify the selected runtime | `uv run kg-construction doctor --strict` |
 | The full offline certification gate | `bash run_all_approaches.sh` |
 
-Per-technique explanations and the exact commands to test each are in the
-[documentation map](#documentation-map) below.
+Per-technique explanations and the exact commands to test each are in the [documentation map](#documentation-map) below.
 
 ## Python usage
 
@@ -140,21 +135,9 @@ print(text_result.quality_report)
 print(text_result.intended_use_report)
 ```
 
-Every public construction requires a sealed, dataset-specific evaluation suite
-and executes formation plus all seven intended-use evaluators against the frozen
-constructed graph. A self-computed fixture hash is integrity, not approval:
-`resources/publication_contracts_v1.yaml` separately allowlists the reviewed
-suite bytes, source snapshot, semantic configuration, model lock, governed
-schema, held-out gold, builder contract, and policy hash. Repository-owned
-threshold floors and ceilings cannot be weakened by editing and re-sealing a
-suite. Custom suites remain valid for research workflows, but the public API
-labels them research-only and refuses to publish. The suite contains gold
-judgments and declarative queries, never caller-supplied predictions. Missing
-support is recorded as `executed=false`, and no graph is published unless every
-applicable gate passes.
+Every public construction requires a sealed, dataset-specific evaluation suite and executes formation plus all seven intended-use evaluators against the frozen constructed graph. A self-computed fixture hash is integrity, not approval: `resources/publication_contracts_v1.yaml` separately allowlists the reviewed suite bytes, source snapshot, semantic configuration, model lock, governed schema, held-out gold, builder contract, and policy hash. Repository-owned threshold floors and ceilings cannot be weakened by editing and re-sealing a suite. Custom suites remain valid for research workflows, but the public API labels them research-only and refuses to publish. The suite contains gold judgments and declarative queries, never caller-supplied predictions. Missing support is recorded as `executed=false`, and no graph is published unless every applicable gate passes.
 
-Structured sources (CSV/Excel/SQL) are mapped semantically by default. To resolve
-foreign keys across tables, declare their structure in a source catalog:
+Structured sources (CSV/Excel/SQL) are mapped semantically by default. To resolve foreign keys across tables, declare their structure in a source catalog:
 
 ```python
 from kg_construction.application.source_catalog import (
@@ -200,9 +183,7 @@ src/kg_construction/
   interfaces/cli/   construct and doctor commands
 ```
 
-Check the entire selected runtime with
-`uv run kg-construction doctor --strict`. The doctor reports only pass or fail;
-it does not downgrade missing models or services to warnings.
+Check the entire selected runtime with `uv run kg-construction doctor --strict`. The doctor reports only pass or fail; it does not downgrade missing models or services to warnings.
 
 ## Verify
 

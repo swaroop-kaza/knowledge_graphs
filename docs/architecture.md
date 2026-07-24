@@ -1,11 +1,10 @@
 # Repository architecture
 
-`kg_construction` is a **hexagonal (ports-and-adapters)** framework for turning
-structured and unstructured data into evidence-grounded knowledge graphs. The
-design goal is that the *shape of the graph* — identities, relationships,
-provenance — is decided by an inner domain contract, and every external
-technology (a loader, an NER model, Neo4j, RDF, a metric) is a replaceable
-adapter behind a small protocol.
+`kg_construction` is a **hexagonal (ports-and-adapters)** framework that turns structured and unstructured data into evidence-grounded knowledge graphs.
+
+- **The graph shape is decided inside** — identities, relationships, and provenance come from an inner domain contract, not from any tool.
+- **Every external technology is a replaceable adapter** — a loader, an NER model, Neo4j, RDF, or a metric sits behind a small protocol.
+- **Storage is a projection, never the source of truth** — see the pillars below.
 
 This document is the map. The technique write-ups drill into each layer:
 
@@ -19,10 +18,9 @@ This document is the map. The technique write-ups drill into each layer:
 
 ## 1. The three pillars
 
-Everything in the repo serves one of three product pillars. Storage (Neo4j, RDF,
-Memgraph, Ladybug, vector indexes) is treated as a *projection* of a correctly
-formed model — it cannot repair identities or relationships that were formed
-wrong.
+- **Three pillars, nothing else** — every module serves structured→graph, unstructured→graph, or evaluation.
+- **Storage is downstream** — Neo4j, RDF, Memgraph, Ladybug, and vector indexes are projections of a correctly formed model.
+- **A store cannot repair bad formation** — wrong identities or relationships stay wrong no matter where they are written.
 
 ```mermaid
 flowchart LR
@@ -58,9 +56,11 @@ flowchart LR
 
 ## 2. Hexagonal layers
 
-The package is split into four rings. Dependencies point **inward** only: the
-domain knows nothing about Neo4j or GLiNER; adapters depend on the ports; the
-application layer orchestrates.
+The package is split into four rings with **dependencies pointing inward only**:
+
+- **Domain** knows nothing about Neo4j or GLiNER.
+- **Infrastructure adapters** depend on the ports, not the reverse.
+- **Application** orchestrates the ports; it never imports a concrete adapter directly.
 
 ```mermaid
 flowchart TB
@@ -120,9 +120,11 @@ flowchart TB
 
 ## 3. Core data flow
 
-The same domain vocabulary flows through both pillars. A source becomes
-`SourceRecord`s, which produce `EvidenceRef`-carrying candidates, which are
-resolved, validated, and materialized into three graph views.
+The same domain vocabulary flows through both pillars:
+
+- **One vocabulary, two pillars** — structured and text inputs converge on the same objects.
+- **Everything carries evidence** — candidates hold an `EvidenceRef` before they are ever promoted.
+- **Three graph views out** — property, RDF, and evidence graphs from one `ConstructionBatch`.
 
 ```mermaid
 flowchart LR
@@ -143,8 +145,7 @@ flowchart LR
     N --> O[Reports · rankings · certificate]
 ```
 
-Key domain objects (`domain/models.py`, `domain/claim.py`,
-`domain/graph_objects.py`, `domain/modeling.py`):
+Key domain objects (`domain/models.py`, `domain/claim.py`, `domain/graph_objects.py`, `domain/modeling.py`):
 
 | Object | Role |
 | --- | --- |
@@ -161,9 +162,8 @@ Key domain objects (`domain/models.py`, `domain/claim.py`,
 
 ## 4. The technique registry
 
-The framework is *technique-centered*: many construction techniques are
-registered side by side, then ranked and recommended. Two registry views exist
-(`application/registry.py`):
+- **Technique-centered** — many construction techniques are registered side by side, then ranked and recommended.
+- **Two registry views** (`application/registry.py`) — `research_registry()` (the full inventory) and `default_registry()` (the mandatory release surface).
 
 ```mermaid
 flowchart TB
@@ -181,24 +181,36 @@ flowchart TB
 | `default_registry()` | 105 | Mandatory, certifiable release capabilities only |
 
 Public maturity labels (via `TechniqueDescriptor.public_support_label`):
-**Mandatory 96 · Research inventory 42 · Roadmap 27**.
 
-Registered categories (research view): `loader` (20), `mapper` (25),
-`extractor` (27), `resolution` (16), `enrichment` (24), `validation` (9),
-`graph_store` (9), `production` (9), `schema` (8), `hybrid` (8), `evaluation`
-(6), `graph_builder` (3), `llm` (1).
+| Maturity label | Count | Meaning |
+| --- | ---: | --- |
+| Mandatory | 96 | Part of the executable release contract; no skip or fallback |
+| Research inventory | 42 | Implemented/adapted outside the release contract; kept for comparison |
+| Roadmap | 27 | Non-executable extension point, outside the release registry |
 
-> Counts drift as the code evolves — reproduce them with
-> `make registry-reports` or the `Counter` snippet in
-> [testing_guide.md](testing_guide.md).
+Registered categories (research view):
+
+| Category | Techniques | Category | Techniques |
+| --- | ---: | --- | ---: |
+| `extractor` | 27 | `validation` | 9 |
+| `mapper` | 25 | `schema` | 8 |
+| `enrichment` | 24 | `hybrid` | 8 |
+| `loader` | 20 | `evaluation` | 6 |
+| `resolution` | 16 | `graph_builder` | 3 |
+| `graph_store` | 9 | `llm` | 1 |
+| `production` | 9 | | |
+
+> Counts drift as the code evolves — reproduce them with `make registry-reports` or the `Counter` snippet in [testing_guide.md](testing_guide.md).
 
 ---
 
 ## 5. The mandatory "hard pass" (certification)
 
-The release contract is **zero-skip**: a capability is credited only when
-`declared = configured = instantiated = executed = evaluated = passed`.
-Importability alone earns nothing.
+The release contract is **zero-skip**:
+
+- **Credit requires execution** — a capability counts only when `declared = configured = instantiated = executed = evaluated = passed`.
+- **Importability earns nothing** — being present in the codebase is not a pass.
+- **No silent fallback** — a skipped provider or a downgraded device fails the run.
 
 ```mermaid
 flowchart LR
@@ -220,10 +232,11 @@ flowchart LR
 | `capability_manifest.yaml` | `scripts/generate_capability_manifest.py` | Registry ↔ owner bijection, doctrine split |
 | `certification/execution_plan.yaml` | maintained | Per-capability semantic certifier contract |
 
-Model/platform profiles live in `models.manifest.yaml`: `darwin-arm64` (MPS +
-MLX), `linux-cpu`, `linux-cuda`. Each profile mandates GLiNER, Transformers,
-spaCy, sentence-transformers, Qwen3 (Transformers + Ollama, plus MLX on Apple
-Silicon), and the Ollama/Neo4j/Memgraph/Ladybug services.
+Model/platform profiles live in `models.manifest.yaml`:
+
+- **Three profiles** — `darwin-arm64` (MPS + MLX), `linux-cpu`, `linux-cuda`.
+- **Every profile mandates the same models** — GLiNER, Transformers, spaCy, sentence-transformers, and Qwen3 (Transformers + Ollama; MLX added on Apple Silicon).
+- **Every profile mandates the same services** — Ollama, Neo4j, Memgraph, and embedded Ladybug.
 
 ---
 

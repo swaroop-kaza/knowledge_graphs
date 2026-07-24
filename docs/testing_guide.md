@@ -1,8 +1,7 @@
 # Testing every technique
 
-The repo ships **437 tests** plus report generators, gold fixtures, and an
-offline certification gate. This guide shows how to test each technique family
-and which test pins it.
+- **437 tests** plus report generators, gold fixtures, and an offline certification gate.
+- **This guide maps** each technique family to the test that pins it and the command to run it.
 
 Contents:
 
@@ -100,9 +99,8 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python3 -m pytest --collect-only
 
 ## 3. Gold fixtures
 
-Correctness is pinned by small, versioned fixtures under
-`tests/fixtures/gold_standards/`. Because they are tiny and deterministic, they
-are the ground truth the CI gate enforces (`make modelling-correctness`).
+- **Small, versioned fixtures** live under `tests/fixtures/gold_standards/`.
+- **Tiny and deterministic** — they are the ground truth the CI gate enforces (`make modelling-correctness`).
 
 | Fixture | Feeds |
 | --- | --- |
@@ -116,15 +114,13 @@ are the ground truth the CI gate enforces (`make modelling-correctness`).
 | `entity_resolution_clusters.json` | ER pairwise/cluster + false-merge/split |
 | `retrieval_cases.json` | GraphRAG / retrieval judgments |
 
-Other fixture roots: `tests/fixtures/golden_benchmarks/` (leaderboard),
-`tests/fixtures/enterprise_loaders/` (loaders).
+Other fixture roots: `tests/fixtures/golden_benchmarks/` (leaderboard), `tests/fixtures/enterprise_loaders/` (loaders).
 
 ---
 
 ## 4. Report-driven gates
 
-Several gates are exercised by regenerating a committed report and asserting it
-matches. Regenerate them with:
+Several gates are exercised by regenerating a committed report and asserting it matches. Regenerate them with:
 
 ```bash
 make modelling-correctness   # reports/modelling_correctness.md   (CI-enforced)
@@ -135,24 +131,20 @@ make cross-source-identity-benchmark
 make gold-benchmark-story
 ```
 
-The corresponding tests (`test_modelling_correctness.py`,
-`test_schema_quality.py`, `test_benchmark_leaderboard.py`) fail if the code
-drifts from the pinned report.
+- **Drift is caught** — `test_modelling_correctness.py`, `test_schema_quality.py`, and `test_benchmark_leaderboard.py` fail if the code diverges from the pinned report.
 
 ---
 
 ## 5. The doctor and certification hard pass
 
-`doctor` verifies the *selected runtime* — it has only `ok`/`fail`, never a
-downgrade:
+`doctor` verifies the *selected runtime* — it has only `ok`/`fail`, never a downgrade:
 
 ```bash
 uv run kg-construction doctor --strict
 uv run kg-construction doctor --strict --json
 ```
 
-The full **zero-skip** gate provisions locks, then re-runs everything with
-package/model/container registries disconnected:
+The full **zero-skip** gate provisions locks, then re-runs everything with package/model/container registries disconnected:
 
 ```bash
 make release-locks   # one-time, online: uv.lock + models.lock + services.lock
@@ -160,15 +152,14 @@ make setup           # hydrate models + services, strict doctor
 bash run_all_approaches.sh
 ```
 
-`run_all_approaches.sh` sets `UV_OFFLINE=1`, `HF_HUB_OFFLINE=1`,
-`TRANSFORMERS_OFFLINE=1`, dispatches every capability certifier with a fresh
-nonce, and requires
-`declared = configured = instantiated = executed = evaluated = passed`. Live
-remote identity/reconciliation certifiers still use their documented endpoints.
+`run_all_approaches.sh`:
 
-> The three lock files are network-gated: generate them once on a networked
-> machine. Without them, `make lock-check` / `certify-preflight` fail fast — by
-> design.
+- **Forces offline** — sets `UV_OFFLINE=1`, `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`.
+- **Dispatches every certifier** with a fresh nonce.
+- **Requires the full chain** — `declared = configured = instantiated = executed = evaluated = passed`.
+- **Live endpoints stay live** — remote identity/reconciliation certifiers still use their documented endpoints.
+
+> The three lock files are network-gated: generate them once on a networked machine. Without them, `make lock-check` / `certify-preflight` fail fast — by design.
 
 ---
 
@@ -178,17 +169,19 @@ remote identity/reconciliation certifiers still use their documented endpoints.
 make quality
 ```
 
-Runs, in order: `ruff check`, `mypy src/kg_construction`, `vulture`,
-`check_config_examples.py` (every `configs/*.example.yaml` parses and matches
-the schema), `check_notebook_hygiene.py`, and `check_notebook_coverage.py`
-(each of the 11 notebooks maps to a covered capability).
+Runs, in order:
+
+- **`ruff check`** — lint.
+- **`mypy src/kg_construction`** — types.
+- **`vulture`** — dead code.
+- **`check_config_examples.py`** — every `configs/*.example.yaml` parses and matches its schema.
+- **`check_notebook_hygiene.py`** + **`check_notebook_coverage.py`** — each of the 11 notebooks maps to a covered capability.
 
 ---
 
 ## 7. Testing a technique end to end
 
-Beyond unit tests, exercise a technique through the CLI on the sample data and
-inspect the emitted graphs and gate reports:
+Beyond unit tests, exercise a technique through the CLI on the sample data and inspect the emitted graphs and gate reports:
 
 ```bash
 # Structured (semantic mapper default) — writes property/RDF/evidence/Neo4j + gate JSON
@@ -212,7 +205,6 @@ PYTHONPATH=src python3 -m kg_construction.interfaces.cli.benchmark \
   --output /tmp/kg/report.md --json-output /tmp/kg/report.json
 ```
 
-A construction succeeds only if `result.validation_report.valid` and
-`result.publication_gate.passed` — a failing gate is a failing run, which is the
-whole point. See the full command catalogue in the
-[README run guide](../README.md#running-every-technique).
+- **Success is gated** — a construction succeeds only if `result.validation_report.valid` and `result.publication_gate.passed`.
+- **A failing gate is a failing run** — which is the whole point.
+- **Full command catalogue** — see the [README run guide](../README.md#running-every-technique).

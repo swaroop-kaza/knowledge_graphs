@@ -1,12 +1,14 @@
 # Unstructured data → knowledge graph: techniques explained
 
-This is the technical reference for **Pillar 2**: converting text (and HTML,
-PDF, email, chat, scientific papers) into entities, claims, and events where
-**every promoted fact quotes an exact source span and carries complete
-provenance**.
+Technical reference for **Pillar 2** — converting text (and HTML, PDF, email, chat, scientific papers) into entities, claims, and events.
 
-The governing rule of this pillar: keep **four identity layers separate** and
-never force an uncertain mention into an existing entity.
+- **Every promoted fact quotes an exact source span.**
+- **Every promoted fact carries complete provenance.**
+
+The governing rule of this pillar:
+
+- **Keep four identity layers separate** (below).
+- **Never force an uncertain mention** into an existing entity.
 
 ```mermaid
 flowchart LR
@@ -35,9 +37,9 @@ Contents:
 
 **File:** `application/unstructured_pipeline.py` · **Registry:** `evidence_first_unstructured_pipeline`, `mandatory_composed_unstructured_runtime`
 
-`UnstructuredPipeline.run()` executes eleven ordered stages. Source observations
-stay immutable; a claim is promoted only after its offsets, document version,
-provider provenance, confidence, and ontology predicate all pass.
+- **Eleven ordered stages** — `UnstructuredPipeline.run()` runs them in sequence.
+- **Observations stay immutable** — nothing is rewritten in place.
+- **Promotion is gated** — a claim promotes only after its offsets, document version, provider provenance, confidence, and ontology predicate all pass.
 
 ```mermaid
 flowchart TD
@@ -53,11 +55,10 @@ flowchart TD
     U5c -->|fail| Q[Quarantine]
 ```
 
-Each stage has a hard exit gate (detailed in
-[knowledge_graph_modelling.md](knowledge_graph_modelling.md), Pillar 2). The
-most important: **every segment must reproduce `document_text[start:end]`
-exactly** (start inclusive, end exclusive), and **exact-evidence coverage and
-provenance coverage must both be 1.0** in the release fixture.
+Each stage has a hard exit gate (detailed in [knowledge_graph_modelling.md](knowledge_graph_modelling.md), Pillar 2). The two that matter most:
+
+- **Segments must reproduce the source exactly** — `document_text[start:end]` (start inclusive, end exclusive).
+- **Coverage must be perfect** — exact-evidence and provenance coverage both `= 1.0` in the release fixture.
 
 ---
 
@@ -65,9 +66,8 @@ provenance coverage must both be 1.0** in the release fixture.
 
 **File:** `domain/claim.py`
 
-A fact is not flattened into a bare `(subject, predicate, object)` edge
-prematurely. It is an immutable, reified `Claim` that preserves the qualifiers a
-plain edge would lose.
+- **Facts are not flattened prematurely** — no bare `(subject, predicate, object)` edge up front.
+- **A `Claim` is immutable and reified** — it preserves the qualifiers a plain edge would lose.
 
 ```mermaid
 classDiagram
@@ -106,13 +106,18 @@ classDiagram
     Claim "1" --> "*" EventRole
 ```
 
-`has_complete_provenance()` is the promotion gate: a claim is promotable only
-when its document digest matches, every evidence and semantic span is exact,
-extractor/provider/model-revision/configuration/confidence all exist, confidence
-meets policy, and the predicate is on the governed ontology. `TextSpan` uses
-end-exclusive offsets aligned to the [W3C Web Annotation selector
-model](https://www.w3.org/TR/selectors-states/); provenance follows
-[PROV-O](https://www.w3.org/TR/prov-o/).
+`has_complete_provenance()` is the promotion gate. A claim is promotable **only when all** of the following hold:
+
+- **document digest matches**;
+- **every evidence and semantic span is exact**;
+- **extractor / provider / model-revision / configuration / confidence all exist**;
+- **confidence meets policy**; and
+- **the predicate is on the governed ontology**.
+
+Standards alignment:
+
+- **Spans** — `TextSpan` uses end-exclusive offsets aligned to the [W3C Web Annotation selector model](https://www.w3.org/TR/selectors-states/).
+- **Provenance** — follows [PROV-O](https://www.w3.org/TR/prov-o/).
 
 ---
 
@@ -134,13 +139,11 @@ model](https://www.w3.org/TR/selectors-states/); provenance follows
 
 ## 4. The mention ensemble (technique detail)
 
-**Files:** `infrastructure/extractors/model_backed/mentions.py`,
-`infrastructure/extractors/{regex,gazetteer}.py`
+**Files:** `infrastructure/extractors/model_backed/mentions.py`, `infrastructure/extractors/{regex,gazetteer}.py`
 
-Every applicable profile runs **all** of these providers; the union is kept with
-provider-agreement ratios. A disagreement is information, not a reason to erase a
-supported mention. Any mandatory provider failure fails the stage *after* the
-others have been attempted.
+- **All providers run** — every applicable profile runs each one; the union is kept with provider-agreement ratios.
+- **Disagreement is information** — not a reason to erase a supported mention.
+- **Failure is aggregated** — a mandatory provider failure fails the stage *after* the others have been attempted.
 
 ```mermaid
 flowchart LR
@@ -159,11 +162,9 @@ flowchart LR
 | `TransformersMentionDetector` | `dslim/bert-base-NER` | Supervised token classification |
 | `SpacyMentionDetector` | `spacy/en_core_web_sm` | Statistical NER, CPU-only |
 
-**Exact-span evaluation is deliberately separate from label/name evaluation.**
-Matching is on `(document version, start, end, type, occurrence)`, so a boundary
-error cannot hide behind entity F1, and NIL behaviour is reported explicitly
-(motivated by the [EMNLP 2023 in-depth entity-linking
-evaluation](https://aclanthology.org/2023.emnlp-main.411/)).
+- **Exact-span evaluation is separate from label/name evaluation** — by design.
+- **Matching key** — `(document version, start, end, type, occurrence)`, so a boundary error cannot hide behind entity F1.
+- **NIL is reported explicitly** — motivated by the [EMNLP 2023 in-depth entity-linking evaluation](https://aclanthology.org/2023.emnlp-main.411/).
 
 ---
 
@@ -171,8 +172,7 @@ evaluation](https://aclanthology.org/2023.emnlp-main.411/)).
 
 **Files:** `infrastructure/extractors/model_backed/{claims,relations}.py`
 
-Three independent extraction paths run so the contract never depends on one model
-family or one decoding path:
+Three independent extraction paths run so the contract never depends on one model family or one decoding path:
 
 ```mermaid
 flowchart LR
@@ -185,10 +185,9 @@ flowchart LR
     P & G & Q1 & Q2 & Q3 --> C[Claims with exact cue spans]
 ```
 
-The structured response schema (`StructuredClaimResponse`) covers subject,
-predicate, object, event roles, evidence, negation, modality, attribution, time,
-quantity, and confidence. **Values and cues require exact spans.**
-Relation/fact/intent claims require an object; events require typed roles.
+- **Rich response schema** — `StructuredClaimResponse` covers subject, predicate, object, event roles, evidence, negation, modality, attribution, time, quantity, and confidence.
+- **Values and cues require exact spans.**
+- **Shape rules** — relation/fact/intent claims require an object; events require typed roles.
 
 | Path | Basis | Role |
 | --- | --- | --- |
@@ -196,13 +195,9 @@ Relation/fact/intent claims require an object; events require typed roles.
 | `GlinerRelExClaimExtractor` | `knowledgator/gliner-relex-large-v1.0` | Joint entity+relation extraction ([GLiNER-Relex](https://arxiv.org/abs/2605.10108)) |
 | `TransformersQwenClaimExtractor` / `MlxQwenClaimExtractor` / `OllamaQwenClaimExtractor` | Qwen3-1.7B | Structured-schema LLM generation across three independent backends |
 
-Held-out evaluation is document-level, not sentence-level, because relations
-cross sentence boundaries ([DocRED](https://aclanthology.org/P19-1074/)).
+- **Evaluation is document-level, not sentence-level** — relations cross sentence boundaries ([DocRED](https://aclanthology.org/P19-1074/)).
 
-> **License note:** the earlier REBEL relation extractor was removed from the
-> product registry (its `cc-by-nc-sa` license is non-commercial). GLiNER RelEx
-> (Apache-2.0) replaces it. The `TransformerRelationExtractor` class remains for
-> research but is de-registered/de-certified.
+> **License note:** the earlier REBEL relation extractor was removed from the product registry (its `cc-by-nc-sa` license is non-commercial). GLiNER RelEx (Apache-2.0) replaces it. The `TransformerRelationExtractor` class remains for research but is de-registered/de-certified.
 
 ---
 
@@ -220,18 +215,15 @@ Each claim is annotated with qualifier cues, each requiring an exact span:
 | quantity | `\d+ (%|kg|km|hours|days|items|units…)` | "40 hours" → quantity |
 | attribution | `according to / reported by / stated by <Source>` | "according to Alice" → attribution |
 
-These qualifiers are what make a **reified claim** more faithful than a bare
-edge — "X did *not* cause Y, *reportedly*, in *2023*" survives intact.
+- **Why qualifiers matter** — they make a **reified claim** more faithful than a bare edge: "X did *not* cause Y, *reportedly*, in *2023*" survives intact.
 
 ---
 
 ## 7. Identity resolution and external linking
 
-**Files:** `infrastructure/extractors/model_backed/identity.py`,
-`infrastructure/resolution/`
+**Files:** `infrastructure/extractors/model_backed/identity.py`, `infrastructure/resolution/`
 
-The certified `MandatoryCanonicalIdentityEnsemble` votes across providers and
-keeps NIL explicit rather than forcing a merge:
+The certified `MandatoryCanonicalIdentityEnsemble` votes across providers and keeps NIL explicit rather than forcing a merge:
 
 ```mermaid
 flowchart LR
@@ -253,17 +245,14 @@ flowchart LR
 | ML / embedding | `EmbeddingResolver`, `CrossEncoderResolver`, `Splink`, `Dedupe` | Vector similarity, probabilistic linkage, active learning |
 | external | `WikidataLinker`, `DBpediaLinker`, `OpenRefineReconciler` | Link to a public KB via the [Reconciliation Service API](https://reconciliation-api.github.io/specs/latest/) |
 
-**Ambiguous cases remain NIL/unresolved and can be quarantined — never forced to
-the nearest name.** ER quality is measured with pairwise/cluster F1,
-false-merge rate, false-split rate, NIL accuracy, and record-universe coverage
-(see [evaluation_metrics.md](evaluation_metrics.md)).
+- **Ambiguity stays NIL** — unresolved cases can be quarantined, never forced to the nearest name.
+- **ER quality is measured** — pairwise/cluster F1, false-merge rate, false-split rate, NIL accuracy, and record-universe coverage (see [evaluation_metrics.md](evaluation_metrics.md)).
 
 ---
 
 ## 8. Ontology alignment and the SHACL/provenance promotion gate
 
-**Files:** `infrastructure/ontology/unstructured_governance.py`,
-`infrastructure/ontology/ontology_alignment.py`, `infrastructure/ontology/shacl.py`
+**Files:** `infrastructure/ontology/unstructured_governance.py`, `infrastructure/ontology/ontology_alignment.py`, `infrastructure/ontology/shacl.py`
 
 ```mermaid
 flowchart TD
@@ -276,10 +265,9 @@ flowchart TD
     S -->|yes| PROMOTE[promoted claim]
 ```
 
-`GovernedClaimShaclGate` runs SHACL against the generated RDF. A claim with an
-off-ontology predicate, an inexact span, missing provenance, or a SHACL
-violation is quarantined, never silently written. The governed schema is
-declared in a config like `configs/governed_unstructured_ontology.yaml`.
+- **SHACL runs on the generated RDF** — via `GovernedClaimShaclGate`.
+- **Four ways to be quarantined** — off-ontology predicate, inexact span, missing provenance, or a SHACL violation; none are silently written.
+- **Schema is declared in config** — e.g. `configs/governed_unstructured_ontology.yaml`.
 
 ---
 
@@ -292,17 +280,15 @@ declared in a config like `configs/governed_unstructured_ontology.yaml`.
 | `DETERMINISTIC` (default) | Rule segmenter/mention/coref/claim/attribute + `KeepUnresolvedResolver` | Runs fully offline, no models — the testable contract floor |
 | `MODEL_BACKED` (certified) | GLiNER, Transformers NER, spaCy, GLiNER RelEx, Qwen3 (Transformers + Ollama + MLX on Apple Silicon), embedding/cross-encoder identity, external linking | The release/hard-pass path |
 
-Both profiles satisfy the *same* protocols (`Segmenter`, `MentionDetector`,
-`CoreferenceResolver`, `ClaimExtractor`, `AttributeExtractor`,
-`IdentityResolver`, `EntityLinkProvider`), so the deterministic path proves the
-contract offline and the model-backed path fulfils it for real documents.
+- **Both profiles satisfy the same protocols** — `Segmenter`, `MentionDetector`, `CoreferenceResolver`, `ClaimExtractor`, `AttributeExtractor`, `IdentityResolver`, `EntityLinkProvider`.
+- **Deterministic proves the contract offline.**
+- **Model-backed fulfils it for real documents.**
 
 ---
 
 ## 10. Legacy / comparison extractors
 
-Kept in `research_registry()` for side-by-side comparison, not part of the
-mandatory release surface:
+Kept in `research_registry()` for side-by-side comparison, not part of the mandatory release surface:
 
 | Technique | Basis | Status |
 | --- | --- | --- |
@@ -313,6 +299,4 @@ mandatory release surface:
 | `transformer_relation_extractor` | Supervised transformer RE | adapter (de-certified) |
 | `spacy_entity_ruler_extractor`, `coreference_adapter`, `pos_tagging_adapter` | spaCy components | stub/roadmap |
 
-See runnable commands in the
-[README run guide](../README.md#running-every-technique) and how to test each in
-the [testing guide](testing_guide.md).
+See runnable commands in the [README run guide](../README.md#running-every-technique) and how to test each in the [testing guide](testing_guide.md).

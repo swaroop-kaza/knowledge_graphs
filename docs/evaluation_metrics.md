@@ -1,18 +1,17 @@
 # Evaluation: metrics, weighting, and thresholds
 
-This is the technical reference for **Pillar 3**. It answers four questions for
-every metric the repo computes:
+This is the technical reference for **Pillar 3**. It answers four questions for every metric the repo computes:
 
 - **What** it measures
 - **Why** that evaluation is required
 - **How** it is calculated (the exact formula)
-- **What threshold** decides pass/fail, and **how** metrics combine into a final
-  decision
+- **What threshold** decides pass/fail, and **how** metrics combine into a final decision
 
-The single most important design rule: **a weighted score can rank research
-candidates, but it can never override a correctness gate.** The release result is
-the *conjunction of mandatory gates*. "Not measured" is a gate failure, never a
-passing zero.
+The single most important design rule:
+
+- **A weighted score ranks; it never overrides** — it can compare research candidates but cannot override a correctness gate.
+- **The release result is the conjunction of mandatory gates.**
+- **"Not measured" is a gate failure** — never a passing zero.
 
 Contents:
 
@@ -70,29 +69,21 @@ flowchart TB
 
 ## 2. Why separate intrinsic quality from fitness-for-use
 
-A graph can be internally perfect (no dangling edges, full evidence) and still
-useless for its consumer — or answer queries adequately while silently
-duplicating entities. Following [Steps to KG Quality
-Assessment](https://arxiv.org/abs/2208.07779) and
-[KGrEaT](https://arxiv.org/abs/2308.10537), the repo evaluates **both**, and
-never lets one substitute for the other. This also prevents a *circular
-benchmark*: expected judgments are versioned **inputs**, while predictions are
-computed by workload runners from the frozen graph and are **never accepted from
-the caller** (`construct_kg` refuses caller-supplied predictions in the
-evaluation suite).
+- **Intrinsic ≠ useful** — a graph can be internally perfect (no dangling edges, full evidence) yet useless for its consumer, or answer queries while silently duplicating entities.
+- **Evaluate both, substitute neither** — following [Steps to KG Quality Assessment](https://arxiv.org/abs/2208.07779) and [KGrEaT](https://arxiv.org/abs/2308.10537).
+- **No circular benchmark** — expected judgments are versioned **inputs**; predictions are computed by workload runners from the frozen graph and are **never accepted from the caller** (`construct_kg` refuses caller-supplied predictions).
 
-The evidence model deliberately mirrors the [W3C Data Quality
-Vocabulary](https://www.w3.org/TR/vocab-dqv/): the versioned threshold set is the
-**policy**, each named observation is a **measurement**, and the nonce-bound
-hard-pass report is the **certificate**.
+The evidence model mirrors the [W3C Data Quality Vocabulary](https://www.w3.org/TR/vocab-dqv/):
+
+- **Policy** — the versioned threshold set.
+- **Measurement** — each named observation.
+- **Certificate** — the nonce-bound hard-pass report.
 
 ---
 
 ## 3. Tier E1 — universal formation metrics
 
-These apply before any downstream benchmark. Computed by
-`ConstructionMetricsEvaluator` (`metrics.py`) and `ValidationMetrics`
-(`validation_metrics.py`).
+These apply before any downstream benchmark. Computed by `ConstructionMetricsEvaluator` (`metrics.py`) and `ValidationMetrics` (`validation_metrics.py`).
 
 | Dimension | Metric | How it is calculated | Ideal threshold |
 | --- | --- | --- | ---: |
@@ -113,15 +104,10 @@ These apply before any downstream benchmark. Computed by
 
 **Why each matters**
 
-- *Conciseness* is the whole point of Pillar 1 — a duplicated categorical literal
-  is the failure the semantic mapper exists to prevent.
-- *Integrity* — a dangling or duplicate edge silently corrupts every traversal
-  and aggregation downstream.
-- *Evidence/trust* — an unsupported promoted claim is indistinguishable from a
-  hallucination; requiring exact spans + provenance makes every fact auditable.
-- *`shacl_executed` as its own gate* — this closes the "passing zero" hole: a
-  schema-quality report is not allowed to pass unless SHACL actually ran
-  (a null violation count can no longer masquerade as conformance).
+- *Conciseness* is the whole point of Pillar 1 — a duplicated categorical literal is the failure the semantic mapper exists to prevent.
+- *Integrity* — a dangling or duplicate edge silently corrupts every traversal and aggregation downstream.
+- *Evidence/trust* — an unsupported promoted claim is indistinguishable from a hallucination; requiring exact spans + provenance makes every fact auditable.
+- *`shacl_executed` as its own gate* — this closes the "passing zero" hole: a schema-quality report is not allowed to pass unless SHACL actually ran (a null violation count can no longer masquerade as conformance).
 
 The base precision/recall/F1 helper is zero-safe:
 
@@ -137,8 +123,8 @@ F1        = 2·P·R / (P + R)      (0 if P + R == 0)
 
 ### 4.1 Extraction accuracy (`accuracy_metrics.py`)
 
-Counts **occurrences** (not sets), so repeated mentions are not collapsed, and
-scores entities, exact spans, and relations *separately*.
+- **Counts occurrences, not sets** — repeated mentions are not collapsed.
+- **Scores three things separately** — entities, exact spans, and relations.
 
 | Metric | Match key | Why separate |
 | --- | --- | --- |
@@ -147,13 +133,16 @@ scores entities, exact spans, and relations *separately*.
 | `relation_f1` | `(subject endpoint, predicate, object endpoint, qualifiers)` | direction + qualifier-aware; negation/modality/time/quantity/role are part of the key |
 | `triple_exact_match` / `relaxed_triple_match` | derived from relation F1 | strict vs relaxed triple scoring |
 
-Ideal thresholds (`quality_gates.py`, `ner`/`relation` families): F1 `≥ 0.80`,
-gold coverage `≥ 0.80`, gold and prediction support `≥ 1`.
+Ideal thresholds (`quality_gates.py`, `ner`/`relation` families):
+
+- **F1** `≥ 0.80`
+- **gold coverage** `≥ 0.80`
+- **gold and prediction support** `≥ 1`
 
 ### 4.2 Entity resolution (`entity_resolution_metrics.py`)
 
-Merge decisions are turned into **pairs** grouped by `canonical_entity_id`, then
-compared against gold pairs over a shared record-ID universe.
+- **Merges become pairs** — grouped by `canonical_entity_id`.
+- **Compared over a shared record-ID universe** — against gold pairs.
 
 | Metric | Formula | Ideal |
 | --- | --- | ---: |
@@ -162,24 +151,27 @@ compared against gold pairs over a shared record-ID universe.
 | `false_split_rate` | `|gold − predicted| / |gold|` | `→ 0` |
 | `er_record_id_overlap_rate` | `|overlap| / |gold ids|` | records must be comparable |
 
-If the predicted and gold record-ID universes are **disjoint**, the evaluator
-raises — a benchmark you cannot compare must fail loudly, not score 0.
+- **Disjoint universes fail loudly** — if predicted and gold record-ID universes don't overlap, the evaluator raises; a benchmark you cannot compare must not score 0.
 
 ### 4.3 Schema & integration
 
-Key/datatype preservation, foreign-key/join accuracy, association qualifier
-preservation, source-field coverage, and structured round-trip query
-correctness — all `= 1.0` gold gates (see `structured` family below).
+All of these are `= 1.0` gold gates (see the `structured` family below):
+
+- **key/datatype preservation**;
+- **foreign-key/join accuracy**;
+- **association qualifier preservation**;
+- **source-field coverage**; and
+- **structured round-trip query correctness**.
 
 ---
 
 ## 5. Tier E3 — intended-use metrics
 
-**File:** `intended_use_metrics.py`. The *same frozen graph* is evaluated for
-each declared consumer. Reports are **graph-bound**: an executed benchmark must
-carry graph + fixture hashes, one query hash and one observed latency per case,
-and per-family workload support — an unexecuted benchmark cannot publish cases,
-metrics, or a pass (`_execution_state_is_honest` enforces this).
+**File:** `intended_use_metrics.py`.
+
+- **Same frozen graph, every consumer** — each declared use is evaluated against the identical snapshot.
+- **Reports are graph-bound** — an executed benchmark must carry graph + fixture hashes, one query hash and one observed latency per case, and per-family workload support.
+- **Honesty is enforced** — an unexecuted benchmark cannot publish cases, metrics, or a pass (`_execution_state_is_honest`).
 
 | Intended use (`IntendedUse`) | Required metrics | Notes / ideal |
 | --- | --- | --- |
@@ -191,9 +183,7 @@ metrics, or a pass (`_execution_state_is_honest` enforces this).
 | `recommendation` | Precision/Recall/nDCG@k, catalog coverage, novelty, intra-list diversity | plus `max_p95_runtime_ms` |
 | `reasoning` | competency-question accuracy, inferred-fact precision/recall, rule consistency, runtime | `max_p95_runtime_ms` |
 
-**Popularity stratification** (`PopularityStratumReport`) reports MRR and Hits@k
-separately for **head / torso / tail** entities, so a model that only ranks
-popular entities cannot look good on aggregate.
+- **Popularity stratification** (`PopularityStratumReport`) — MRR and Hits@k are reported separately for **head / torso / tail** entities, so a model that only ranks popular entities cannot look good on aggregate.
 
 ---
 
@@ -201,9 +191,8 @@ popular entities cannot look good on aggregate.
 
 **File:** `claim_evaluations.py` · **Registry:** `claim_evaluation_suite`
 
-Runs **every** held-out metric on every invocation — there is no "not evaluated"
-success state. Each returns a full `EvalScore` (precision, recall, F1, gold /
-predicted / matched counts).
+- **Every metric runs every time** — there is no "not evaluated" success state.
+- **Full result per metric** — each returns an `EvalScore` (precision, recall, F1, gold / predicted / matched counts).
 
 ```mermaid
 flowchart LR
@@ -223,8 +212,7 @@ flowchart LR
 | `evidence` | claims quoting the source exactly | `has_exact_evidence(text)` ÷ claims |
 | `provenance` | claims with complete provider/model provenance | `has_complete_provenance(text)` ÷ claims |
 
-**Ideal thresholds** (`HardCoverageThresholds`) — the release fixture demands a
-perfect result:
+**Ideal thresholds** (`HardCoverageThresholds`) — the release fixture demands a perfect result:
 
 | Threshold | Default |
 | --- | ---: |
@@ -232,19 +220,16 @@ perfect result:
 | `claim_coverage` (matched semantic units ÷ gold units) | `≥ 1.0` |
 | `maximum_unsupported_claim_rate` ((predicted − matched) ÷ predicted) | `≤ 0.0` |
 
-A required metric missing from the suite is itself a gate failure.
+- **A missing required metric is itself a gate failure** — not a skipped check.
 
 ---
 
 ## 7. The schema-quality evaluator
 
-**File:** `schema_quality.py` · **Registry:** `schema_quality_evaluator` ·
-version `schema-quality-v2`
+**File:** `schema_quality.py` · **Registry:** `schema_quality_evaluator` · version `schema-quality-v2`
 
-Profiles the graph across **four dimensions** and gates a release. Categorical
-duplication is *policy-aware*: only columns the policy promotes to nodes are
-checked, so a value kept as a property by the supernode guard is not wrongly
-flagged.
+- **Four dimensions, one release gate** — the graph is profiled and gated.
+- **Categorical duplication is policy-aware** — only columns the policy promotes to nodes are checked, so a value kept as a property by the supernode guard is not wrongly flagged.
 
 | Dimension | Metrics | Gate (default) |
 | --- | --- | --- |
@@ -253,16 +238,16 @@ flagged.
 | consistency | `domain_range_violation_rate`, `cardinality_violation_rate`, `consistency_violation_count`, `shacl_violation_count`, `shacl_executed` | consistency violations `≤ 0`; **SHACL must have executed**; SHACL violations `≤ 0` |
 | structure ([OntoQA](https://doi.org/10.1016/j.websem.2005.06.001)) | `node_count`, `edge_count`, `average_degree`, `orphan_rate`, `connected_component_count`, `class_richness`, `relationship_richness`, `attribute_richness` | orphan rate `≤ 0.05` |
 
-`require_shacl_execution: Literal[True]` is a *type-level* invariant — the gate
-cannot be constructed with SHACL disabled.
+- **SHACL cannot be switched off** — `require_shacl_execution: Literal[True]` is a *type-level* invariant; the gate cannot be constructed with SHACL disabled.
 
 ---
 
 ## 8. The weighted scoring engine (research ranking)
 
-**File:** `application/scoring.py`. This produces the `final_score` used to
-**rank techniques** in benchmarks and the leaderboard. It is explicitly *not* a
-release gate — it helps compare candidates.
+**File:** `application/scoring.py`.
+
+- **Produces `final_score`** — used to **rank techniques** in benchmarks and the leaderboard.
+- **Not a release gate** — it compares candidates; it never overrides a correctness gate.
 
 ### The formula
 
@@ -326,18 +311,14 @@ Separate from the ranking score, these are the safe-to-ship cutoffs:
 | `unsupported_extraction_rate` (hallucination) | `≤ 0.02` |
 | `validation_failure_rate` | `≤ 0.05` |
 
-> The weighted score deliberately does **not** attach a statistical confidence
-> interval (`confidence_interval_method = "not_estimated"`); a degenerate
-> interval is never presented as uncertainty. Real intervals come from
-> `statistical_confidence.py` (bootstrap for means, Wilson for proportions).
+> The weighted score deliberately does **not** attach a statistical confidence interval (`confidence_interval_method = "not_estimated"`); a degenerate interval is never presented as uncertainty. Real intervals come from `statistical_confidence.py` (bootstrap for means, Wilson for proportions).
 
 ---
 
 ## 9. The complete threshold table
 
-`quality_gates.py` holds the versioned, immutable gate set
-(`VersionedQualityThresholds`; changing a threshold requires a new version).
-Every family must be present or the threshold set is invalid.
+- **Versioned and immutable** — `quality_gates.py` holds `VersionedQualityThresholds`; changing a threshold requires a new version.
+- **Every family must be present** — a threshold set missing a family is invalid.
 
 | Family | Metric | Operator | Threshold |
 | --- | --- | :---: | ---: |
@@ -373,13 +354,8 @@ Every family must be present or the threshold set is invalid.
 
 Interpretation of the two threshold bands:
 
-- **`= 1.0` / `= 0.0` gates** are *correctness invariants* — formation,
-  structured integrity, categorical conciseness, idempotence, SHACL. These must
-  be exact; there is no partial credit.
-- **`≥ 0.80` / `≥ 0.70` gates** are *supervised-quality floors* — NER, relation,
-  coreference, linking, query, vector. These acknowledge that learned components
-  are imperfect but must clear a meaningful bar, and every one requires
-  `gold_support ≥ 1` so a "pass" can never be computed over an empty fixture.
+- **`= 1.0` / `= 0.0` gates** are *correctness invariants* — formation, structured integrity, categorical conciseness, idempotence, SHACL. These must be exact; there is no partial credit.
+- **`≥ 0.80` / `≥ 0.70` gates** are *supervised-quality floors* — NER, relation, coreference, linking, query, vector. These acknowledge that learned components are imperfect but must clear a meaningful bar, and every one requires `gold_support ≥ 1` so a "pass" can never be computed over an empty fixture.
 
 ---
 
@@ -400,12 +376,10 @@ flowchart TD
     CONJ -->|no| REJECT[Release fails —<br/>even if weighted score rose]
 ```
 
-Each observation records: metric + purpose, value + support count, threshold +
-operator, `executed`, pass/fail, fixture and output hashes, and a failure
-reason. The final release result is the **conjunction of mandatory gates**.
-Regression policy (`statistical_confidence.py`, Stage E4): a release fails on a
-hard-gate regression **even when the weighted aggregate rises**, and candidate
-comparisons use paired examples reporting deltas, not only ranks.
+- **Each observation is fully recorded** — metric + purpose, value + support count, threshold + operator, `executed`, pass/fail, fixture and output hashes, and a failure reason.
+- **The release result is the conjunction of mandatory gates.**
+- **Regression policy** (`statistical_confidence.py`, Stage E4) — a release fails on a hard-gate regression **even when the weighted aggregate rises**.
+- **Comparisons report deltas** — paired examples, not only ranks.
 
 ### Reproduce the reports
 
@@ -415,6 +389,4 @@ make schema-quality          # 4-dimension schema quality + gates
 make benchmark-leaderboard   # weighted technique ranking
 ```
 
-Outputs land in `reports/` (`modelling_correctness.md`, `schema_quality.md`,
-`benchmark_leaderboard.md`). See the [testing guide](testing_guide.md) for the
-test that pins each gate.
+Outputs land in `reports/` (`modelling_correctness.md`, `schema_quality.md`, `benchmark_leaderboard.md`). See the [testing guide](testing_guide.md) for the test that pins each gate.
