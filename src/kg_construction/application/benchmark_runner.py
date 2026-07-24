@@ -33,6 +33,7 @@ from kg_construction.application.scoring import (
     ScoringWeights,
     TechniqueScore,
 )
+from kg_construction.application.source_catalog import CatalogTableMapper
 from kg_construction.application.technique_selector import ApplicabilityResult, TechniqueSelector
 from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
 from kg_construction.domain.graph_objects import PropertyGraph, RDFGraph
@@ -492,6 +493,15 @@ class TechniqueEvaluationRunner:
         has_records = any(source.records for source in sources)
         has_text = any(source.content for source in sources) or profile.text_density > 0
         specs: list[dict[str, Any]] = []
+        if has_records and self._should_run("semantic_table_mapper", selected_names):
+            specs.append(
+                {
+                    "technique_name": "semantic_table_mapper",
+                    "pipeline_name": "semantic_mapping",
+                    "mappers": [CatalogTableMapper()],
+                    "extractors": [],
+                }
+            )
         if has_records and self._should_run("direct_table_mapper", selected_names):
             specs.append(
                 {

@@ -21,6 +21,10 @@ class PipelineConfig(BaseModel):
     evidence_required: bool = True
     validation_required: bool = True
     validation_policy: Literal["reject", "quarantine", "repair", "send_to_human_review"] = "reject"
+    structured_mapping: Literal["semantic", "direct"] = "semantic"
+    """How structured tables are mapped. ``semantic`` (default) profiles, resolves,
+    and builds shared dimension nodes and typed relationships. ``direct`` selects
+    the ``DirectTableMapper`` baseline, retained only for explicit comparison."""
     schema_version: str = "v1"
 
     @field_validator("name", "schema_version")

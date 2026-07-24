@@ -1,5 +1,5 @@
 {
-  "attribute_richness": 1.0,
+  "attribute_richness": 2.5,
   "average_degree": 1.6666666666666667,
   "cardinality_violation_rate": 0.0,
   "categorical_duplication_rate": 0.0,
@@ -52,9 +52,9 @@
   "node_count": 6,
   "orphan_rate": 0.0,
   "passed": true,
-  "property_completeness": 0.6666666666666666,
+  "property_completeness": 1.0,
   "relationship_completeness": 1.0,
-  "relationship_richness": 0.45454545454545453,
+  "relationship_richness": 0.25,
   "schema_completeness": 0.8333333333333334,
   "shacl_violation_count": null
 }

@@ -117,6 +117,27 @@ class ForeignKeyLink(BaseModel):
     self_referential: bool = False
 
 
+class KeyCandidate(BaseModel):
+    """An inferred primary-key candidate with confidence and evidence.
+
+    Inference proposes candidates; it never silently adopts the first unique
+    column as the key. Adoption is reserved for an id-named single column or a
+    jointly-unique composite when no single key exists — otherwise the candidate
+    is surfaced for a declaration or reviewer to confirm.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    columns: list[str]
+    confidence: float
+    evidence: str
+    adopted: bool = False
+
+    @property
+    def composite(self) -> bool:
+        return len(self.columns) > 1
+
+
 class ModelingPlan(BaseModel):
     """A proposed modelling plan for one table."""
 
@@ -125,6 +146,7 @@ class ModelingPlan(BaseModel):
     table_name: str
     record_type: str
     identity_columns: list[str] = Field(default_factory=list)
+    key_candidates: list[KeyCandidate] = Field(default_factory=list)
     foreign_keys: list[ForeignKeyLink] = Field(default_factory=list)
     assignments: list[ColumnRoleAssignment] = Field(default_factory=list)
 
@@ -250,7 +272,7 @@ class SemanticColumnProfiler:
         columns = sorted({column for row in records for column in row})
         row_count = len(records)
         features = {column: self._features(column, records, row_count) for column in columns}
-        identity_columns = self._identity_columns(columns, features)
+        identity_columns, key_candidates = self._infer_keys(columns, features, records)
         foreign_keys = self._foreign_keys(columns, records, features, identity_columns)
         fk_by_column = {link.source_column: link for link in foreign_keys}
 
@@ -274,6 +296,7 @@ class SemanticColumnProfiler:
             table_name=table_name,
             record_type=record_type,
             identity_columns=identity_columns,
+            key_candidates=key_candidates,
             foreign_keys=foreign_keys,
             assignments=assignments,
         )
@@ -298,17 +321,79 @@ class SemanticColumnProfiler:
             avg_text_length=mean(text_lengths) if text_lengths else 0.0,
         )
 
-    @staticmethod
-    def _identity_columns(columns: list[str], features: dict[str, ColumnFeatures]) -> list[str]:
+    def _infer_keys(
+        self,
+        columns: list[str],
+        features: dict[str, ColumnFeatures],
+        records: list[JsonDict],
+    ) -> tuple[list[str], list[KeyCandidate]]:
+        """Infer the primary key with confidence, without auto-adopting a unique column.
+
+        An id-named unique column is adopted. A jointly-unique composite is adopted
+        only when no single-column key exists. A unique but non-id-named column is
+        recorded as a candidate for confirmation, never silently adopted.
+        """
+
         unique_columns = [
             column
             for column in columns
             if features[column].is_unique and features[column].null_rate == 0.0
         ]
-        if not unique_columns:
-            return []
         id_named = [column for column in unique_columns if _IDENTIFIER_NAME_RE.search(column)]
-        return [id_named[0]] if id_named else [unique_columns[0]]
+        candidates: list[KeyCandidate] = []
+        adopted: list[str] = []
+
+        if id_named:
+            adopted = [id_named[0]]
+            candidates.append(
+                KeyCandidate(columns=[id_named[0]], confidence=0.95, evidence="unique, id-named column", adopted=True)
+            )
+            for column in id_named[1:]:
+                candidates.append(
+                    KeyCandidate(columns=[column], confidence=0.9, evidence="unique, id-named alternate key")
+                )
+        else:
+            for column in unique_columns:
+                candidates.append(
+                    KeyCandidate(
+                        columns=[column],
+                        confidence=0.5,
+                        evidence="unique but not id-named; not auto-adopted without a declaration",
+                    )
+                )
+            if not unique_columns:
+                composite = self._composite_key(columns, features, records)
+                if composite is not None:
+                    adopted = composite
+                    candidates.append(
+                        KeyCandidate(columns=composite, confidence=0.6, evidence="jointly-unique composite key", adopted=True)
+                    )
+        return adopted, candidates
+
+    @staticmethod
+    def _composite_key(
+        columns: list[str],
+        features: dict[str, ColumnFeatures],
+        records: list[JsonDict],
+        *,
+        max_columns: int = 8,
+    ) -> list[str] | None:
+        """Return the first minimal jointly-unique, non-null column pair, if any."""
+
+        row_count = len(records)
+        if row_count == 0:
+            return None
+        candidate_columns = [
+            column
+            for column in columns[:max_columns]
+            if features[column].null_rate == 0.0 and not features[column].is_unique
+        ]
+        for left_index, left in enumerate(candidate_columns):
+            for right in candidate_columns[left_index + 1 :]:
+                combined = {(str(row.get(left)), str(row.get(right))) for row in records}
+                if len(combined) == row_count:
+                    return sorted([left, right])
+        return None
 
     def _foreign_keys(
         self,
@@ -479,6 +564,7 @@ __all__ = [
     "ColumnFeatures",
     "ColumnRoleAssignment",
     "ForeignKeyLink",
+    "KeyCandidate",
     "ModelingPlan",
     "SemanticColumnProfiler",
 ]

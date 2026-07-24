@@ -8,6 +8,7 @@
   },
   "csv": {
     "ranking": [
+      "semantic_table_mapper",
       "direct_table_mapper",
       "jsonpath_mapper"
     ]
@@ -15,12 +16,14 @@
   "json": {
     "ranking": [
       "jsonpath_mapper",
-      "direct_table_mapper"
+      "direct_table_mapper",
+      "semantic_table_mapper"
     ]
   },
   "mixed": {
     "ranking": [
       "hybrid_rules_gazetteer_regex",
+      "semantic_table_mapper",
       "gazetteer_entity_extractor",
       "regex_entity_extractor",
       "hybrid_structured_then_text",

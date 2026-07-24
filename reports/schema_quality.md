@@ -1,8 +1,8 @@
 # Schema & Instance Quality Report
 
-Generated: 2026-07-23
+Generated: 2026-07-24
 
-Computed on the policy-driven semantic graph of `examples/data_to_kg/sample.csv` (Stage 2 mapper). Categorical duplication is policy-aware.
+Computed on the policy-driven semantic graph of `examples/data_to_kg/sample.csv` (the semantic mapper). Categorical duplication is policy-aware.
 
 ## Release gates
 
@@ -22,7 +22,7 @@ Computed on the policy-driven semantic graph of `examples/data_to_kg/sample.csv`
 
 ## Completeness
 - schema_completeness: 0.8333333333333334
-- property_completeness: 0.667
+- property_completeness: 1.000
 - relationship_completeness: 1.000
 - class_population: {'Employee': 3, 'Team': 3}
 
@@ -35,7 +35,7 @@ Computed on the policy-driven semantic graph of `examples/data_to_kg/sample.csv`
 - node_count: 6 | edge_count: 5
 - average_degree: 1.667 | orphan_rate: 0.0
 - connected_component_count: 1
-- class_richness: 1.0 | relationship_richness: 0.455
-- attribute_richness: 1.000
+- class_richness: 1.0 | relationship_richness: 0.250
+- attribute_richness: 2.500
 
 Regenerate with `make schema-quality`.

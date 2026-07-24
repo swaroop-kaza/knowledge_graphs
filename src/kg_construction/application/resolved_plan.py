@@ -217,6 +217,10 @@ class ForeignKeyResolution(BaseModel):
     relationship_name: str
     cardinality: Cardinality = Field(default_factory=Cardinality.zero_or_one)
     on_missing: OnMissingTarget = OnMissingTarget.SKIP
+    self_referential: bool = False
+    target_available: bool = False
+    """True when the target table is present in the same catalog, so the edge can
+    link to a real node; otherwise a missing target is skipped, never fabricated."""
 
 
 class ResolvedAttribute(BaseModel):

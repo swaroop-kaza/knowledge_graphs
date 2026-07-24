@@ -12,6 +12,7 @@ from kg_construction.application.benchmark_runner import (
     TechniqueEvaluationConfig,
     TechniqueEvaluationRunner,
 )
+from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.workflow import ConstructionWorkflow
@@ -40,9 +41,11 @@ def _employees() -> list[dict]:
 def _semantic_graph_policy_ontology():
     records = _employees()
     source = SourceRecord.from_rows(records, source_type="csv", source_name="employees.csv")
-    policy = SemanticColumnProfiler().profile(records, table_name="employees", record_type="Employee").to_modeling_policy()
+    modeling_plan = SemanticColumnProfiler().profile(records, table_name="employees", record_type="Employee")
+    policy = modeling_plan.to_modeling_policy()
+    resolved = resolve_modeling_plan(modeling_plan, source_name="employees.csv")
     ontology = propose_structured_ontology(policy).ontology
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(policy)]).run([source]).property_graph
+    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
     return graph, policy, records, ontology
 
 

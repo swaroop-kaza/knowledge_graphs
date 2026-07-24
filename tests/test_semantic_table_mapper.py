@@ -6,6 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
+from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.workflow import ConstructionWorkflow
@@ -20,12 +21,20 @@ def _table(name: str) -> dict:
     return next(t for t in tables if t["table_name"] == name)
 
 
+def _resolved(table_name: str, record_type: str):
+    table = _table(table_name)
+    plan = SemanticColumnProfiler().profile(
+        table["records"], table_name=table_name, record_type=record_type
+    )
+    return resolve_modeling_plan(plan, source_name=f"{table_name}.csv")
+
+
 def _graph(table_name: str, record_type: str) -> tuple[PropertyGraph, dict]:
     table = _table(table_name)
     records = table["records"]
     source = SourceRecord.from_rows(records, source_type="csv", source_name=f"{table_name}.csv")
-    policy = SemanticColumnProfiler().profile(records, table_name=table_name, record_type=record_type).to_modeling_policy()
-    result = ConstructionWorkflow(mappers=[SemanticTableMapper(policy)]).run([source])
+    resolved = _resolved(table_name, record_type)
+    result = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source])
     return result.property_graph, {"records": records, "validation": result.validation_report}
 
 
@@ -54,8 +63,7 @@ class CategoricalDeduplicationTests(unittest.TestCase):
     def test_reference_candidates_share_a_canonical_id(self) -> None:
         table = _table("employees")
         source = SourceRecord.from_rows(table["records"], source_type="csv", source_name="employees.csv")
-        policy = SemanticColumnProfiler().profile(table["records"], table_name="employees", record_type="Employee").to_modeling_policy()
-        batch = SemanticTableMapper(policy).map_source(source)
+        batch = SemanticTableMapper(_resolved("employees", "Employee")).map_source(source)
         department_candidates = [e for e in batch.entities if e.entity_type == "Department"]
         # 8 rows emit a Department reference candidate, but they collapse to 3 ids.
         self.assertEqual(len(department_candidates), 8)
@@ -91,12 +99,18 @@ class RelationshipFormationTests(unittest.TestCase):
         department_ids = {node.node_id for node in _nodes_with_label(graph, "Department")}
         self.assertTrue(all(edge.target_id in department_ids for edge in department_edges))
 
-    def test_non_self_reference_becomes_a_reference_node(self) -> None:
-        graph, ctx = _graph("orders", "Order")
-        customer_nodes = _nodes_with_label(graph, "Customer")
-        distinct_customers = {str(row["customer_id"]) for row in ctx["records"]}
-        self.assertEqual(len(customer_nodes), len(distinct_customers))  # 3 distinct customers
-        self.assertTrue(_edges_of_type(graph, "customer"))
+    def test_unresolvable_foreign_key_is_retained_not_fabricated(self) -> None:
+        # orders.customer_id references Customer, but no Customer source is present.
+        graph, _ = _graph("orders", "Order")
+        # The doctrine bans placeholder entities: no Customer nodes, no customer edges.
+        self.assertEqual(_nodes_with_label(graph, "Customer"), [])
+        self.assertEqual(_edges_of_type(graph, "customer"), [])
+        # The reference value is retained on the Order so no data is lost.
+        order_nodes = _nodes_with_label(graph, "Order")
+        self.assertTrue(all("customer_id" in node.properties for node in order_nodes))
+        # A categorical dimension still becomes a shared concept node.
+        self.assertEqual(len(_nodes_with_label(graph, "Priority")), 3)
+        self.assertTrue(_edges_of_type(graph, "has_priority"))
 
 
 class PropertiesAndRoundTripTests(unittest.TestCase):

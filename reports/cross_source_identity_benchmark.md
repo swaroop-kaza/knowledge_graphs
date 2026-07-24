@@ -12,16 +12,16 @@ The fixture contains aliases, legal suffix variations, exact repeated names, and
 make cross-source-identity-benchmark
 ```
 
-- Run ID: `e9ad00a9d718dff0`
+- Run ID: `406f5ddf62236828`
 - Dataset hash: `4ed31b012643663e3aa32ad3b6c0228bf9f0be7b375d757f6ab0d8f4729fe3cb`
 - Input hash: `36acf7cb9eedd83454f647f1542c8990474dd2231bf5212be40e0db21689fb0b`
 - Gold hash: `11825ea8262338d1b1f60997ffe54d9d96d26b6ee3ca4640119fa3e4dbe91432`
 - Manifest hash: `9107ee02d7ba4eed59ef5612f0642c7832006f4cb261d01c523652eb0198cf19`
 - Config hash: `bd04d1bfe1fe2cd1c70359e6bf17fd51b0050dafb97eecfd1e98f033b4f228f2`
-- Git commit: `42d0100ae71f2d46320b90532ceb9f00ddcec51c`
+- Git commit: `e9ca3eeb4af97c26beb1ae4840541c85253ff666`
 - Git tree state: `dirty`
 - Generator hash: `c403349333a3c5a221c8b8bbd33cee44893d4aecf357ac7bde82c0c687164222`
-- Source tree hash: `1055f176c82051bb3aea6e0a52e506094fe17d5bc98b0c4767ba70d0ab41a96a`
+- Source tree hash: `d2bec58c9e67fc8707a0453cfd0234f2cc68cd04005c3afaf9c08aa6e974141f`
 - Results hash: `e7356ff86936af5b693240fd52d102e998c0212b9953f28ce4851ed4c9da54e3`
 - Python: `3.12.9`
 

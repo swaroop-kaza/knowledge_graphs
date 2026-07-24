@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from kg_construction.application.semantic_profiler import SemanticColumnProfiler
+from kg_construction.application.source_catalog import CatalogTableMapper, SourceCatalog
 from kg_construction.infrastructure.enrichment import (
     ChunkEmbeddingEnricher,
     CommunityDetectionEnricher,
@@ -281,6 +283,9 @@ def default_registry() -> PluginRegistry:
         _d("email_loader", "loader", "rules", "implemented", 18, EmailLoader, ("email",)),
         _d("chat_transcript_loader", "loader", "rules", "implemented", 18, ChatTranscriptLoader, ("chat_transcript",)),
         _d("scientific_paper_loader", "loader", "rules", "implemented", 20, ScientificPaperLoader, ("scientific_paper",)),
+        _d("semantic_column_profiler", "mapper", "deterministic", "implemented", 9, SemanticColumnProfiler, ("csv", "sql", "excel")),
+        _d("semantic_table_mapper", "mapper", "deterministic", "implemented", 9, CatalogTableMapper, ("csv", "sql", "excel")),
+        _d("source_catalog", "mapper", "deterministic", "implemented", 9, SourceCatalog, ("csv", "sql", "excel")),
         _d("direct_table_mapper", "mapper", "deterministic", "implemented", 10, DirectTableMapper, ("csv", "sql", "excel")),
         _d("table_to_node_mapping", "mapper", "deterministic", "implemented", 10, DirectTableMapper),
         _d("row_to_entity_mapping", "mapper", "deterministic", "implemented", 10, DirectTableMapper),

@@ -10,6 +10,7 @@ from typing import Any
 
 from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.production import build_production_services
+from kg_construction.application.source_catalog import CatalogTableMapper
 from kg_construction.application.workflow import ConstructionWorkflow
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
 from kg_construction.infrastructure.graph_stores.exporters import Neo4jExporter, RDFExporter
@@ -147,7 +148,15 @@ def _workflow_for_source(
         "config_payload": config.model_dump(mode="json"),
         **(production_kwargs or {}),
     }
-    if source_type in {"csv", "excel", "xml", "chat_transcript"}:
+    if source_type in {"csv", "excel", "sql", "structured_api"}:
+        direct = config.pipeline.structured_mapping == "direct"
+        return ConstructionWorkflow(
+            mappers=[DirectTableMapper()] if direct else [CatalogTableMapper()],
+            resolvers=resolvers,
+            validators=validators,
+            **common_kwargs,
+        )
+    if source_type in {"xml", "chat_transcript"}:
         return ConstructionWorkflow(
             mappers=[DirectTableMapper()],
             resolvers=resolvers,

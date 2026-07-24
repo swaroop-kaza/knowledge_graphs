@@ -8,14 +8,14 @@
     "hybrid": 8,
     "llm": 1,
     "loader": 20,
-    "mapper": 22,
+    "mapper": 25,
     "production": 9,
     "resolution": 16,
     "schema": 8,
     "validation": 9
   },
   "method_type_counts": {
-    "deterministic": 44,
+    "deterministic": 47,
     "embedding": 8,
     "evaluation": 3,
     "human": 7,
@@ -30,7 +30,7 @@
     "resilience": 4,
     "rules": 25
   },
-  "report_date": "2026-07-22",
+  "report_date": "2026-07-24",
   "report_files": [
     "reports/current_repo_capability_summary.md",
     "reports/current_registry_summary.json",
@@ -38,14 +38,14 @@
   ],
   "status_counts": {
     "adapter": 17,
-    "implemented": 104,
+    "implemented": 107,
     "stub": 29
   },
   "support_level_counts": {
     "experimental": 16,
     "optional_adapter": 29,
     "planned": 29,
-    "stable": 76
+    "stable": 79
   },
   "support_levels": [
     {
@@ -1222,6 +1222,54 @@
     ],
     "mapper": [
       {
+        "adapter": "SemanticColumnProfiler",
+        "input_types": [
+          "csv",
+          "sql",
+          "excel"
+        ],
+        "method_type": "deterministic",
+        "name": "semantic_column_profiler",
+        "notes": "",
+        "priority": 9,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "CatalogTableMapper",
+        "input_types": [
+          "csv",
+          "sql",
+          "excel"
+        ],
+        "method_type": "deterministic",
+        "name": "semantic_table_mapper",
+        "notes": "",
+        "priority": 9,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
+        "adapter": "SourceCatalog",
+        "input_types": [
+          "csv",
+          "sql",
+          "excel"
+        ],
+        "method_type": "deterministic",
+        "name": "source_catalog",
+        "notes": "",
+        "priority": 9,
+        "status": "implemented",
+        "support_label": "Stable",
+        "support_level": "stable",
+        "tags": []
+      },
+      {
         "adapter": "DirectTableMapper",
         "input_types": [],
         "method_type": "deterministic",
@@ -2041,5 +2089,5 @@
       }
     ]
   },
-  "total_registered_techniques": 150
+  "total_registered_techniques": 153
 }

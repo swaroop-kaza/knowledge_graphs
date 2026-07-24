@@ -17,6 +17,9 @@ coverage:
   - email_loader
   - chat_transcript_loader
   02_structured_schema_mapping_rdf.ipynb:
+  - semantic_column_profiler
+  - semantic_table_mapper
+  - source_catalog
   - direct_table_mapper
   - table_to_node_mapping
   - row_to_entity_mapping

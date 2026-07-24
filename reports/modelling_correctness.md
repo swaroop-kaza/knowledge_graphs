@@ -1,6 +1,6 @@
 # Modelling Correctness Report
 
-Generated: 2026-07-23
+Generated: 2026-07-24
 
 Runs the gold modelling cases through the real pipeline and verifies the output conforms to the expected graph (RML/R2RML conformance style). CI fails on regression.
 

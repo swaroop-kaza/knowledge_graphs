@@ -13,6 +13,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.workflow import ConstructionWorkflow
@@ -30,9 +31,11 @@ _REPORTS = Path("reports")
 def _report() -> tuple[SchemaQualityReport, dict]:
     records = list(csv.DictReader(_SAMPLE.read_text(encoding="utf-8").splitlines()))
     source = SourceRecord.from_rows(records, source_type="csv", source_name="sample.csv")
-    policy = SemanticColumnProfiler().profile(records, table_name="sample", record_type="Employee").to_modeling_policy()
+    modeling_plan = SemanticColumnProfiler().profile(records, table_name="sample", record_type="Employee")
+    policy = modeling_plan.to_modeling_policy()
+    resolved = resolve_modeling_plan(modeling_plan, source_name="sample.csv")
     ontology = propose_structured_ontology(policy).ontology
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(policy)]).run([source]).property_graph
+    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
     report = SchemaQualityEvaluator().evaluate(
         graph, policy=policy, source_records=records, ontology=ontology
     )

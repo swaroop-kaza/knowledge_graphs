@@ -17,6 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.semantic_table_mapper import SemanticTableMapper
 from kg_construction.application.workflow import ConstructionWorkflow
@@ -51,9 +52,13 @@ def evaluate_structured_case(
 ) -> ModellingCase:
     """Build the semantic graph and compare it to the gold graph."""
 
-    policy = SemanticColumnProfiler().profile(records, table_name=table_name, record_type=record_type).to_modeling_policy()
+    modeling_plan = SemanticColumnProfiler().profile(
+        records, table_name=table_name, record_type=record_type
+    )
+    policy = modeling_plan.to_modeling_policy()
+    resolved = resolve_modeling_plan(modeling_plan, source_name=f"{table_name}.csv")
     source = SourceRecord.from_rows(records, source_type="csv", source_name=f"{table_name}.csv")
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(policy)]).run([source]).property_graph
+    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
 
     record_nodes = [node for node in graph.nodes if record_type in node.labels]
     edge_counts = Counter(edge.type for edge in graph.edges)

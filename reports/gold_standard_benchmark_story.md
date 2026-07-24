@@ -1,6 +1,6 @@
 # Gold-Standard Benchmark Story
 
-Generated: 2026-07-22
+Generated: 2026-07-24
 
 This report turns the tiny human-reviewed gold fixtures into a public correctness story. It is not a broad model leaderboard. It proves that the framework can run benchmark-grade checks for extraction, graph facts, identity resolution, and GraphRAG-style retrieval using deterministic local examples.
 
