@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
+from kg_construction.application.mandatory_unstructured_runtime import (
+    MandatoryUnstructuredRuntime,
+)
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.application.source_catalog import CatalogTableMapper, SourceCatalog
+from kg_construction.application.unstructured_pipeline import UnstructuredPipeline
 from kg_construction.infrastructure.enrichment import (
     ChunkEmbeddingEnricher,
     CommunityDetectionEnricher,
@@ -28,26 +32,40 @@ from kg_construction.infrastructure.enrichment import (
     PyTorchGeometricGraphSAGEAdapter,
     TemporalEventEnricher,
 )
-from kg_construction.infrastructure.evaluation import BenchmarkRunner, ConstructionMetricsEvaluator
+from kg_construction.infrastructure.evaluation import (
+    BenchmarkRunner,
+    ConstructionMetricsEvaluator,
+    IntendedUseMetricsEvaluator,
+    KnowledgeGraphQualityEvaluator,
+    SchemaQualityEvaluator,
+)
+from kg_construction.infrastructure.evaluation.claim_evaluations import ClaimEvaluationSuite
 from kg_construction.infrastructure.extractors import (
     CoreferenceAdapter,
     DependencyPatternRelationExtractor,
     GazetteerEntityExtractor,
-    GlinerEntityExtractor,
     GlinerOllamaRelationTypingExtractor,
     JointEntityRelationExtractor,
     OllamaGraphExtractor,
     OpenIERelationExtractor,
     PairwiseRelationClassifierAdapter,
     PosTaggingAdapter,
-    RebelRelationExtractor,
     RegexEntityExtractor,
     SentenceSplitterAdapter,
     SpacyEntityRulerExtractor,
-    SpacyNerExtractor,
     SupervisedRelationExtractor,
-    TransformerNerExtractor,
     TransformerRelationExtractor,
+)
+from kg_construction.infrastructure.extractors.model_backed import (
+    GlinerMentionDetector,
+    GlinerRelExClaimExtractor,
+    MandatoryClaimEnsemble,
+    MandatoryMentionEnsemble,
+    MlxQwenClaimExtractor,
+    OllamaQwenClaimExtractor,
+    SpacyMentionDetector,
+    TransformersMentionDetector,
+    TransformersQwenClaimExtractor,
 )
 from kg_construction.infrastructure.graph_builders import (
     EvidenceGraphBuilder,
@@ -55,11 +73,12 @@ from kg_construction.infrastructure.graph_builders import (
     RDFGraphBuilder,
 )
 from kg_construction.infrastructure.graph_stores import (
-    KuzuExporter,
-    KuzuIngestionAdapter,
+    LadybugExporter,
+    LadybugIngestionAdapter,
     MemgraphExporter,
     Neo4jExporter,
     Neo4jIngestionAdapter,
+    Neo4jVectorStoreAdapter,
     NetworkXExporter,
     RDFExporter,
     RDFLibExporter,
@@ -144,20 +163,22 @@ from kg_construction.infrastructure.resolution import (
 )
 
 TechniqueStatus = Literal["implemented", "adapter", "stub"]
-SupportLevel = Literal["stable", "optional_adapter", "experimental", "planned"]
+SupportLevel = Literal["mandatory", "research", "roadmap"]
 
 SUPPORT_LEVEL_DEFINITIONS: dict[SupportLevel, str] = {
-    "stable": "Safe to use now with the documented API and normal test coverage.",
-    "optional_adapter": "Works when the required dependency, model, service, or project wiring is configured.",
-    "experimental": "Implemented for research/prototyping, but API, scoring, or model behavior may change.",
-    "planned": "Registered as a roadmap extension point, but not implemented for normal use.",
+    "mandatory": (
+        "Part of the executable release contract; certification permits no skip or fallback."
+    ),
+    "research": (
+        "Implemented or adapted outside the focused release contract; retained for comparative research."
+    ),
+    "roadmap": "A non-executable extension point kept outside the release registry.",
 }
 
 SUPPORT_LEVEL_LABELS: dict[SupportLevel, str] = {
-    "stable": "Stable",
-    "optional_adapter": "Optional adapter",
-    "experimental": "Experimental",
-    "planned": "Planned",
+    "mandatory": "Mandatory",
+    "research": "Research inventory",
+    "roadmap": "Roadmap",
 }
 
 _EXPERIMENTAL_METHOD_TYPES = {"embedding", "llm", "ml"}
@@ -177,6 +198,7 @@ class TechniqueDescriptor:
     notes: str = ""
     tags: tuple[str, ...] = ()
     support_level: SupportLevel | None = None
+    profiles: tuple[str, ...] = ("darwin-arm64", "linux-cpu", "linux-cuda")
 
     @property
     def public_support_level(self) -> SupportLevel:
@@ -185,14 +207,12 @@ class TechniqueDescriptor:
         if self.support_level is not None:
             return self.support_level
         if self.status == "stub":
-            return "planned"
+            return "roadmap"
         if self.status == "adapter":
-            return "optional_adapter"
-        if "optional_adapter" in self.tags:
-            return "optional_adapter"
+            return "research"
         if "experimental" in self.tags or self.method_type in _EXPERIMENTAL_METHOD_TYPES:
-            return "experimental"
-        return "stable"
+            return "research"
+        return "mandatory"
 
     @property
     def public_support_label(self) -> str:
@@ -243,6 +263,7 @@ def _d(
     notes: str = "",
     tags: tuple[str, ...] = (),
     support_level: SupportLevel | None = None,
+    profiles: tuple[str, ...] = ("darwin-arm64", "linux-cpu", "linux-cuda"),
 ) -> TechniqueDescriptor:
     return TechniqueDescriptor(
         name=name,
@@ -255,11 +276,18 @@ def _d(
         notes=notes,
         tags=tags,
         support_level=support_level,
+        profiles=profiles,
     )
 
 
-def default_registry() -> PluginRegistry:
-    """Return registry coverage for the complete Data-to-KG framework."""
+def research_registry() -> PluginRegistry:
+    """Return the complete implementation, adapter, and roadmap inventory.
+
+    This broad catalogue exists for comparative research and future work. It is
+    intentionally not the release surface: stubs, adapter-only entries, and
+    downstream graph-enrichment experiments must never be counted as mandatory
+    construction capabilities.
+    """
 
     registry = PluginRegistry()
     descriptors = [
@@ -315,22 +343,106 @@ def default_registry() -> PluginRegistry:
         _d("sentence_splitter_adapter", "extractor", "nlp", "stub", 25, SentenceSplitterAdapter, ("text",)),
         _d("pos_tagging_adapter", "extractor", "nlp", "stub", 25, PosTaggingAdapter, ("text",)),
         _d("coreference_adapter", "extractor", "nlp", "stub", 26, CoreferenceAdapter, ("text",)),
-        _d("spacy_ner_extractor", "extractor", "nlp", "stub", 25, SpacyNerExtractor, ("text",)),
-        _d("transformer_ner_extractor", "extractor", "ml", "stub", 30, TransformerNerExtractor, ("text",)),
+        _d(
+            "spacy_ner_extractor",
+            "extractor",
+            "nlp",
+            "implemented",
+            25,
+            SpacyMentionDetector,
+            ("text",),
+        ),
+        _d(
+            "transformer_ner_extractor",
+            "extractor",
+            "ml",
+            "implemented",
+            30,
+            TransformersMentionDetector,
+            ("text",),
+        ),
         _d(
             "gliner_entity_extractor",
             "extractor",
             "ml",
             "implemented",
             30,
-            GlinerEntityExtractor,
+            GlinerMentionDetector,
             ("text",),
-            tags=("optional_adapter",),
+        ),
+        _d(
+            "gliner_relex_claim_extractor",
+            "extractor",
+            "ml",
+            "implemented",
+            31,
+            GlinerRelExClaimExtractor,
+            ("text",),
+        ),
+        _d(
+            "transformers_qwen_claim_extractor",
+            "extractor",
+            "llm",
+            "implemented",
+            32,
+            TransformersQwenClaimExtractor,
+            ("text",),
+        ),
+        _d(
+            "mlx_qwen_claim_extractor",
+            "extractor",
+            "llm",
+            "implemented",
+            32,
+            MlxQwenClaimExtractor,
+            ("text",),
+            profiles=("darwin-arm64",),
+        ),
+        _d(
+            "ollama_qwen_claim_extractor",
+            "extractor",
+            "llm",
+            "implemented",
+            32,
+            OllamaQwenClaimExtractor,
+            ("text",),
+        ),
+        _d(
+            "mandatory_mention_ensemble",
+            "extractor",
+            "hybrid",
+            "implemented",
+            33,
+            MandatoryMentionEnsemble,
+            ("text",),
+        ),
+        _d(
+            "mandatory_claim_ensemble",
+            "extractor",
+            "hybrid",
+            "implemented",
+            33,
+            MandatoryClaimEnsemble,
+            ("text",),
+        ),
+        _d(
+            "mandatory_composed_unstructured_runtime",
+            "extractor",
+            "hybrid",
+            "implemented",
+            34,
+            MandatoryUnstructuredRuntime,
+            ("text", "html"),
+            notes=(
+                "Single governed release path: every locked extractor and identity/"
+                "linking provider participates, NIL stays observed, claims pass "
+                "ontology/SHACL, and versioned held-out metrics gate publication."
+            ),
         ),
         _d("openie_relation_extractor", "extractor", "nlp", "implemented", 28, OpenIERelationExtractor, ("text",)),
         _d("pairwise_relation_classifier_adapter", "extractor", "ml", "stub", 32, PairwiseRelationClassifierAdapter, ("text",)),
         _d("joint_entity_relation_extractor", "extractor", "ml", "stub", 32, JointEntityRelationExtractor, ("text",)),
-        _d("rebel_relation_extractor", "extractor", "ml", "adapter", 32, RebelRelationExtractor, ("text",)),
+        _d("evidence_first_unstructured_pipeline", "extractor", "hybrid", "implemented", 24, UnstructuredPipeline, ("text",)),
         _d("transformer_relation_extractor", "extractor", "ml", "adapter", 32, TransformerRelationExtractor, ("text",)),
         _d("supervised_relation_extractor", "extractor", "ml", "stub", 32, SupervisedRelationExtractor, ("text",)),
         _d(
@@ -401,20 +513,40 @@ def default_registry() -> PluginRegistry:
             Neo4jIngestionAdapter,
             tags=("optional_adapter",),
         ),
-        _d("memgraph_exporter", "graph_store", "deterministic", "implemented", 12, MemgraphExporter),
-        _d("kuzu_exporter", "graph_store", "deterministic", "implemented", 12, KuzuExporter),
         _d(
-            "kuzu_ingestion_adapter",
+            "neo4j_vector_store_adapter",
+            "graph_store",
+            "embedding",
+            "implemented",
+            14,
+            Neo4jVectorStoreAdapter,
+            notes=(
+                "Fixed-dimension Neo4j vector index with validated transactional "
+                "upserts and parameterized equality-filtered ANN search."
+            ),
+            support_level="mandatory",
+        ),
+        _d("memgraph_exporter", "graph_store", "deterministic", "implemented", 12, MemgraphExporter),
+        _d(
+            "ladybug_exporter",
+            "graph_store",
+            "deterministic",
+            "implemented",
+            12,
+            LadybugExporter,
+        ),
+        _d(
+            "ladybug_ingestion_adapter",
             "graph_store",
             "deterministic",
             "implemented",
             14,
-            KuzuIngestionAdapter,
+            LadybugIngestionAdapter,
             tags=("optional_adapter",),
         ),
         _d("networkx_exporter", "graph_store", "deterministic", "implemented", 12, NetworkXExporter),
         _d("rdf_exporter", "graph_store", "ontology", "implemented", 12, RDFExporter),
-        _d("rdflib_exporter", "graph_store", "ontology", "adapter", 12, RDFLibExporter),
+        _d("rdflib_exporter", "graph_store", "ontology", "implemented", 12, RDFLibExporter),
         _d("ollama_provider", "llm", "llm", "implemented", 40, OllamaProvider, tags=("optional_adapter",)),
         _d("graph_analytics_enricher", "enrichment", "deterministic", "implemented", 20, GraphAnalyticsEnricher),
         _d("graph_train_validation_splitter", "enrichment", "ml", "implemented", 34, GraphTrainValidationSplitter),
@@ -450,6 +582,31 @@ def default_registry() -> PluginRegistry:
         _d("temporal_event_enricher", "enrichment", "rules", "stub", 30, TemporalEventEnricher),
         _d("construction_metrics_evaluator", "evaluation", "evaluation", "implemented", 60, ConstructionMetricsEvaluator),
         _d("benchmark_runner", "evaluation", "evaluation", "implemented", 60, BenchmarkRunner),
+        _d("claim_evaluation_suite", "evaluation", "evaluation", "implemented", 60, ClaimEvaluationSuite),
+        _d(
+            "knowledge_graph_quality_evaluator",
+            "evaluation",
+            "evaluation",
+            "implemented",
+            60,
+            KnowledgeGraphQualityEvaluator,
+        ),
+        _d(
+            "schema_quality_evaluator",
+            "evaluation",
+            "evaluation",
+            "implemented",
+            60,
+            SchemaQualityEvaluator,
+        ),
+        _d(
+            "intended_use_metrics_evaluator",
+            "evaluation",
+            "evaluation",
+            "implemented",
+            60,
+            IntendedUseMetricsEvaluator,
+        ),
         _d("hybrid_rules_gazetteer_regex", "hybrid", "rules", "implemented", 22, None, ("text",)),
         _d("hybrid_rules_ml_ollama", "hybrid", "llm", "adapter", 35, None),
         _d("hybrid_structured_then_text", "hybrid", "deterministic", "adapter", 18, None),
@@ -482,6 +639,31 @@ def default_registry() -> PluginRegistry:
     return registry
 
 
+def default_registry() -> PluginRegistry:
+    """Return only mandatory executable Data-to-KG release capabilities.
+
+    The product is deliberately centred on structured construction, unstructured
+    construction, evaluation/validation, graph materialisation, and the production
+    services needed to execute those paths. Downstream graph-ML enrichment belongs
+    to :func:`research_registry`, as do every stub and adapter-only declaration.
+    """
+
+    release = PluginRegistry()
+    for descriptor in research_registry().techniques:
+        if descriptor.status != "implemented":
+            continue
+        if descriptor.category == "enrichment" or descriptor.adapter is None:
+            continue
+        release.register(
+            replace(
+                descriptor,
+                tags=tuple(tag for tag in descriptor.tags if tag != "optional_adapter"),
+                support_level="mandatory",
+            )
+        )
+    return release
+
+
 __all__ = [
     "PluginRegistry",
     "SUPPORT_LEVEL_DEFINITIONS",
@@ -490,4 +672,5 @@ __all__ = [
     "TechniqueDescriptor",
     "TechniqueStatus",
     "default_registry",
+    "research_registry",
 ]

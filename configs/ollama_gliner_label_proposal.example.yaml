@@ -1,7 +1,7 @@
 llm:
   provider: ollama
   base_url: http://localhost:11434
-  model: llama3.1
+  model: qwen3:1.7b-q4_K_M
   temperature: 0
   structured_output: true
   evidence_required: true
@@ -64,4 +64,4 @@ gliner:
 
 compare_regex: true
 compare_gazetteer: true
-compare_ollama_graph: false
+compare_ollama_graph: true

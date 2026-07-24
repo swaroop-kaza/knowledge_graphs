@@ -4,127 +4,223 @@ pipeline:
   evidence_required: true
   validation_required: true
   validation_policy: reject
+  structured_mapping: semantic
   schema_version: v1
+
+# This complete example is bound to the sample CSV fixture. Pass the text
+# fixture explicitly when constructing examples/data_to_kg/sample.txt.
+evaluation_suite_path: configs/graph_evaluation_suite.sample_csv.yaml
+
+# The structured product path is declaration-aware. This example is directly
+# usable with examples/data_to_kg/sample.csv. Identity, foreign keys, datatypes,
+# and closed categorical values are authoritative; profiling only fills
+# decisions that are not declared.
+structured:
+  require_declarations: true
+  tables:
+    - table_name: examples/data_to_kg/sample.csv
+      record_type: Person
+      primary_key: [id]
+      foreign_keys:
+        - columns: [manager_id]
+          target_table: examples/data_to_kg/sample.csv
+          target_key: [id]
+          relationship_name: reports_to
+      datatypes:
+        id: string
+        name: string
+        email: string
+        manager_id: string
+        team: string
+      column_mappings:
+        team:
+          role: categorical_dimension
+          materialization: node
+          target: Team
+          relationship_name: has_team
+          controlled_vocabulary: Team
+          concept_scheme: urn:kg:scheme:team
+          canonicalization:
+            unicode_nfkc: true
+            trim: true
+            collapse_whitespace: true
+            casefold: true
+      identity_scope: source
+      controlled_vocabularies:
+        - name: Team
+          permissible_values: [Compiler, Flight, Research]
+          closed: true
+          aliases:
+            compiler: Compiler
+            flight: Flight
+            research: Research
+          description: Governed team concepts collapse to one node per canonical value.
+      table_kind: entity
 
 llm:
   provider: ollama
   base_url: http://localhost:11434
-  model: llama3.1
+  model: qwen3:1.7b-q4_K_M
   temperature: 0
   structured_output: true
   evidence_required: true
   retry_on_invalid_output: true
   max_retries: 3
-  prompt_version: ollama_graph_extraction_v1
+  prompt_version: evidence_first_claim_extraction_v2
 
+# The lock file, not technique toggles, selects the platform profile. Every
+# provider in that profile is constructed and must succeed. Darwin arm64 runs
+# GLiNER, GLiNER RelEx, Transformers NER/Qwen3, spaCy, MLX Qwen3, and Ollama
+# Qwen3. Linux runs the same ensemble except the Darwin-only MLX provider.
+unstructured:
+  models_lock_path: models.lock.yaml
+  cache_root: null
+  require_all_platform_providers: true
+  # null selects immutable wheel resources; a non-null value selects an
+  # explicitly reviewed replacement whose content digest is recorded.
+  governed_schema_path: null
+  held_out_gold_path: null
+  require_governed_schema: true
+  require_pre_promotion_shacl: true
+  require_canonical_identity_ensemble: true
+  require_held_out_claim_evaluation: true
+  require_embedding_cross_encoder: true
+  require_external_linkers: true
+  nil_policy: retain_observed
+  entity_labels:
+    - Person
+    - Organization
+    - Location
+    - Event
+    - Product
+    - Date
+    - Concept
+    - System
+    - Service
+    - Incident
+
+# Capability assertions below are not runtime switches. Loading is selected by
+# source type; each listed loader is implemented and mandatory when applicable.
 loaders:
+  api_response:
+    enabled: true
+  chat_transcript:
+    enabled: true
   csv:
-    enabled: true
-  excel:
-    enabled: true
-  sql:
-    enabled: true
-  json:
-    enabled: true
-  xml:
-    enabled: true
-  pdf:
-    enabled: true
-  webpage:
     enabled: true
   email:
     enabled: true
-  logs:
+  event_payload:
     enabled: true
-
-mappers:
-  direct_table:
+  excel:
     enabled: true
-  r2rml:
+  html:
     enabled: true
-  rml:
-    enabled: true
-  csvw:
+  json:
     enabled: true
   jsonld:
     enabled: true
-  obda_virtual:
+  logs:
+    enabled: true
+  markdown:
+    enabled: true
+  pdf:
+    enabled: true
+  report:
+    enabled: true
+  scientific_paper:
+    enabled: true
+  sql:
+    enabled: true
+  structured_api:
+    enabled: true
+  text:
+    enabled: true
+  webpage:
+    enabled: true
+  xml:
+    enabled: true
+
+# The tabular product route is the semantic source-catalog mapper. Other
+# standards mappers remain available as explicit APIs and research benchmarks;
+# listing them here would incorrectly imply this file dispatches them.
+mappers:
+  semantic_catalog:
+    enabled: true
+  event_graph:
+    enabled: true
+  html_metadata:
     enabled: true
   jsonpath:
     enabled: true
+  jsonld:
+    enabled: true
+  log_event:
+    enabled: true
 
+# This mirrors the executable, locked provider factory. MLX is mandatory for
+# the darwin-arm64 profile and inapplicable (not skipped) on Linux profiles.
 extractors:
-  regex:
-    enabled: true
-  gazetteer:
-    enabled: true
-  spacy:
-    enabled: true
-  transformer_ner:
+  evidence_first_unstructured:
     enabled: true
   gliner:
     enabled: true
-  openie:
+  gliner_relex:
     enabled: true
-  rebel:
+  transformer_ner:
     enabled: true
-  supervised_re:
+  spacy:
     enabled: true
-  ollama_graph:
+  transformers_qwen3:
+    enabled: true
+  mlx_qwen3:
+    enabled: true
+    parameters:
+      required_profiles: [darwin-arm64]
+  ollama_qwen3:
     enabled: true
 
 resolution:
   exact:
     enabled: true
-  fuzzy:
-    enabled: true
-  embedding:
-    enabled: true
-  cross_encoder:
-    enabled: true
-  graph_based:
-    enabled: true
-  human_review:
-    enabled: true
 
+# Evidence and referential-integrity validators execute in every construction.
+# Schema projections and their separate certification are not falsely presented
+# as switches in this workflow config.
 validation:
-  json_schema:
-    enabled: true
-  schema_registry:
-    enabled: true
-  shacl:
-    enabled: true
-  property_graph:
-    enabled: true
   evidence_required:
     enabled: true
+  referential_integrity:
+    enabled: true
 
+# construct_kg always materializes all three graph views in memory. Persistent
+# Neo4j/Ladybug ingestion is an explicit second command configured in
+# configs/production_ingestion.example.yaml, so it is not claimed as a side
+# effect of this construction file.
 graph_store:
-  neo4j:
+  property_graph:
     enabled: true
   rdf:
     enabled: true
-  kuzu:
-    enabled: true
-  networkx:
+  evidence_graph:
     enabled: true
 
-enrichment:
-  graph_analytics:
-    enabled: true
-  node_embeddings:
-    enabled: true
-  external_kg_linking:
-    enabled: true
-  pagerank:
-    enabled: true
-  community_detection:
-    enabled: true
+# No enrichment is performed by construct_kg; research-only/stub enrichers are
+# deliberately absent instead of being advertised as enabled.
+enrichment: {}
 
 evaluation:
-  benchmark_runner:
+  # Executed by every ConstructionWorkflow run. Missing gold judgments remain
+  # explicit failed families in the emitted quality report.
+  knowledge_graph_quality:
+    enabled: true
+  schema_quality:
+    enabled: true
+  intended_use_metrics:
     enabled: true
   construction_metrics:
+    enabled: true
+  validation_failure_metrics:
     enabled: true
 
 production:
@@ -136,7 +232,7 @@ production:
     enabled: true
     output_dir: data/processed/manifests
   incremental_sync:
-    enabled: false
+    enabled: true
     watermark_path: data/processed/watermarks.json
     watermark_field: updated_at
   error_quarantine:

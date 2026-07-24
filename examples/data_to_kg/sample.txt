@@ -1,3 +1,4 @@
 On 2026-07-09, Platform Team reviewed INCIDENT-1042.
 Contact ops@example.com and see https://example.com/runbook.
 The service version is v2.4.1.
+INCIDENT-1042 affected Recommendation API.

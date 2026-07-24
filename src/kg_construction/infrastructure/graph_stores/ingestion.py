@@ -102,10 +102,10 @@ class Neo4jIngestionConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class KuzuIngestionConfig:
-    """Configuration for Kuzu embedded property graph ingestion."""
+class LadybugIngestionConfig:
+    """Configuration for Ladybug embedded property-graph ingestion."""
 
-    database_path: str = "data/processed/kuzu_graph"
+    database_path: str = "data/processed/ladybug_graph"
     node_table: str = "KGNode"
     edge_table: str = "KGEdge"
     batch_size: int = 500
@@ -202,8 +202,8 @@ class Neo4jIngestionAdapter:
             from neo4j import GraphDatabase
         except ImportError as exc:
             raise AdapterNotConfigured(
-                "Neo4j ingestion requires optional dependency 'neo4j'. "
-                "Install with the graph extra or inject a configured driver."
+                "Neo4j is a mandatory dependency. Run the repository provisioning "
+                "step or inject a configured driver."
             ) from exc
         auth = None
         if self.config.user is not None or self.config.password is not None:
@@ -381,26 +381,26 @@ class Neo4jIngestionAdapter:
         }
 
 
-class KuzuIngestionAdapter:
-    """Write property graphs to Kuzu through a generic typed graph schema."""
+class LadybugIngestionAdapter:
+    """Write property graphs to Ladybug through a generic typed graph schema."""
 
-    name = "kuzu_ingestion_adapter"
+    name = "ladybug_ingestion_adapter"
 
     def __init__(
         self,
-        config: KuzuIngestionConfig | None = None,
+        config: LadybugIngestionConfig | None = None,
         *,
         connection: Any | None = None,
         retry_policy: BatchRetryPolicy | None = None,
         dead_letter_queue: DeadLetterQueue | None = None,
     ) -> None:
-        self.config = config or KuzuIngestionConfig()
+        self.config = config or LadybugIngestionConfig()
         self._connection = connection
         self.retry_policy = retry_policy or BatchRetryPolicy()
         self.dead_letter_queue = dead_letter_queue
 
     def write_property_graph(self, graph: PropertyGraph) -> IngestionWriteReport:
-        operation_name = "kuzu_property_graph_write"
+        operation_name = "ladybug_property_graph_write"
         try:
             outcome = self.retry_policy.run(
                 lambda: self._write_property_graph_once(graph),
@@ -434,14 +434,18 @@ class KuzuIngestionAdapter:
 
     def write_rdf_graph(self, graph: RDFGraph) -> IngestionWriteReport:
         raise AdapterNotConfigured(
-            "Kuzu ingestion currently targets property graphs. "
+            "Ladybug ingestion currently targets property graphs. "
             f"RDF triples received: {len(graph.triples)}"
         )
 
     def bulk_import_property_graph(self, graph: PropertyGraph, output_dir: str | Path | None = None) -> IngestionWriteReport:
-        """Write large graphs through CSV files and Kuzu COPY statements."""
+        """Write large graphs through CSV files and Ladybug ``COPY`` statements."""
 
-        directory = Path(output_dir) if output_dir else Path(tempfile.mkdtemp(prefix="kg_kuzu_bulk_"))
+        directory = (
+            Path(output_dir)
+            if output_dir
+            else Path(tempfile.mkdtemp(prefix="kg_ladybug_bulk_"))
+        )
         directory.mkdir(parents=True, exist_ok=True)
         node_path = directory / f"{self._node_table}.csv"
         edge_path = directory / f"{self._edge_table}.csv"
@@ -473,14 +477,14 @@ class KuzuIngestionAdapter:
         if self._connection is not None:
             return self._connection
         try:
-            import kuzu
+            import ladybug as lb
         except ImportError as exc:
             raise AdapterNotConfigured(
-                "Kuzu ingestion requires optional dependency 'kuzu'. "
-                "Install with the graph extra or inject a configured connection."
+                "Ladybug is a mandatory dependency. Run the repository provisioning "
+                "step or inject a configured connection."
             ) from exc
-        database = kuzu.Database(self.config.database_path)
-        self._connection = kuzu.Connection(database)
+        database = lb.Database(self.config.database_path)
+        self._connection = lb.Connection(database)
         return self._connection
 
     def _write_property_graph_once(self, graph: PropertyGraph) -> IngestionWriteReport:
@@ -629,16 +633,25 @@ class KuzuIngestionAdapter:
             writer = csv.DictWriter(handle, fieldnames=["id", "labels", "properties"])
             writer.writeheader()
             for node in graph.nodes:
-                writer.writerow(KuzuIngestionAdapter._node_parameters(node))
+                writer.writerow(LadybugIngestionAdapter._node_parameters(node))
         with edge_path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=["id", "source_id", "target_id", "type", "properties"])
             writer.writeheader()
             for edge in graph.edges:
-                writer.writerow(KuzuIngestionAdapter._edge_parameters(edge))
+                writer.writerow(LadybugIngestionAdapter._edge_parameters(edge))
+
+
+# Compatibility aliases for callers migrating from the database's former name.
+# The release registry, configuration, documentation, and certification surface
+# use Ladybug exclusively.
+KuzuIngestionConfig = LadybugIngestionConfig
+KuzuIngestionAdapter = LadybugIngestionAdapter
 
 
 __all__ = [
     "IngestionWriteReport",
+    "LadybugIngestionAdapter",
+    "LadybugIngestionConfig",
     "KuzuIngestionAdapter",
     "KuzuIngestionConfig",
     "Neo4jIngestionAdapter",

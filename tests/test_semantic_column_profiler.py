@@ -83,10 +83,22 @@ class ClassificationBehaviourTests(unittest.TestCase):
 
     def test_categorical_materialisation_respects_supernode_guard(self) -> None:
         plan = self._plan("employees")
-        # department has 3 distinct values -> promote to a shared node.
+        # Department has reusable business-dimension semantics and enough values
+        # to justify a shared node.
         self.assertEqual(plan.assignment("department").materialization, "node")
-        # status has 2 distinct values (<= keep_as_property_max_distinct) -> property.
+        # Status is a scalar enum, so it stays a property.
         self.assertEqual(plan.assignment("status").materialization, "property")
+
+    def test_low_cardinality_alone_does_not_promote_a_column_to_a_node(self) -> None:
+        records = [
+            {"id": index, "bucket": value}
+            for index, value in enumerate(("a", "b", "c", "a", "b", "c"), start=1)
+        ]
+        plan = self.profiler.profile(records, table_name="samples", record_type="Sample")
+        assignment = plan.assignment("bucket")
+        self.assertEqual(assignment.role, ColumnRole.CATEGORICAL_DIMENSION)
+        self.assertEqual(assignment.materialization, "property")
+        self.assertIn("no independent reusable dimension semantics", assignment.rationale)
 
     def test_temporal_detected_by_iso_date_values(self) -> None:
         plan = self._plan("employees")
@@ -138,7 +150,7 @@ class ModelingPolicyEmissionTests(unittest.TestCase):
         plan = SemanticColumnProfiler(thresholds).profile(
             table["records"], table_name="employees", record_type="Employee"
         )
-        # With a higher property cutoff, department (3 distinct) stays a property.
+        # Even a reusable dimension stays a property below the configured cutoff.
         self.assertEqual(plan.assignment("department").materialization, "property")
 
 

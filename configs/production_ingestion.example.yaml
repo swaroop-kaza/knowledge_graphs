@@ -16,8 +16,8 @@ production_ingestion:
     batch_size: 500
     ensure_constraints: true
 
-  kuzu:
-    database_path: data/processed/kuzu_graph
+  ladybug:
+    database_path: data/processed/ladybug_graph
     node_table: KGNode
     edge_table: KGEdge
     batch_size: 500
@@ -28,4 +28,4 @@ production_ingestion:
   replay:
     command_examples:
       - kg-construction-replay-deadletters --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl --store neo4j_ingestion_adapter --dry-run
-      - kg-construction-replay-deadletters --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl --store kuzu_ingestion_adapter --kuzu-database data/processed/kuzu_graph
+      - kg-construction-replay-deadletters --dead-letter-path data/processed/graph_ingestion_dead_letters.jsonl --store ladybug_ingestion_adapter --ladybug-database data/processed/ladybug_graph

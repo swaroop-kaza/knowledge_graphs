@@ -53,7 +53,12 @@ class SchemaQualityAcceptanceTests(unittest.TestCase):
     def test_stage2_semantic_graph_is_conciseness_perfect_and_passes(self) -> None:
         graph, policy, records, ontology = _semantic_graph_policy_ontology()
         report = SchemaQualityEvaluator().evaluate(
-            graph, policy=policy, source_records=records, ontology=ontology
+            graph,
+            policy=policy,
+            source_records=records,
+            ontology=ontology,
+            shacl_executed=True,
+            shacl_violation_count=0,
         )
         self.assertEqual(report.categorical_duplication_rate, 0.0)
         self.assertEqual(report.literal_that_should_be_node_rate, 0.0)
@@ -162,7 +167,12 @@ class ReportPayloadTests(unittest.TestCase):
         graph, policy, records, _ = _semantic_graph_policy_ontology()
         settings = SchemaQualityGateSettings(maximum_orphan_rate=0.0)
         report = SchemaQualityEvaluator().evaluate(
-            graph, policy=policy, source_records=records, gate_settings=settings
+            graph,
+            policy=policy,
+            source_records=records,
+            shacl_executed=True,
+            shacl_violation_count=0,
+            gate_settings=settings,
         )
         self.assertTrue(report.passed)  # orphan_rate is 0.0
 

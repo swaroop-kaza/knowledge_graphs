@@ -7,8 +7,8 @@ from pathlib import Path
 from kg_construction.application.registry import default_registry
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
 from kg_construction.infrastructure.graph_stores import (
-    KuzuIngestionAdapter,
-    KuzuIngestionConfig,
+    LadybugIngestionAdapter,
+    LadybugIngestionConfig,
     Neo4jIngestionAdapter,
     Neo4jIngestionConfig,
 )
@@ -73,7 +73,7 @@ class FakeNeo4jDriver:
         return FakeNeo4jSession(self)
 
 
-class FakeKuzuConnection:
+class FakeLadybugConnection:
     def __init__(self, *, fail_on_query_fragment: str | None = None) -> None:
         self.fail_on_query_fragment = fail_on_query_fragment
         self.executions: list[tuple[str, dict[str, object] | None]] = []
@@ -81,7 +81,7 @@ class FakeKuzuConnection:
     def execute(self, query: str, parameters: dict[str, object] | None = None) -> FakeResult:
         self.executions.append((query, parameters))
         if self.fail_on_query_fragment and self.fail_on_query_fragment in query:
-            raise TransientError("temporary Kuzu write timeout")
+            raise TransientError("temporary Ladybug write timeout")
         return FakeResult()
 
 
@@ -213,8 +213,8 @@ class ProductionIngestionTests(unittest.TestCase):
             path = Path(tmpdir) / "dead_letters.jsonl"
             DeadLetterQueue(path).record_failure(
                 stage="graph_store_ingestion",
-                store_name="kuzu_ingestion_adapter",
-                operation_name="kuzu_property_graph_write",
+                store_name="ladybug_ingestion_adapter",
+                operation_name="ladybug_property_graph_write",
                 graph_model="property_graph",
                 error=TransientError("temporary"),
                 attempt_count=1,
@@ -226,17 +226,17 @@ class ProductionIngestionTests(unittest.TestCase):
                     "--dead-letter-path",
                     str(path),
                     "--store",
-                    "kuzu_ingestion_adapter",
+                    "ladybug_ingestion_adapter",
                     "--dry-run",
                 ]
             )
 
         self.assertEqual(code, 0)
 
-    def test_kuzu_adapter_creates_schema_and_writes_inside_manual_transaction(self) -> None:
-        connection = FakeKuzuConnection()
-        adapter = KuzuIngestionAdapter(
-            KuzuIngestionConfig(database_path="memory", batch_size=10),
+    def test_ladybug_adapter_creates_schema_and_writes_inside_manual_transaction(self) -> None:
+        connection = FakeLadybugConnection()
+        adapter = LadybugIngestionAdapter(
+            LadybugIngestionConfig(database_path="memory", batch_size=10),
             connection=connection,
             retry_policy=BatchRetryPolicy(RetryPolicyConfig(max_attempts=1, sleep=False)),
         )
@@ -244,7 +244,7 @@ class ProductionIngestionTests(unittest.TestCase):
         report = adapter.write_property_graph(sample_graph())
         queries = [query for query, _ in connection.executions]
 
-        self.assertEqual(report.store_name, "kuzu_ingestion_adapter")
+        self.assertEqual(report.store_name, "ladybug_ingestion_adapter")
         self.assertEqual(report.node_count, 2)
         self.assertEqual(report.edge_count, 1)
         self.assertIn("CREATE NODE TABLE KGNode", queries[0])
@@ -262,7 +262,7 @@ class ProductionIngestionTests(unittest.TestCase):
             "batch_retry_policy",
             "dead_letter_queue",
             "dead_letter_replay_tool",
-            "kuzu_ingestion_adapter",
+            "ladybug_ingestion_adapter",
             "neo4j_ingestion_adapter",
         }:
             self.assertEqual(registry.get(name).status, "implemented")

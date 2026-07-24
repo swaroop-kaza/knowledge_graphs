@@ -79,11 +79,11 @@ class DBpediaLinkerConfig(BaseModel):
 
 
 class OpenRefineReconcilerConfig(BaseModel):
-    """Configuration for OpenRefine/W3C reconciliation services."""
+    """Configuration for an OpenRefine Reconciliation API v0.2 service."""
 
     model_config = ConfigDict(extra="forbid")
 
-    endpoint_url: str = "http://localhost:3333/reconcile"
+    endpoint_url: str = "https://wikidata-reconciliation.wmcloud.org/en/api"
     limit: int = Field(default=3, ge=1, le=50)
     type_map: dict[str, str] = Field(default_factory=dict)
     min_confidence: float = Field(default=0.75, ge=0.0, le=1.0)

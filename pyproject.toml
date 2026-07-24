@@ -34,7 +34,11 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+# Every product dependency is required. Platform markers express mutually
+# exclusive mandatory implementations, not optional features: Apple Silicon must
+# install MLX/MLX-LM, while every platform installs the Torch stack.
 dependencies = [
+    # Core contract, parsing, and RDF/SHACL
     "pydantic>=2.7",
     "PyYAML>=6.0",
     "jsonpath-ng>=1.7,<2",
@@ -44,16 +48,41 @@ dependencies = [
     "rapidfuzz>=3.9",
     "rdflib>=7.0",
     "pyshacl>=0.26",
+    "pyld>=2.0,<3",
+    "huggingface-hub>=0.27,<2",
+    "pandas>=2.2,<4",
+    "pyarrow>=17,<24",
+    # Graph stores and analytics
+    "networkx>=3.3,<4",
+    "neo4j>=5.20,<7",
+    "ladybug>=0.16.1,<0.17",
+    "numpy>=1.26,<3",
+    "igraph>=0.11,<2",
+    "leidenalg>=0.10,<1",
+    # Entity/relation extraction models
+    "gliner>=0.2.16,<0.3",
+    "transformers>=4.51.3,<5.7",
+    "torch>=2.2,<3",
+    "spacy>=3.7,<4",
+    "mlx>=0.25,<1; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-lm>=0.22,<1; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    # LLM provider integration
+    "langchain-ollama>=0.2.0,<1",
+    "langchain-core>=0.3.0,<2",
+    "langchain-neo4j>=0.4.0,<1",
+    # Entity linking and deduplication
+    "sentence-transformers>=3.0,<6",
+    "datasketch>=1.6,<3",
+    "splink>=4.0,<5",
+    "dedupe>=3.0,<4",
+    # Graph machine learning
+    "torch-geometric>=2.5,<3",
+    "pykeen>=1.10,<2",
 ]
 
-[project.urls]
-Homepage = "https://github.com/swaroop-kaza/knowledge_graphs"
-Repository = "https://github.com/swaroop-kaza/knowledge_graphs"
-Documentation = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/docs"
-Benchmarks = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/reports"
-Issues = "https://github.com/swaroop-kaza/knowledge_graphs/issues"
-
-[project.optional-dependencies]
+# Tooling groups (PEP 735). All four are part of the default repository hard pass:
+# ``uv sync --frozen`` installs them and certification runs under them.
+[dependency-groups]
 dev = [
     "build>=1.2",
     "mypy>=1.10",
@@ -64,15 +93,21 @@ dev = [
     "vulture>=2.11",
 ]
 notebook = ["jupyter>=1.1", "ipykernel>=6.29", "nbformat>=5.10"]
-gliner = ["gliner>=0.2.16"]
-llm = ["langchain-ollama>=0.2.0", "langchain-core>=0.3.0", "langchain-neo4j>=0.4.0"]
-bert = ["transformers>=4.44", "torch>=2.2"]
-spacy = ["spacy>=3.7"]
-graph = ["networkx>=3.3", "neo4j>=5.20", "numpy>=1.26", "kuzu>=0.11.0"]
-rdf = ["rdflib>=7.0", "pyshacl>=0.26", "pyld>=2.0"]
-linking = ["sentence-transformers>=3.0"]
-dedup = ["datasketch>=1.6", "rapidfuzz>=3.9", "splink>=4.0", "dedupe>=3.0"]
-ml = ["numpy>=1.26", "torch>=2.2", "torch-geometric>=2.5", "pykeen>=1.10", "igraph>=0.11", "leidenalg>=0.10"]
+benchmark = [{ include-group = "dev" }]
+evaluation = [{ include-group = "dev" }]
+all = [
+    { include-group = "dev" },
+    { include-group = "notebook" },
+    { include-group = "benchmark" },
+    { include-group = "evaluation" },
+]
+
+[project.urls]
+Homepage = "https://github.com/swaroop-kaza/knowledge_graphs"
+Repository = "https://github.com/swaroop-kaza/knowledge_graphs"
+Documentation = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/docs"
+Benchmarks = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/reports"
+Issues = "https://github.com/swaroop-kaza/knowledge_graphs/issues"
 
 [project.scripts]
 kg-construction = "kg_construction.interfaces.cli.construct:main"
@@ -83,7 +118,7 @@ kg-construction-replay-deadletters = "kg_construction.interfaces.cli.replay_dead
 where = ["src"]
 
 [tool.setuptools.package-data]
-kg_construction = ["py.typed"]
+kg_construction = ["py.typed", "resources/*.yaml", "resources/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -99,7 +134,7 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 warn_redundant_casts = true
 warn_unused_ignores = true

@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
-from kg_construction.domain.models import ConstructionBatch, EvidenceRef, stable_id
+from kg_construction.domain.models import (
+    ConstructionBatch,
+    EvidenceRef,
+    SourceRecord,
+    stable_id,
+)
 
 
 class EvidenceGraphBuilder:
@@ -26,6 +31,8 @@ class EvidenceGraphBuilder:
                     **source.metadata,
                 },
             )
+        for source in batch.source_records:
+            self._add_source_lineage(nodes, edges, source)
 
         for candidate_id, candidate_type, evidence_items in self._candidate_evidence(batch):
             nodes[candidate_id] = PropertyNode(
@@ -44,6 +51,60 @@ class EvidenceGraphBuilder:
                 "graph_model": "evidence_graph",
                 "node_count": len(nodes),
                 "edge_count": len(edges),
+            },
+        )
+
+    @staticmethod
+    def _add_source_lineage(
+        nodes: dict[str, PropertyNode],
+        edges: dict[str, PropertyEdge],
+        source: SourceRecord,
+    ) -> None:
+        metadata = source.metadata
+        if not isinstance(metadata, dict):
+            return
+        lineage = metadata.get("_source_lineage")
+        if not isinstance(lineage, dict) or lineage.get("relation") != "DERIVED_FROM":
+            return
+        source_id = source.source_id
+        source_type = source.source_type
+        parent_source_id = str(lineage.get("parent_source_id", ""))
+        parent_version = str(lineage.get("parent_document_version", ""))
+        if not source_id or not parent_source_id or not parent_version:
+            return
+
+        nodes.setdefault(
+            parent_source_id,
+            PropertyNode(
+                node_id=parent_source_id,
+                labels=["Source", source_type, "SourceSnapshot"],
+                properties={
+                    "document_version": parent_version,
+                    "source_name": source.source_name,
+                    "provenance_only": True,
+                    "lineage_role": "parent_snapshot",
+                },
+            ),
+        )
+        edge_id = stable_id(
+            "edge",
+            source_id,
+            "DERIVED_FROM",
+            parent_source_id,
+            lineage.get("transformation", ""),
+            lineage.get("transformation_version", ""),
+        )
+        edges[edge_id] = PropertyEdge(
+            edge_id=edge_id,
+            source_id=source_id,
+            target_id=parent_source_id,
+            type="DERIVED_FROM",
+            properties={
+                "parent_document_version": parent_version,
+                "root_source_id": lineage.get("root_source_id"),
+                "root_document_version": lineage.get("root_document_version"),
+                "transformation": lineage.get("transformation"),
+                "transformation_version": lineage.get("transformation_version"),
             },
         )
 

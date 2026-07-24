@@ -1,10 +1,4 @@
-"""The capability manifest must stay complete, honest, and doctrine-consistent.
-
-These checks are the Stage-0 exit gate for the manifest: it covers exactly the
-live registry, every required capability has an executable implementation owner,
-the required/removed split follows the full-release doctrine, and the committed
-file matches a fresh regeneration (so it cannot silently drift).
-"""
+"""The certified manifest contains only mandatory executable capabilities."""
 
 from __future__ import annotations
 
@@ -18,7 +12,12 @@ from kg_construction.application.registry import default_registry
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "capability_manifest.yaml"
+_RESEARCH_INVENTORY = _ROOT / "certification" / "research_inventory.yaml"
 _GENERATOR = _ROOT / "scripts" / "generate_capability_manifest.py"
+_RENAMES = {
+    "kuzu_exporter": "ladybug_exporter",
+    "kuzu_ingestion_adapter": "ladybug_ingestion_adapter",
+}
 
 
 def _load_manifest() -> dict:
@@ -39,44 +38,45 @@ class ManifestCompletenessTests(unittest.TestCase):
         self.registry = default_registry()
         self.techniques = {row["name"]: row for row in self.manifest["techniques"]}
 
-    def test_manifest_covers_exactly_the_registry(self) -> None:
-        self.assertEqual(set(self.techniques), self.registry.names())
-        self.assertEqual(len(self.manifest["techniques"]), len(self.registry.techniques))
+    def test_manifest_covers_exactly_the_executable_registry(self) -> None:
+        executable = {
+            _RENAMES.get(row.name, row.name)
+            for row in self.registry.techniques
+            if row.status != "stub"
+        }
+        self.assertEqual(set(self.techniques), executable)
 
-    def test_every_disposition_is_valid(self) -> None:
+    def test_every_disposition_is_mandatory(self) -> None:
         for row in self.manifest["techniques"]:
-            self.assertIn(row["disposition"], {"required", "removed"}, row["name"])
+            self.assertEqual(row["disposition"], "mandatory", row["name"])
 
-    def test_required_removed_split_follows_doctrine(self) -> None:
-        for descriptor in self.registry.techniques:
-            row = self.techniques[descriptor.name]
-            expected = "removed" if descriptor.status == "stub" else "required"
-            self.assertEqual(
-                row["disposition"],
-                expected,
-                f"{descriptor.name}: status={descriptor.status} must be {expected}",
-            )
-
-    def test_every_required_capability_has_an_owner(self) -> None:
+    def test_no_stub_planned_or_optional_status_enters_certification(self) -> None:
+        forbidden = {"stub", "planned", "optional"}
         for row in self.manifest["techniques"]:
-            if row["disposition"] == "required":
-                self.assertTrue(
-                    row["owner"],
-                    f"required capability {row['name']} has no implementation owner",
-                )
+            self.assertNotIn(str(row["status"]).lower(), forbidden, row["name"])
 
-    def test_removed_set_is_exactly_the_stubs(self) -> None:
-        removed = {row["name"] for row in self.manifest["techniques"] if row["disposition"] == "removed"}
-        stubs = {d.name for d in self.registry.techniques if d.status == "stub"}
-        self.assertEqual(removed, stubs)
+    def test_every_mandatory_capability_has_an_owner(self) -> None:
+        for row in self.manifest["techniques"]:
+            self.assertTrue(row["owner"], f"mandatory capability {row['name']} has no owner")
+
+    def test_research_inventory_is_disjoint_from_the_release(self) -> None:
+        inventory = yaml.safe_load(_RESEARCH_INVENTORY.read_text(encoding="utf-8"))
+        research = {row["name"] for row in inventory["techniques"]}
+        self.assertFalse(research & set(self.techniques))
+        self.assertTrue(all(row["certified"] is False for row in inventory["techniques"]))
+        broad = {
+            _RENAMES.get(row.name, row.name)
+            for row in _load_generator().research_registry().techniques
+        }
+        self.assertEqual(set(self.techniques) | research, broad)
 
     def test_summary_counts_match_rows(self) -> None:
         for section, summary in self.manifest["summary"].items():
             rows = self.manifest[section]
-            required = sum(1 for row in rows if row["disposition"] == "required")
+            mandatory = sum(1 for row in rows if row["disposition"] == "mandatory")
             self.assertEqual(summary["total"], len(rows), section)
-            self.assertEqual(summary["required"], required, section)
-            self.assertEqual(summary["removed"], len(rows) - required, section)
+            self.assertEqual(summary["mandatory"], mandatory, section)
+            self.assertEqual(summary["total"], summary["mandatory"], section)
 
     def test_committed_manifest_matches_regeneration(self) -> None:
         generator = _load_generator()
@@ -87,6 +87,8 @@ class ManifestCompletenessTests(unittest.TestCase):
             committed,
             "capability_manifest.yaml is stale; run scripts/generate_capability_manifest.py",
         )
+        research = yaml.safe_load(_RESEARCH_INVENTORY.read_text(encoding="utf-8"))
+        self.assertEqual(generator.build_research_inventory(), research)
 
 
 if __name__ == "__main__":

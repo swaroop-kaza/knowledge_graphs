@@ -9,9 +9,9 @@ integration_profiles:
       - write_property_graph_with_managed_transaction
       - import_rdf_with_neosemantics_when_enabled
 
-  kuzu_live:
-    enabled_env: KG_RUN_KUZU_INTEGRATION
-    database_path: data/processed/integration/kuzu_graph
+  ladybug_live:
+    enabled_env: KG_RUN_LADYBUG_INTEGRATION
+    database_path: data/processed/integration/ladybug_graph
     tests:
       - write_property_graph
       - bulk_import_large_property_graph

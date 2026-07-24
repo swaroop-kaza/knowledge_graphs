@@ -1,34 +1,33 @@
 {
   "category_counts": {
-    "enrichment": 24,
-    "evaluation": 2,
-    "extractor": 20,
+    "evaluation": 6,
+    "extractor": 17,
     "graph_builder": 3,
-    "graph_store": 8,
-    "hybrid": 8,
+    "graph_store": 9,
+    "hybrid": 1,
     "llm": 1,
-    "loader": 20,
-    "mapper": 25,
+    "loader": 19,
+    "mapper": 21,
     "production": 9,
-    "resolution": 16,
-    "schema": 8,
-    "validation": 9
+    "resolution": 10,
+    "schema": 4,
+    "validation": 5
   },
   "method_type_counts": {
-    "deterministic": 47,
-    "embedding": 8,
-    "evaluation": 3,
-    "human": 7,
-    "hybrid": 1,
-    "llm": 14,
-    "ml": 23,
-    "nlp": 5,
+    "deterministic": 37,
+    "embedding": 2,
+    "evaluation": 6,
+    "human": 5,
+    "hybrid": 5,
+    "llm": 6,
+    "ml": 4,
+    "nlp": 2,
     "observability": 1,
-    "ontology": 13,
+    "ontology": 12,
     "privacy": 1,
     "reproducibility": 1,
     "resilience": 4,
-    "rules": 25
+    "rules": 19
   },
   "report_date": "2026-07-24",
   "report_files": [
@@ -37,331 +36,31 @@
     "reports/current_registry_matrix.csv"
   ],
   "status_counts": {
-    "adapter": 17,
-    "implemented": 107,
-    "stub": 29
+    "implemented": 105
   },
   "support_level_counts": {
-    "experimental": 16,
-    "optional_adapter": 29,
-    "planned": 29,
-    "stable": 79
+    "mandatory": 105,
+    "research": 0,
+    "roadmap": 0
   },
   "support_levels": [
     {
-      "description": "Safe to use now with the documented API and normal test coverage.",
-      "label": "Stable",
-      "level": "stable"
+      "description": "Part of the executable release contract; certification permits no skip or fallback.",
+      "label": "Mandatory",
+      "level": "mandatory"
     },
     {
-      "description": "Works when the required dependency, model, service, or project wiring is configured.",
-      "label": "Optional adapter",
-      "level": "optional_adapter"
+      "description": "Implemented or adapted outside the focused release contract; retained for comparative research.",
+      "label": "Research inventory",
+      "level": "research"
     },
     {
-      "description": "Implemented for research/prototyping, but API, scoring, or model behavior may change.",
-      "label": "Experimental",
-      "level": "experimental"
-    },
-    {
-      "description": "Registered as a roadmap extension point, but not implemented for normal use.",
-      "label": "Planned",
-      "level": "planned"
+      "description": "A non-executable extension point kept outside the release registry.",
+      "label": "Roadmap",
+      "level": "roadmap"
     }
   ],
   "techniques_by_category": {
-    "enrichment": [
-      {
-        "adapter": "GraphAnalyticsEnricher",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "graph_analytics_enricher",
-        "notes": "",
-        "priority": 20,
-        "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "ExternalKGLinkEnricher",
-        "input_types": [],
-        "method_type": "rules",
-        "name": "external_kg_link_enricher",
-        "notes": "",
-        "priority": 28,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "CommunityDetectionEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "community_detection_enricher",
-        "notes": "",
-        "priority": 30,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "ConnectedComponentsEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "connected_components_enricher",
-        "notes": "",
-        "priority": 30,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "PageRankEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "pagerank_enricher",
-        "notes": "",
-        "priority": 30,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "TemporalEventEnricher",
-        "input_types": [],
-        "method_type": "rules",
-        "name": "temporal_event_enricher",
-        "notes": "",
-        "priority": 30,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "GraphTrainValidationSplitter",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "graph_train_validation_splitter",
-        "notes": "",
-        "priority": 34,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "ChunkEmbeddingEnricher",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "chunk_embedding_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "EntityEmbeddingEnricher",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "entity_embedding_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "LinkPredictionEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "jaccard_link_prediction",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "LinkPredictionEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "link_prediction_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "NodeEmbeddingEnricher",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "node_embedding_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "LinkPredictionEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "resource_allocation_link_prediction",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "NodeEmbeddingEnricher",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "spectral_node_embedding_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "NodeEmbeddingEnricher",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "structural_hash_node_embedding_enricher",
-        "notes": "",
-        "priority": 35,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "KnowledgeGraphEmbeddingAdapter",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "knowledge_graph_embedding_adapter",
-        "notes": "",
-        "priority": 36,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "Node2VecEmbeddingAdapter",
-        "input_types": [],
-        "method_type": "embedding",
-        "name": "node2vec_embedding_adapter",
-        "notes": "",
-        "priority": 36,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "LinkPredictionEnricher",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "hybrid_topology_embedding_link_prediction",
-        "notes": "",
-        "priority": 37,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "GraphSageLinkPredictionTrainer",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "graphsage_link_prediction_trainer",
-        "notes": "",
-        "priority": 38,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "PyTorchGeometricGraphSAGEAdapter",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "graphsage_pyg_adapter",
-        "notes": "",
-        "priority": 38,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "LargeGraphAnalyticsBackend",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "large_graph_analytics_backend",
-        "notes": "",
-        "priority": 38,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": []
-      },
-      {
-        "adapter": "GraphRetrievalBenchmark",
-        "input_types": [],
-        "method_type": "evaluation",
-        "name": "graph_retrieval_benchmark",
-        "notes": "",
-        "priority": 39,
-        "status": "implemented",
-        "support_label": "Experimental",
-        "support_level": "experimental",
-        "tags": [
-          "experimental"
-        ]
-      },
-      {
-        "adapter": "CommunitySummaryEnricher",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "community_summary_enricher",
-        "notes": "",
-        "priority": 45,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "EntitySummaryEnricher",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "entity_summary_enricher",
-        "notes": "",
-        "priority": 45,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      }
-    ],
     "evaluation": [
       {
         "adapter": "BenchmarkRunner",
@@ -370,9 +69,31 @@
         "name": "benchmark_runner",
         "notes": "",
         "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "ClaimEvaluationSuite",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "claim_evaluation_suite",
+        "notes": "",
+        "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -382,9 +103,65 @@
         "name": "construction_metrics_evaluator",
         "notes": "",
         "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "IntendedUseMetricsEvaluator",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "intended_use_metrics_evaluator",
+        "notes": "",
+        "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "KnowledgeGraphQualityEvaluator",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "knowledge_graph_quality_evaluator",
+        "notes": "",
+        "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "SchemaQualityEvaluator",
+        "input_types": [],
+        "method_type": "evaluation",
+        "name": "schema_quality_evaluator",
+        "notes": "",
+        "priority": 60,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -398,9 +175,14 @@
         "name": "gazetteer_entity_extractor",
         "notes": "",
         "priority": 20,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -412,9 +194,14 @@
         "name": "regex_entity_extractor",
         "notes": "",
         "priority": 20,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -426,55 +213,37 @@
         "name": "dependency_pattern_relation_extractor",
         "notes": "",
         "priority": 22,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "SpacyEntityRulerExtractor",
+        "adapter": "UnstructuredPipeline",
         "input_types": [
           "text"
         ],
-        "method_type": "rules",
-        "name": "spacy_entity_ruler_extractor",
+        "method_type": "hybrid",
+        "name": "evidence_first_unstructured_pipeline",
         "notes": "",
-        "priority": 22,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "PosTaggingAdapter",
-        "input_types": [
-          "text"
+        "priority": 24,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
         ],
-        "method_type": "nlp",
-        "name": "pos_tagging_adapter",
-        "notes": "",
-        "priority": 25,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "SentenceSplitterAdapter",
-        "input_types": [
-          "text"
-        ],
-        "method_type": "nlp",
-        "name": "sentence_splitter_adapter",
-        "notes": "",
-        "priority": 25,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "SpacyNerExtractor",
+        "adapter": "SpacyMentionDetector",
         "input_types": [
           "text"
         ],
@@ -482,23 +251,14 @@
         "name": "spacy_ner_extractor",
         "notes": "",
         "priority": 25,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "CoreferenceAdapter",
-        "input_types": [
-          "text"
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
         ],
-        "method_type": "nlp",
-        "name": "coreference_adapter",
-        "notes": "",
-        "priority": 26,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -510,13 +270,18 @@
         "name": "openie_relation_extractor",
         "notes": "",
         "priority": 28,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "GlinerEntityExtractor",
+        "adapter": "GlinerMentionDetector",
         "input_types": [
           "text"
         ],
@@ -524,15 +289,18 @@
         "name": "gliner_entity_extractor",
         "notes": "",
         "priority": 30,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       },
       {
-        "adapter": "TransformerNerExtractor",
+        "adapter": "TransformersMentionDetector",
         "input_types": [
           "text"
         ],
@@ -540,79 +308,146 @@
         "name": "transformer_ner_extractor",
         "notes": "",
         "priority": 30,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "JointEntityRelationExtractor",
+        "adapter": "GlinerRelExClaimExtractor",
         "input_types": [
           "text"
         ],
         "method_type": "ml",
-        "name": "joint_entity_relation_extractor",
+        "name": "gliner_relex_claim_extractor",
         "notes": "",
-        "priority": 32,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "priority": 31,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "PairwiseRelationClassifierAdapter",
+        "adapter": "MlxQwenClaimExtractor",
         "input_types": [
           "text"
         ],
-        "method_type": "ml",
-        "name": "pairwise_relation_classifier_adapter",
+        "method_type": "llm",
+        "name": "mlx_qwen_claim_extractor",
         "notes": "",
         "priority": 32,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "profiles": [
+          "darwin-arm64"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "RebelRelationExtractor",
+        "adapter": "OllamaQwenClaimExtractor",
         "input_types": [
           "text"
         ],
-        "method_type": "ml",
-        "name": "rebel_relation_extractor",
+        "method_type": "llm",
+        "name": "ollama_qwen_claim_extractor",
         "notes": "",
         "priority": 32,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "SupervisedRelationExtractor",
+        "adapter": "TransformersQwenClaimExtractor",
         "input_types": [
           "text"
         ],
-        "method_type": "ml",
-        "name": "supervised_relation_extractor",
+        "method_type": "llm",
+        "name": "transformers_qwen_claim_extractor",
         "notes": "",
         "priority": 32,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "TransformerRelationExtractor",
+        "adapter": "MandatoryClaimEnsemble",
         "input_types": [
           "text"
         ],
-        "method_type": "ml",
-        "name": "transformer_relation_extractor",
+        "method_type": "hybrid",
+        "name": "mandatory_claim_ensemble",
         "notes": "",
-        "priority": 32,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "priority": 33,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "MandatoryMentionEnsemble",
+        "input_types": [
+          "text"
+        ],
+        "method_type": "hybrid",
+        "name": "mandatory_mention_ensemble",
+        "notes": "",
+        "priority": 33,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "MandatoryUnstructuredRuntime",
+        "input_types": [
+          "text",
+          "html"
+        ],
+        "method_type": "hybrid",
+        "name": "mandatory_composed_unstructured_runtime",
+        "notes": "Single governed release path: every locked extractor and identity/linking provider participates, NIL stays observed, claims pass ontology/SHACL, and versioned held-out metrics gate publication.",
+        "priority": 34,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -624,12 +459,15 @@
         "name": "gliner_ollama_relation_typing_extractor",
         "notes": "",
         "priority": 40,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       },
       {
         "adapter": "OllamaGraphExtractor",
@@ -640,39 +478,14 @@
         "name": "ollama_graph_extractor",
         "notes": "",
         "priority": 40,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
-      },
-      {
-        "adapter": "OllamaGraphExtractor",
-        "input_types": [
-          "text"
-        ],
-        "method_type": "llm",
-        "name": "ollama_schema_guided_extraction",
-        "notes": "",
-        "priority": 40,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "OllamaGraphExtractor",
-        "input_types": [
-          "text"
-        ],
-        "method_type": "llm",
-        "name": "ollama_schema_later_extraction",
-        "notes": "",
-        "priority": 42,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -684,9 +497,14 @@
         "name": "evidence_graph_builder",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -696,9 +514,14 @@
         "name": "property_graph_builder",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -708,23 +531,33 @@
         "name": "rdf_graph_builder",
         "notes": "",
         "priority": 15,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
     "graph_store": [
       {
-        "adapter": "KuzuExporter",
+        "adapter": "LadybugExporter",
         "input_types": [],
         "method_type": "deterministic",
-        "name": "kuzu_exporter",
+        "name": "ladybug_exporter",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -734,9 +567,14 @@
         "name": "memgraph_exporter",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -746,9 +584,14 @@
         "name": "neo4j_exporter",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -758,9 +601,14 @@
         "name": "networkx_exporter",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -770,9 +618,14 @@
         "name": "rdf_exporter",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -782,24 +635,32 @@
         "name": "rdflib_exporter",
         "notes": "",
         "priority": 12,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
-        "adapter": "KuzuIngestionAdapter",
+        "adapter": "LadybugIngestionAdapter",
         "input_types": [],
         "method_type": "deterministic",
-        "name": "kuzu_ingestion_adapter",
+        "name": "ladybug_ingestion_adapter",
         "notes": "",
         "priority": 14,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       },
       {
         "adapter": "Neo4jIngestionAdapter",
@@ -808,65 +669,35 @@
         "name": "neo4j_ingestion_adapter",
         "notes": "",
         "priority": 14,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
+      },
+      {
+        "adapter": "Neo4jVectorStoreAdapter",
+        "input_types": [],
+        "method_type": "embedding",
+        "name": "neo4j_vector_store_adapter",
+        "notes": "Fixed-dimension Neo4j vector index with validated transactional upserts and parameterized equality-filtered ANN search.",
+        "priority": 14,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       }
     ],
     "hybrid": [
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "hybrid_structured_then_text",
-        "notes": "",
-        "priority": 18,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [
-          "text"
-        ],
-        "method_type": "rules",
-        "name": "hybrid_rules_gazetteer_regex",
-        "notes": "",
-        "priority": 22,
-        "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "hybrid_rules_ml_ollama",
-        "notes": "",
-        "priority": 35,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "hybrid_deterministic_then_llm_enrichment",
-        "notes": "",
-        "priority": 38,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
       {
         "adapter": "GlinerOllamaRelationTypingExtractor",
         "input_types": [
@@ -876,47 +707,14 @@
         "name": "hybrid_gliner_then_ollama_relations",
         "notes": "",
         "priority": 38,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "hybrid_ollama_schema_then_gliner",
-        "notes": "",
-        "priority": 38,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "hybrid_openie_then_ollama_canonicalization",
-        "notes": "",
-        "priority": 38,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "human",
-        "name": "hybrid_human_reviewed_schema",
-        "notes": "",
-        "priority": 50,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -928,12 +726,15 @@
         "name": "ollama_provider",
         "notes": "",
         "priority": 40,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       }
     ],
     "loader": [
@@ -946,9 +747,14 @@
         "name": "csv_loader",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -960,9 +766,14 @@
         "name": "json_loader",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -974,9 +785,14 @@
         "name": "markdown_loader",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -989,9 +805,14 @@
         "name": "text_loader",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1003,23 +824,14 @@
         "name": "api_response_loader",
         "notes": "",
         "priority": 12,
-        "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "DataWarehouseExportLoader",
-        "input_types": [
-          "warehouse"
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
         ],
-        "method_type": "deterministic",
-        "name": "data_warehouse_export_loader",
-        "notes": "",
-        "priority": 12,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1031,9 +843,14 @@
         "name": "event_payload_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1045,9 +862,14 @@
         "name": "excel_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1059,9 +881,14 @@
         "name": "jsonld_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1073,9 +900,14 @@
         "name": "log_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1088,9 +920,14 @@
         "name": "sql_database_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1102,9 +939,14 @@
         "name": "xml_loader",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1116,9 +958,14 @@
         "name": "structured_api_loader",
         "notes": "",
         "priority": 14,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1130,9 +977,14 @@
         "name": "html_loader",
         "notes": "",
         "priority": 16,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1144,9 +996,14 @@
         "name": "chat_transcript_loader",
         "notes": "",
         "priority": 18,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1158,9 +1015,14 @@
         "name": "email_loader",
         "notes": "",
         "priority": 18,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1172,9 +1034,14 @@
         "name": "pdf_loader",
         "notes": "",
         "priority": 18,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1186,9 +1053,14 @@
         "name": "report_loader",
         "notes": "",
         "priority": 18,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1200,9 +1072,14 @@
         "name": "webpage_loader",
         "notes": "",
         "priority": 18,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1214,9 +1091,14 @@
         "name": "scientific_paper_loader",
         "notes": "",
         "priority": 20,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -1232,9 +1114,14 @@
         "name": "semantic_column_profiler",
         "notes": "",
         "priority": 9,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1248,9 +1135,14 @@
         "name": "semantic_table_mapper",
         "notes": "",
         "priority": 9,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1264,9 +1156,14 @@
         "name": "source_catalog",
         "notes": "",
         "priority": 9,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1276,9 +1173,14 @@
         "name": "column_to_property_mapping",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1288,9 +1190,14 @@
         "name": "column_type_inference",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1304,9 +1211,14 @@
         "name": "direct_table_mapper",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1316,9 +1228,14 @@
         "name": "foreign_key_to_edge_mapping",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1328,9 +1245,14 @@
         "name": "primary_key_to_id_mapping",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1340,9 +1262,14 @@
         "name": "row_to_entity_mapping",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1352,9 +1279,14 @@
         "name": "schema_profiling",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1364,23 +1296,14 @@
         "name": "table_to_node_mapping",
         "notes": "",
         "priority": 10,
-        "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "APIResponseMapper",
-        "input_types": [
-          "api_response"
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
         ],
-        "method_type": "deterministic",
-        "name": "api_response_mapper",
-        "notes": "",
-        "priority": 12,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1392,9 +1315,14 @@
         "name": "csvw_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1407,9 +1335,14 @@
         "name": "event_graph_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1421,9 +1354,14 @@
         "name": "jsonld_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1435,9 +1373,14 @@
         "name": "jsonpath_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1449,9 +1392,14 @@
         "name": "log_event_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1463,9 +1411,14 @@
         "name": "r2rml_mapper",
         "notes": "",
         "priority": 12,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1479,23 +1432,14 @@
         "name": "rml_mapper",
         "notes": "",
         "priority": 12,
-        "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "XMLPathMapper",
-        "input_types": [
-          "xml"
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
         ],
-        "method_type": "deterministic",
-        "name": "xmlpath_mapper",
-        "notes": "",
-        "priority": 12,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "status": "implemented",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1507,21 +1451,14 @@
         "name": "dotted_path_json_mapper",
         "notes": "",
         "priority": 13,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "incremental_watermark_sync",
-        "notes": "",
-        "priority": 14,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1533,21 +1470,14 @@
         "name": "obda_virtual_graph_mapper",
         "notes": "",
         "priority": 14,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "DirectTableMapper",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "relationship_inference_from_keys",
-        "notes": "",
-        "priority": 14,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1560,9 +1490,14 @@
         "name": "html_metadata_mapper",
         "notes": "",
         "priority": 16,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -1574,9 +1509,14 @@
         "name": "run_manifest_writer",
         "notes": "",
         "priority": 5,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1586,9 +1526,14 @@
         "name": "structured_logging",
         "notes": "",
         "priority": 5,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1598,9 +1543,14 @@
         "name": "batch_retry_policy",
         "notes": "",
         "priority": 6,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1610,9 +1560,14 @@
         "name": "dead_letter_queue",
         "notes": "",
         "priority": 6,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1622,9 +1577,14 @@
         "name": "pii_redaction_policy",
         "notes": "",
         "priority": 6,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1634,9 +1594,14 @@
         "name": "dead_letter_replay_tool",
         "notes": "",
         "priority": 7,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1646,9 +1611,14 @@
         "name": "error_quarantine",
         "notes": "",
         "priority": 8,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1658,9 +1628,14 @@
         "name": "incremental_sync_policy",
         "notes": "",
         "priority": 8,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1670,9 +1645,14 @@
         "name": "watermark_store",
         "notes": "",
         "priority": 8,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -1684,9 +1664,14 @@
         "name": "exact_key_entity_resolver",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1696,9 +1681,14 @@
         "name": "alias_table_resolver",
         "notes": "",
         "priority": 20,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1708,9 +1698,14 @@
         "name": "normalized_string_resolver",
         "notes": "",
         "priority": 20,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1720,9 +1715,14 @@
         "name": "fuzzy_string_resolver",
         "notes": "",
         "priority": 22,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1732,21 +1732,14 @@
         "name": "rapidfuzz_resolver",
         "notes": "",
         "priority": 22,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "BlockingResolver",
-        "input_types": [],
-        "method_type": "rules",
-        "name": "blocking_resolver",
-        "notes": "",
-        "priority": 24,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1756,12 +1749,15 @@
         "name": "dbpedia_linker",
         "notes": "",
         "priority": 28,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       },
       {
         "adapter": "WikidataLinker",
@@ -1770,47 +1766,14 @@
         "name": "wikidata_linker",
         "notes": "",
         "priority": 28,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
-      },
-      {
-        "adapter": "SplinkProbabilisticResolver",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "probabilistic_linkage_resolver",
-        "notes": "",
-        "priority": 30,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "SplinkProbabilisticResolver",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "splink_probabilistic_resolver",
-        "notes": "",
-        "priority": 30,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "DedupeActiveLearningResolver",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "dedupe_active_learning_resolver",
-        "notes": "",
-        "priority": 32,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1820,12 +1783,15 @@
         "name": "embedding_resolver",
         "notes": "",
         "priority": 35,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       },
       {
         "adapter": "CrossEncoderResolver",
@@ -1834,35 +1800,14 @@
         "name": "cross_encoder_resolver",
         "notes": "",
         "priority": 36,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
-      },
-      {
-        "adapter": "GraphNeighborhoodResolver",
-        "input_types": [],
-        "method_type": "ml",
-        "name": "graph_neighborhood_resolver",
-        "notes": "",
-        "priority": 36,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "HumanReviewResolver",
-        "input_types": [],
-        "method_type": "human",
-        "name": "human_review_resolver",
-        "notes": "",
-        "priority": 50,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1872,12 +1817,15 @@
         "name": "openrefine_reconciler",
         "notes": "",
         "priority": 50,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": [
-          "optional_adapter"
-        ]
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
+        "tags": []
       }
     ],
     "schema": [
@@ -1888,57 +1836,14 @@
         "name": "in_memory_schema_registry",
         "notes": "",
         "priority": 15,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "OwlOntologyLoader",
-        "input_types": [],
-        "method_type": "ontology",
-        "name": "owl_ontology_loader",
-        "notes": "",
-        "priority": 16,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "SchemaProposalWorkflow",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "ollama_entity_label_proposal",
-        "notes": "",
-        "priority": 45,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "SchemaProposalWorkflow",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "ollama_ontology_proposal",
-        "notes": "",
-        "priority": 45,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "SchemaProposalWorkflow",
-        "input_types": [],
-        "method_type": "llm",
-        "name": "ollama_relationship_type_proposal",
-        "notes": "",
-        "priority": 45,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1948,9 +1853,14 @@
         "name": "schema_promotion_workflow",
         "notes": "",
         "priority": 50,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1960,9 +1870,14 @@
         "name": "schema_proposal_workflow",
         "notes": "",
         "priority": 50,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -1972,9 +1887,14 @@
         "name": "schema_quarantine_namespace",
         "notes": "",
         "priority": 50,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ],
@@ -1986,21 +1906,14 @@
         "name": "evidence_required_validator",
         "notes": "",
         "priority": 10,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "JSONSchemaValidator",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "json_schema_validator",
-        "notes": "",
-        "priority": 12,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -2010,9 +1923,14 @@
         "name": "confidence_threshold_validator",
         "notes": "",
         "priority": 15,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -2022,45 +1940,14 @@
         "name": "schema_registry_validator",
         "notes": "",
         "priority": 15,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
-        "tags": []
-      },
-      {
-        "adapter": "EvidenceRequiredValidator",
-        "input_types": [],
-        "method_type": "rules",
-        "name": "hallucination_filter",
-        "notes": "",
-        "priority": 16,
-        "status": "adapter",
-        "support_label": "Optional adapter",
-        "support_level": "optional_adapter",
-        "tags": []
-      },
-      {
-        "adapter": "PropertyGraphValidator",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "property_graph_validator",
-        "notes": "",
-        "priority": 16,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
-        "tags": []
-      },
-      {
-        "adapter": "SchemaDriftValidator",
-        "input_types": [],
-        "method_type": "deterministic",
-        "name": "schema_drift_validator",
-        "notes": "",
-        "priority": 16,
-        "status": "stub",
-        "support_label": "Planned",
-        "support_level": "planned",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -2070,9 +1957,14 @@
         "name": "shacl_validator",
         "notes": "",
         "priority": 16,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       },
       {
@@ -2082,12 +1974,17 @@
         "name": "human_review_queue",
         "notes": "",
         "priority": 50,
+        "profiles": [
+          "darwin-arm64",
+          "linux-cpu",
+          "linux-cuda"
+        ],
         "status": "implemented",
-        "support_label": "Stable",
-        "support_level": "stable",
+        "support_label": "Mandatory",
+        "support_level": "mandatory",
         "tags": []
       }
     ]
   },
-  "total_registered_techniques": 153
+  "total_registered_techniques": 105
 }

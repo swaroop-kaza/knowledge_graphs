@@ -35,6 +35,12 @@ from kg_construction.infrastructure.resolution.linking import (
     WikidataLinker,
     WikidataLinkerConfig,
 )
+from kg_construction.infrastructure.resolution.mandatory_ensemble import (
+    ExternalIdentityDecision,
+    ExternalIdentityPromotionPolicy,
+    GovernedExternalIdentityPromoter,
+    MandatoryScopedResolutionEnsemble,
+)
 from kg_construction.infrastructure.resolution.stubs import (
     BlockingResolver,
     GraphNeighborhoodResolver,
@@ -61,10 +67,14 @@ __all__ = [
     "EmbeddingModelProtocol",
     "EmbeddingResolver",
     "EmbeddingResolverConfig",
+    "ExternalIdentityDecision",
+    "ExternalIdentityPromotionPolicy",
     "ExactKeyEntityResolver",
     "FuzzyStringResolver",
     "GraphNeighborhoodResolver",
+    "GovernedExternalIdentityPromoter",
     "HumanReviewResolver",
+    "MandatoryScopedResolutionEnsemble",
     "NormalizedStringResolver",
     "NormalizedStringResolverConfig",
     "OpenRefineReconciler",

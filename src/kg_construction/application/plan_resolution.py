@@ -55,6 +55,10 @@ _ROLE_DATATYPE: dict[ColumnRole, JsonType] = {
 def _datatype(assignment: ColumnRoleAssignment) -> JsonType:
     if assignment.datatype is not None:
         return assignment.datatype
+    # Identifiers are lexical unless an authoritative declaration explicitly
+    # types them otherwise.  This preserves significant leading zeros.
+    if assignment.role is ColumnRole.IDENTIFIER:
+        return "string"
     inferred = _DTYPE_JSON.get(assignment.features.dtype)
     if inferred is not None:
         return inferred
@@ -139,7 +143,7 @@ def resolve_modeling_plan(
             # A categorical dimension promoted to a shared node: a governed concept.
             reference_type = assignment.reference_type or column
             target = reference_type
-            canonicalization = CanonicalizationRule()
+            canonicalization = CanonicalizationRule(casefold=True)
             classes.setdefault(
                 reference_type,
                 ResolvedClass(
@@ -164,8 +168,9 @@ def resolve_modeling_plan(
             # A foreign key to a business entity.
             reference_type = assignment.reference_type or column
             target = reference_type
+            datatype = _datatype(assignment)
             identity_role = IdentityRole.FOREIGN
-            canonicalization = CanonicalizationRule()
+            canonicalization = CanonicalizationRule(casefold=True)
             is_self_reference = reference_type == record
             if not is_self_reference:
                 classes.setdefault(
@@ -195,6 +200,8 @@ def resolve_modeling_plan(
                     source_class=record,
                     target_class=reference_type,
                     target_key=target_key,
+                    target_source_name=source_name if is_self_reference else None,
+                    target_identity_scope=identity_scope,
                     relationship_name=relationship_name,
                     cardinality=_cardinality(null_rate),
                     on_missing=OnMissingTarget.SKIP,

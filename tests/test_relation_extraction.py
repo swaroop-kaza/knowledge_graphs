@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from kg_construction.application.registry import default_registry
+from kg_construction.application.registry import default_registry, research_registry
 from kg_construction.domain.models import SourceRecord
 from kg_construction.infrastructure.extractors.relations import (
     DependencyPatternRelationExtractor,
@@ -166,8 +166,15 @@ class RelationExtractionTests(unittest.TestCase):
         self.assertEqual(registry.get("openie_relation_extractor").status, "implemented")
         self.assertEqual(registry.get("dependency_pattern_relation_extractor").status, "implemented")
         self.assertEqual(registry.get("gliner_ollama_relation_typing_extractor").status, "implemented")
-        self.assertEqual(registry.get("rebel_relation_extractor").status, "adapter")
-        self.assertEqual(registry.get("transformer_relation_extractor").status, "adapter")
+        self.assertEqual(registry.get("evidence_first_unstructured_pipeline").status, "implemented")
+        self.assertNotIn("transformer_relation_extractor", registry.names())
+        self.assertEqual(
+            research_registry().get("transformer_relation_extractor").status,
+            "adapter",
+        )
+        # REBEL is removed from the product registry: its common model is non-commercial.
+        with self.assertRaises(KeyError):
+            registry.get("rebel_relation_extractor")
 
 
 if __name__ == "__main__":

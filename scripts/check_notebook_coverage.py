@@ -1,4 +1,4 @@
-"""Check that implemented registry techniques have notebook coverage."""
+"""Check release coverage while allowing documented research techniques."""
 
 from __future__ import annotations
 
@@ -14,7 +14,10 @@ COVERAGE_PATH = NOTEBOOK_DIR / "capability_coverage.yaml"
 
 sys.path.insert(0, str(ROOT / "src"))
 
-from kg_construction.application.registry import default_registry  # noqa: E402
+from kg_construction.application.registry import (  # noqa: E402
+    default_registry,
+    research_registry,
+)
 
 REQUIRED_STATUSES = {"implemented", "adapter"}
 
@@ -58,11 +61,14 @@ def main() -> int:
         failures.append("extension_points must be a mapping of notebook filename to technique names.")
         extension_points = {}
 
-    registry = default_registry()
-    by_name = {technique.name: technique for technique in registry.techniques}
+    release_registry = default_registry()
+    inventory_registry = research_registry()
+    by_name = {
+        technique.name: technique for technique in inventory_registry.techniques
+    }
     required = {
         technique.name
-        for technique in registry.techniques
+        for technique in release_registry.techniques
         if technique.status in REQUIRED_STATUSES
     }
 
@@ -108,7 +114,9 @@ def main() -> int:
         )
 
     undocumented_stubs = {
-        technique.name for technique in registry.techniques if technique.status == "stub"
+        technique.name
+        for technique in inventory_registry.techniques
+        if technique.status == "stub"
     } - documented_extension_points
     if undocumented_stubs:
         failures.append(

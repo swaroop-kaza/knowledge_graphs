@@ -13,7 +13,7 @@ from kg_construction.application.hybrid_gliner import (
     extract_entities_with_ollama_labels_and_gliner,
 )
 from kg_construction.application.planner import TechniquePlanner
-from kg_construction.application.registry import default_registry
+from kg_construction.application.registry import default_registry, research_registry
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
@@ -901,7 +901,6 @@ class DataToKGConstructionTests(unittest.TestCase):
             "graph_builder",
             "graph_store",
             "llm",
-            "enrichment",
             "evaluation",
             "hybrid",
         }
@@ -921,7 +920,7 @@ class DataToKGConstructionTests(unittest.TestCase):
             "gazetteer_entity_extractor",
             "gliner_entity_extractor",
             "openie_relation_extractor",
-            "rebel_relation_extractor",
+            "evidence_first_unstructured_pipeline",
             "ollama_graph_extractor",
             "exact_key_entity_resolver",
             "embedding_resolver",
@@ -942,7 +941,7 @@ class DataToKGConstructionTests(unittest.TestCase):
         self.assertTrue(required_names <= registry.names())
 
     def test_planner_prefers_deterministic_before_llm_and_human_review(self) -> None:
-        registry = default_registry()
+        registry = research_registry()
         planned = TechniquePlanner().plan(
             [
                 registry.get("human_review_resolver"),
@@ -961,23 +960,21 @@ class DataToKGConstructionTests(unittest.TestCase):
         self.assertEqual(config.llm.provider, "ollama")
         self.assertIn("csv", config.enabled_techniques()["loaders"])
 
-    def test_cli_constructs_sample_text_graph(self) -> None:
+    def test_cli_refuses_to_construct_without_a_sealed_evaluation_suite(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output = Path(tmpdir) / "graph.json"
-            code = construct_main(
-                [
-                    "--input",
-                    "examples/data_to_kg/sample.txt",
-                    "--source-type",
-                    "text",
-                    "--output",
-                    str(output),
-                ]
-            )
-            payload = json.loads(output.read_text(encoding="utf-8"))
-
-        self.assertEqual(code, 0)
-        self.assertGreater(len(payload["nodes"]), 0)
+            with self.assertRaises(SystemExit):
+                construct_main(
+                    [
+                        "--input",
+                        "examples/data_to_kg/sample.txt",
+                        "--source-type",
+                        "text",
+                        "--output",
+                        str(output),
+                    ]
+                )
+            self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

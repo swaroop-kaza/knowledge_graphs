@@ -8,8 +8,8 @@ import os
 from pathlib import Path
 
 from kg_construction.infrastructure.graph_stores import (
-    KuzuIngestionAdapter,
-    KuzuIngestionConfig,
+    LadybugIngestionAdapter,
+    LadybugIngestionConfig,
     Neo4jIngestionAdapter,
     Neo4jIngestionConfig,
 )
@@ -20,14 +20,21 @@ from kg_construction.infrastructure.production.dead_letter import DeadLetterWrit
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Replay pending graph ingestion dead letters.")
     parser.add_argument("--dead-letter-path", required=True, help="Path to dead-letter JSONL file.")
-    parser.add_argument("--store", required=True, choices=["neo4j_ingestion_adapter", "kuzu_ingestion_adapter"])
+    parser.add_argument(
+        "--store",
+        required=True,
+        choices=["neo4j_ingestion_adapter", "ladybug_ingestion_adapter"],
+    )
     parser.add_argument("--limit", type=int, default=None, help="Maximum pending records to replay.")
     parser.add_argument("--dry-run", action="store_true", help="Inspect replay candidates without writing.")
     parser.add_argument("--neo4j-uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7687"))
     parser.add_argument("--neo4j-user", default=os.getenv("NEO4J_USER"))
     parser.add_argument("--neo4j-password", default=os.getenv("NEO4J_PASSWORD"))
     parser.add_argument("--neo4j-database", default=os.getenv("NEO4J_DATABASE"))
-    parser.add_argument("--kuzu-database", default="data/processed/kuzu_graph")
+    parser.add_argument(
+        "--ladybug-database",
+        default="data/processed/ladybug_graph",
+    )
     return parser
 
 
@@ -46,8 +53,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         else:
-            writers[args.store] = KuzuIngestionAdapter(
-                KuzuIngestionConfig(database_path=args.kuzu_database)
+            writers[args.store] = LadybugIngestionAdapter(
+                LadybugIngestionConfig(database_path=args.ladybug_database)
             )
 
     report = DeadLetterReplayTool(queue).replay(

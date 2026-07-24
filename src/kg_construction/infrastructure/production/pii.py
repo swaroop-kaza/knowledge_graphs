@@ -24,6 +24,7 @@ class PIIRedactionPolicy(BaseModel):
     redact_ssn: bool = True
     redact_ip_addresses: bool = True
     redact_api_keys: bool = True
+    transformation_version: str = "pii-redaction-v1"
 
     def redact_text(self, text: str) -> str:
         """Redact configured sensitive patterns from text."""
@@ -79,9 +80,16 @@ class PIIRedactionPolicy(BaseModel):
         return {key: self.redact_value(value) for key, value in payload.items()}
 
     def redact_source_record(self, source: SourceRecord) -> SourceRecord:
-        """Return a source record with content, rows, and metadata redacted."""
+        """Return a redacted snapshot without reusing a mutated source version."""
 
         metadata = self.redact_mapping(source.metadata)
+        redacted_content = (
+            self.redact_text(source.content) if source.content is not None else None
+        )
+        redacted_records = [self.redact_mapping(row) for row in source.records]
+        snapshot_mutated = (
+            redacted_content != source.content or redacted_records != source.records
+        )
         if self.enabled:
             # Mappers use this marker to avoid treating a shared replacement
             # value as an authoritative key. It contains no original PII.
@@ -89,11 +97,21 @@ class PIIRedactionPolicy(BaseModel):
                 "applied": True,
                 "replacement": self.replacement,
                 "identity_policy": "redacted_keys_require_row_scoped_fallback",
+                "snapshot_mutated": snapshot_mutated,
+                "transformation_version": self.transformation_version,
             }
+        if snapshot_mutated:
+            return source.derive_snapshot(
+                content=redacted_content,
+                records=redacted_records,
+                metadata=metadata,
+                transformation="pii_redaction",
+                transformation_version=self.transformation_version,
+            )
         return source.model_copy(
             update={
-                "content": self.redact_text(source.content) if source.content is not None else None,
-                "records": [self.redact_mapping(row) for row in source.records],
+                "content": redacted_content,
+                "records": redacted_records,
                 "metadata": metadata,
             }
         )

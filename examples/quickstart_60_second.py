@@ -1,8 +1,4 @@
-"""60-second local quickstart for data scientists.
-
-This example uses only the core package install. It does not call live Neo4j,
-Ollama, GLiNER, Kuzu, or graph ML backends.
-"""
+"""Mandatory-profile quickstart for data scientists."""
 
 from __future__ import annotations
 
@@ -10,29 +6,48 @@ import json
 from typing import Any
 
 from kg_construction import construct_kg, evaluate_techniques, profile_dataset
-from kg_construction.infrastructure.graph_stores import Neo4jExporter, NetworkXExporter, RDFExporter
+from kg_construction.infrastructure.graph_stores import (
+    Neo4jExporter,
+    NetworkXExporter,
+    RDFExporter,
+)
 
 
-def _counts(result: Any) -> dict[str, int]:
+def _counts(result: Any) -> dict[str, Any]:
     return {
         "entities": len(result.batch.entities),
         "relations": len(result.batch.relations),
         "property_nodes": len(result.property_graph.nodes),
         "property_edges": len(result.property_graph.edges),
         "rdf_triples": len(result.rdf_graph.triples),
+        "formation_quality_passed": result.quality_report.passed,
+        "executed_quality_families": result.quality_report.executed_families,
+        "missing_quality_families": result.quality_report.missing_families,
+        "intended_use_passed": result.intended_use_report.passed,
+        "missing_intended_uses": result.intended_use_report.missing_uses,
+        "publication_passed": result.publication_gate.passed,
     }
 
 
 def run_quickstart() -> dict[str, Any]:
-    """Run CSV, text, JSON, benchmark, and export examples."""
+    """Run strict structured/unstructured publication, benchmark, and exports."""
 
     csv_path = "examples/data_to_kg/sample.csv"
     text_path = "examples/data_to_kg/sample.txt"
-    json_path = "examples/data_to_kg/sample.json"
+    config_path = "configs/data_to_kg_complete.example.yaml"
 
-    csv_result = construct_kg(csv_path)
-    text_result = construct_kg(text_path, source_type="text")
-    json_result = construct_kg(json_path, source_type="json")
+    csv_result = construct_kg(
+        csv_path,
+        source_type="csv",
+        config=config_path,
+        evaluation_suite_path="configs/graph_evaluation_suite.sample_csv.yaml",
+    )
+    text_result = construct_kg(
+        text_path,
+        source_type="text",
+        config=config_path,
+        evaluation_suite_path="configs/graph_evaluation_suite.sample_text.yaml",
+    )
 
     benchmark = evaluate_techniques(
         text_path,
@@ -48,7 +63,6 @@ def run_quickstart() -> dict[str, Any]:
         "csv_profile": profile_dataset(csv_path).model_dump(mode="json"),
         "csv_to_kg": _counts(csv_result),
         "text_to_kg": _counts(text_result),
-        "json_to_kg": _counts(json_result),
         "best_benchmark_technique": benchmark.best_technique,
         "export_preview": {
             "rdf_turtle_lines": len(rdf_payload["turtle"].splitlines()),

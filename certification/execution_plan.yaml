@@ -1,0 +1,126 @@
+# Executable semantic certification contracts.
+#
+# Every mandatory release capability is dispatched in its own fresh process.
+# The command imports and instantiates the owner named by capability_manifest,
+# executes a real fixture behavior, computes a non-empty semantic metric, and
+# writes nonce-bound evidence to KG_CERT_EVIDENCE_PATH.  The certifier has no
+# final-run fake/stub transport switch: model, linker, Ollama, Neo4j, Memgraph,
+# and Ladybug scenarios contact their real configured backends.
+version: 2
+
+x-semantic-certifier: &semantic-certifier
+  profiles: [darwin-arm64, linux-cpu, linux-cuda]
+  command: [.venv/bin/python, scripts/certify_capability.py]
+  timeout_seconds: 900
+
+x-darwin-semantic-certifier: &darwin-semantic-certifier
+  profiles: [darwin-arm64]
+  command: [.venv/bin/python, scripts/certify_capability.py]
+  timeout_seconds: 900
+
+capabilities:
+  alias_table_resolver: *semantic-certifier
+  api_response_loader: *semantic-certifier
+  batch_retry_policy: *semantic-certifier
+  benchmark_runner: *semantic-certifier
+  chat_transcript_loader: *semantic-certifier
+  claim_evaluation_suite: *semantic-certifier
+  column_to_property_mapping: *semantic-certifier
+  column_type_inference: *semantic-certifier
+  confidence_threshold_validator: *semantic-certifier
+  construction_metrics_evaluator: *semantic-certifier
+  cross_encoder_resolver: *semantic-certifier
+  csv_loader: *semantic-certifier
+  csvw_mapper: *semantic-certifier
+  dbpedia_linker: *semantic-certifier
+  dead_letter_queue: *semantic-certifier
+  dead_letter_replay_tool: *semantic-certifier
+  dependency_pattern_relation_extractor: *semantic-certifier
+  direct_table_mapper: *semantic-certifier
+  dotted_path_json_mapper: *semantic-certifier
+  email_loader: *semantic-certifier
+  embedding_resolver: *semantic-certifier
+  error_quarantine: *semantic-certifier
+  event_graph_mapper: *semantic-certifier
+  event_payload_loader: *semantic-certifier
+  evidence_first_unstructured_pipeline: *semantic-certifier
+  evidence_graph_builder: *semantic-certifier
+  evidence_required_validator: *semantic-certifier
+  exact_key_entity_resolver: *semantic-certifier
+  excel_loader: *semantic-certifier
+  foreign_key_to_edge_mapping: *semantic-certifier
+  fuzzy_string_resolver: *semantic-certifier
+  gazetteer_entity_extractor: *semantic-certifier
+  gliner_entity_extractor: *semantic-certifier
+  gliner_ollama_relation_typing_extractor: *semantic-certifier
+  gliner_relex_claim_extractor: *semantic-certifier
+  html_loader: *semantic-certifier
+  html_metadata_mapper: *semantic-certifier
+  human_review_queue: *semantic-certifier
+  hybrid_gliner_then_ollama_relations: *semantic-certifier
+  in_memory_schema_registry: *semantic-certifier
+  incremental_sync_policy: *semantic-certifier
+  intended_use_metrics_evaluator: *semantic-certifier
+  json_loader: *semantic-certifier
+  jsonld_loader: *semantic-certifier
+  jsonld_mapper: *semantic-certifier
+  jsonpath_mapper: *semantic-certifier
+  knowledge_graph_quality_evaluator: *semantic-certifier
+  ladybug_exporter: *semantic-certifier
+  ladybug_ingestion_adapter: *semantic-certifier
+  log_event_mapper: *semantic-certifier
+  log_loader: *semantic-certifier
+  mandatory_claim_ensemble: *semantic-certifier
+  mandatory_composed_unstructured_runtime: *semantic-certifier
+  mandatory_mention_ensemble: *semantic-certifier
+  markdown_loader: *semantic-certifier
+  memgraph_exporter: *semantic-certifier
+  mlx_qwen_claim_extractor: *darwin-semantic-certifier
+  neo4j_exporter: *semantic-certifier
+  neo4j_ingestion_adapter: *semantic-certifier
+  neo4j_vector_store_adapter: *semantic-certifier
+  networkx_exporter: *semantic-certifier
+  normalized_string_resolver: *semantic-certifier
+  obda_virtual_graph_mapper: *semantic-certifier
+  ollama_graph_extractor: *semantic-certifier
+  ollama_provider: *semantic-certifier
+  ollama_qwen_claim_extractor: *semantic-certifier
+  openie_relation_extractor: *semantic-certifier
+  openrefine_reconciler: *semantic-certifier
+  pdf_loader: *semantic-certifier
+  pii_redaction_policy: *semantic-certifier
+  primary_key_to_id_mapping: *semantic-certifier
+  property_graph_builder: *semantic-certifier
+  r2rml_mapper: *semantic-certifier
+  rapidfuzz_resolver: *semantic-certifier
+  rdf_exporter: *semantic-certifier
+  rdf_graph_builder: *semantic-certifier
+  rdflib_exporter: *semantic-certifier
+  regex_entity_extractor: *semantic-certifier
+  report_loader: *semantic-certifier
+  rml_mapper: *semantic-certifier
+  row_to_entity_mapping: *semantic-certifier
+  run_manifest_writer: *semantic-certifier
+  schema_profiling: *semantic-certifier
+  schema_promotion_workflow: *semantic-certifier
+  schema_proposal_workflow: *semantic-certifier
+  schema_quality_evaluator: *semantic-certifier
+  schema_quarantine_namespace: *semantic-certifier
+  schema_registry_validator: *semantic-certifier
+  scientific_paper_loader: *semantic-certifier
+  semantic_column_profiler: *semantic-certifier
+  semantic_table_mapper: *semantic-certifier
+  shacl_validator: *semantic-certifier
+  source_catalog: *semantic-certifier
+  spacy_ner_extractor: *semantic-certifier
+  sql_database_loader: *semantic-certifier
+  structured_api_loader: *semantic-certifier
+  structured_logging: *semantic-certifier
+  table_to_node_mapping: *semantic-certifier
+  text_loader: *semantic-certifier
+  transformer_ner_extractor: *semantic-certifier
+  transformers_qwen_claim_extractor: *semantic-certifier
+  watermark_store: *semantic-certifier
+  webpage_loader: *semantic-certifier
+  wikidata_linker: *semantic-certifier
+  xml_loader: *semantic-certifier

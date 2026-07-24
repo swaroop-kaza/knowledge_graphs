@@ -191,7 +191,9 @@ class TechniqueEvaluationConfig(BaseModel):
     penalties: PenaltyWeights = Field(default_factory=PenaltyWeights)
     production_thresholds: ProductionThresholds = Field(default_factory=ProductionThresholds)
     hard_gates: BenchmarkHardGateSettings = Field(default_factory=BenchmarkHardGateSettings)
-    llm: dict[str, Any] = Field(default_factory=lambda: {"provider": "ollama", "model": "llama3.1"})
+    llm: dict[str, Any] = Field(
+        default_factory=lambda: {"provider": "ollama", "model": "qwen3:1.7b-q4_K_M"}
+    )
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> TechniqueEvaluationConfig:

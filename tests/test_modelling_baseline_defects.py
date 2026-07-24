@@ -2,23 +2,19 @@
 
 Each case was a defect reproduced against commit 42d0100. Cases fixed by a later
 change assert the corrected behaviour directly (a regression re-breaks the run).
-Cases still open assert the *desired* behaviour under ``expectedFailure``, so they
-flip to an unexpected success — and fail the run — the moment they are fixed.
+Closed by the structured redesign, unstructured pipeline, and release-scope audit:
 
-Closed by the structured redesign:
-
-1. The public ``construct_kg`` structured path now drives the semantic pipeline
+1. The structured workflow drives the semantic pipeline
    (shared dimension nodes, typed relationships, no duplicated literals).
 2. A categorical's semantic role and physical materialization agree across the
    contract, ontology, and graph.
 3. A foreign key whose target is absent is retained as a value, never fabricated
    as a placeholder entity.
-
-Still open:
-
-4. Unstructured correctness ignores the gold claims and intents in the fixture.
-5. Schema quality can report ``passed`` without SHACL ever executing.
-6. The release registry still exposes stub and adapter-only capabilities.
+4. Unstructured correctness scores the gold claims and intents, and every promoted
+   claim carries complete provenance.
+5. The release registry exposes implemented construction/evaluation capabilities
+   only; adapter-only work and stubs live in a separate research inventory.
+6. Schema quality can report ``passed`` without SHACL ever executing.
 """
 
 from __future__ import annotations
@@ -29,7 +25,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kg_construction import construct_kg, default_registry
+from kg_construction import default_registry, default_workflow_for_source_type
 from kg_construction.application.modelling_correctness import evaluate_unstructured_case
 from kg_construction.application.plan_resolution import resolve_modeling_plan
 from kg_construction.application.semantic_profiler import SemanticColumnProfiler
@@ -59,10 +55,10 @@ def _semantic_graph(table: dict):
     return resolved, policy, graph
 
 
-class PublicStructuredPathClosed(unittest.TestCase):
-    """Closed: the public API drives the semantic modelling pipeline."""
+class StructuredPathClosed(unittest.TestCase):
+    """Closed: the draft workflow drives the semantic modelling pipeline."""
 
-    def test_public_api_builds_shared_dimension_nodes_and_edges(self) -> None:
+    def test_structured_workflow_builds_shared_dimension_nodes_and_edges(self) -> None:
         table = _table("employees")
         with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, newline="") as handle:
             path = handle.name
@@ -70,9 +66,12 @@ class PublicStructuredPathClosed(unittest.TestCase):
             writer.writeheader()
             writer.writerows(table["records"])
         try:
-            graph = construct_kg(
-                SourceRecord.from_rows(table["records"], source_type="csv", source_name="employees.csv")
-            ).property_graph
+            source = SourceRecord.from_rows(
+                table["records"],
+                source_type="csv",
+                source_name="employees.csv",
+            )
+            graph = default_workflow_for_source_type("csv").run([source]).property_graph
         finally:
             Path(path).unlink(missing_ok=True)
 
@@ -111,10 +110,9 @@ class MissingForeignKeyNotFabricated(unittest.TestCase):
         self.assertTrue(all("customer_id" in node.properties for node in order_nodes))
 
 
-class UnstructuredClaimAndIntentScoringGap(unittest.TestCase):
-    """Open: unstructured correctness must score gold claims and intents."""
+class UnstructuredClaimAndIntentScoringClosed(unittest.TestCase):
+    """Closed: unstructured correctness scores gold claims and intents."""
 
-    @unittest.expectedFailure
     def test_unstructured_case_scores_claims_and_intents(self) -> None:
         result = evaluate_unstructured_case(
             case_id="characterization",
@@ -130,27 +128,25 @@ class UnstructuredClaimAndIntentScoringGap(unittest.TestCase):
         self.assertIn("intent_coverage", result.metrics)
 
 
-class SchemaQualitySkipsShaclDefect(unittest.TestCase):
-    """Open: a passing schema-quality report must have actually executed SHACL."""
+class SchemaQualitySkipsShaclClosed(unittest.TestCase):
+    """Closed: an omitted SHACL execution is an explicit failed gate."""
 
-    @unittest.expectedFailure
     def test_passing_report_requires_shacl_execution(self) -> None:
         _, policy, graph = _semantic_graph(_table("employees"))
         report = SchemaQualityEvaluator().evaluate(
             graph, policy=policy, source_records=_table("employees")["records"]
         )
-        if not report.passed:
-            self.skipTest("report did not pass; SHACL-skip gate is only relevant on a pass")
-        self.assertIsNotNone(
-            report.shacl_violation_count,
-            "a passing report must reflect an executed SHACL validation, not a skipped one",
+        self.assertFalse(report.passed)
+        self.assertFalse(report.shacl_executed)
+        shacl_gate = next(
+            gate for gate in report.gates if gate.gate == "shacl_execution"
         )
+        self.assertFalse(shacl_gate.passed)
 
 
 class RegistryExposesNonExecutableCapabilitiesDefect(unittest.TestCase):
-    """Open: the release registry must expose only executable capabilities."""
+    """Closed: the release registry exposes only executable capabilities."""
 
-    @unittest.expectedFailure
     def test_registry_contains_only_executable_capabilities(self) -> None:
         registry = default_registry()
         non_executable = sorted(

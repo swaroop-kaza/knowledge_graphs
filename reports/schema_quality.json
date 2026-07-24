@@ -1,5 +1,5 @@
 {
-  "attribute_richness": 2.5,
+  "attribute_richness": 3.0,
   "average_degree": 1.6666666666666667,
   "cardinality_violation_rate": 0.0,
   "categorical_duplication_rate": 0.0,
@@ -46,15 +46,50 @@
       "operator": "<=",
       "passed": true,
       "threshold": 0.0
+    },
+    {
+      "actual": 1.0,
+      "gate": "property_completeness",
+      "metric": "property_completeness",
+      "operator": ">=",
+      "passed": true,
+      "threshold": 1.0
+    },
+    {
+      "actual": 1.0,
+      "gate": "relationship_completeness",
+      "metric": "relationship_completeness",
+      "operator": ">=",
+      "passed": true,
+      "threshold": 1.0
+    },
+    {
+      "actual": 1.0,
+      "gate": "shacl_execution",
+      "metric": "shacl_executed",
+      "operator": ">=",
+      "passed": true,
+      "threshold": 1.0
+    },
+    {
+      "actual": 0.0,
+      "gate": "shacl_conformance",
+      "metric": "shacl_violation_count",
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.0
     }
   ],
   "literal_that_should_be_node_rate": 0.0,
   "node_count": 6,
+  "ontology_evaluated": true,
   "orphan_rate": 0.0,
   "passed": true,
   "property_completeness": 1.0,
   "relationship_completeness": 1.0,
-  "relationship_richness": 0.25,
-  "schema_completeness": 0.8333333333333334,
-  "shacl_violation_count": null
+  "relationship_richness": 0.21739130434782608,
+  "schema_completeness": 0.8571428571428571,
+  "shacl_executed": true,
+  "shacl_violation_count": 0,
+  "thresholds_version": "schema-quality-v2"
 }

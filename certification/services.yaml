@@ -1,0 +1,29 @@
+# Certification services — pinned versions for the locked-artifact hard pass.
+#
+# Every runtime service the release certifies runs from a pinned version tag, and
+# scripts/lock_service_digests.py freezes each tag to an immutable image digest in
+# certification/services.lock.yaml. Certification runs against the digest, never a
+# floating tag, and never downloads a model on first use.
+services:
+  ollama:
+    image: ollama/ollama:0.32.0
+    ports: ["11434:11434"]
+    # Qwen3 is pulled once at provisioning time to a mounted volume, then its
+    # content digest is enforced by models.lock.yaml during every offline run.
+    volumes: ["ollama-models:/root/.ollama"]
+    environment:
+      OLLAMA_KEEP_ALIVE: "24h"
+  neo4j:
+    image: neo4j:5.26.26
+    ports: ["7474:7474", "7687:7687"]
+    environment:
+      NEO4J_AUTH: "neo4j/certification"
+  memgraph:
+    image: memgraph/memgraph:3.10.1
+    ports: ["7688:7687"]
+
+volumes:
+  ollama-models:
+
+# Ladybug is an embedded database (a Python package, no service) and is pinned
+# through pyproject.toml + uv.lock, not here.

@@ -1,0 +1,52 @@
+schema_id: governed-unstructured-core
+version: v1
+namespace: https://w3id.org/kg-construction/unstructured/v1/
+entity_types:
+  - Entity
+  - Person
+  - Organization
+  - Location
+  - Place
+  - Event
+  - Product
+  - Artifact
+  - Date
+  - Concept
+  - System
+  - Service
+  - Incident
+  - Identifier
+  - Version
+entity_type_aliases:
+  Entity: [Miscellaneous, Misc, Other, Unknown, Generic]
+  Organization: [Group]
+  Place: [Facility]
+  Artifact: [CreativeWork, WorkOfArt]
+  Concept: [Law, Language, Time, Percentage, Money, Quantity, Ordinal, Cardinal]
+  Identifier: [EmailAddress]
+predicates:
+  - {name: affected, aliases: [affects], claim_kinds: [relation]}
+  - {name: calls, aliases: [called], claim_kinds: [relation]}
+  - {name: uses, aliases: [used, using], claim_kinds: [relation]}
+  - {name: depends_on, aliases: [depends on], claim_kinds: [relation]}
+  - {name: located_in, aliases: [located in, based in], claim_kinds: [relation]}
+  - {name: part_of, aliases: [part of, member of], claim_kinds: [relation]}
+  - {name: reports_to, aliases: [reports to, reported to], claim_kinds: [relation]}
+  - {name: contains, aliases: [contained], claim_kinds: [relation]}
+  - {name: produces, aliases: [produced], claim_kinds: [relation]}
+  - {name: works_at, aliases: [worked_at, worked at, working at], claim_kinds: [relation]}
+  - {name: works_with, aliases: [worked_with, worked with, working with], claim_kinds: [relation]}
+  - {name: designed, aliases: [designs], claim_kinds: [relation]}
+  - {name: created, aliases: [creates], claim_kinds: [relation, event]}
+  - {name: acquired, aliases: [acquires], claim_kinds: [relation, event]}
+  - {name: founded, aliases: [founds], claim_kinds: [relation, event]}
+  - {name: built, aliases: [builds], claim_kinds: [relation, event]}
+  - {name: joined, aliases: [joins], claim_kinds: [relation, event]}
+  - {name: owns, aliases: [owned], claim_kinds: [relation]}
+  - {name: manages, aliases: [managed], claim_kinds: [relation]}
+  - {name: reported, aliases: [reports], claim_kinds: [relation]}
+  - {name: is_a, aliases: [is, was, are, were], claim_kinds: [fact]}
+  - {name: publish, aliases: [publishes, published], claim_kinds: [intent]}
+  - {name: support, aliases: [supports, supported], claim_kinds: [intent, relation]}
+  - {name: deploy, aliases: [deploys, deployed], claim_kinds: [intent, relation]}
+  - {name: migrate, aliases: [migrates, migrated], claim_kinds: [intent, relation]}
