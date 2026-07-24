@@ -1,14 +1,14 @@
 # Current Repo Capability Summary
 
-Report date: 2026-07-22
+Report date: 2026-07-24
 
 This report is generated from the live `kg_construction.application.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.
 
 ## Registry totals
 
-- Total registered techniques: 150
+- Total registered techniques: 153
 - adapter: 17
-- implemented: 104
+- implemented: 107
 - stub: 29
 
 ## Public support levels
@@ -17,7 +17,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 | Support level | Count | Meaning |
 | --- | ---: | --- |
-| Stable | 76 | Safe to use now with the documented API and normal test coverage. |
+| Stable | 79 | Safe to use now with the documented API and normal test coverage. |
 | Optional adapter | 29 | Works when the required dependency, model, service, or project wiring is configured. |
 | Experimental | 16 | Implemented for research/prototyping, but API, scoring, or model behavior may change. |
 | Planned | 29 | Registered as a roadmap extension point, but not implemented for normal use. |
@@ -34,7 +34,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 | hybrid | 8 |
 | llm | 1 |
 | loader | 20 |
-| mapper | 22 |
+| mapper | 25 |
 | production | 9 |
 | resolution | 16 |
 | schema | 8 |
@@ -44,7 +44,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 | Method type | Count |
 | --- | ---: |
-| deterministic | 44 |
+| deterministic | 47 |
 | embedding | 8 |
 | evaluation | 3 |
 | human | 7 |
@@ -119,7 +119,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 ### mapper
 
-- Stable: column_to_property_mapping, column_type_inference, direct_table_mapper, foreign_key_to_edge_mapping, primary_key_to_id_mapping, row_to_entity_mapping, schema_profiling, table_to_node_mapping, csvw_mapper, event_graph_mapper, jsonld_mapper, jsonpath_mapper, log_event_mapper, r2rml_mapper, rml_mapper, dotted_path_json_mapper, obda_virtual_graph_mapper, html_metadata_mapper
+- Stable: semantic_column_profiler, semantic_table_mapper, source_catalog, column_to_property_mapping, column_type_inference, direct_table_mapper, foreign_key_to_edge_mapping, primary_key_to_id_mapping, row_to_entity_mapping, schema_profiling, table_to_node_mapping, csvw_mapper, event_graph_mapper, jsonld_mapper, jsonpath_mapper, log_event_mapper, r2rml_mapper, rml_mapper, dotted_path_json_mapper, obda_virtual_graph_mapper, html_metadata_mapper
 - Optional adapter: relationship_inference_from_keys
 - Experimental: none
 - Planned: api_response_mapper, xmlpath_mapper, incremental_watermark_sync

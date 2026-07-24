@@ -15,6 +15,7 @@ from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.dataset_profiler import DatasetProfile, DatasetProfiler
 from kg_construction.application.production import build_production_services
 from kg_construction.application.registry import PluginRegistry, default_registry
+from kg_construction.application.source_catalog import CatalogTableMapper
 from kg_construction.application.workflow import ConstructionResult, ConstructionWorkflow
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
@@ -232,6 +233,14 @@ def evaluate_techniques(
     )
 
 
+def _structured_mappers(config: DataToKGConfig) -> list[Any]:
+    """Return the structured-table mapper: semantic by default, direct baseline on request."""
+
+    if config.pipeline.structured_mapping == "direct":
+        return [DirectTableMapper()]
+    return [CatalogTableMapper()]
+
+
 def default_workflow_for_source_type(
     source_type: str | None,
     config: DataToKGConfig | None = None,
@@ -258,7 +267,14 @@ def default_workflow_for_source_type(
             validators=validators,
             **common_kwargs,
         )
-    if normalized_type in {"csv", "excel", "sql", "structured_api", "xml", "chat_transcript"}:
+    if normalized_type in {"csv", "excel", "sql", "structured_api"}:
+        return ConstructionWorkflow(
+            mappers=_structured_mappers(resolved_config),
+            resolvers=resolvers,
+            validators=validators,
+            **common_kwargs,
+        )
+    if normalized_type in {"xml", "chat_transcript"}:
         return ConstructionWorkflow(
             mappers=[DirectTableMapper()],
             resolvers=resolvers,

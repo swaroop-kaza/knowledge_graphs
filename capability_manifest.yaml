@@ -12,8 +12,8 @@ doctrine: full_release
 generated_by: scripts/generate_capability_manifest.py
 summary:
   techniques:
-    total: 150
-    required: 121
+    total: 153
+    required: 124
     removed: 29
   dependencies:
     total: 12
@@ -810,6 +810,18 @@ techniques:
   status: implemented
   disposition: required
   owner: kg_construction.infrastructure.loaders.enterprise.ScientificPaperLoader
+- name: semantic_column_profiler
+  category: mapper
+  method_type: deterministic
+  status: implemented
+  disposition: required
+  owner: kg_construction.application.semantic_profiler.SemanticColumnProfiler
+- name: semantic_table_mapper
+  category: mapper
+  method_type: deterministic
+  status: implemented
+  disposition: required
+  owner: kg_construction.application.source_catalog.CatalogTableMapper
 - name: sentence_splitter_adapter
   category: extractor
   method_type: nlp
@@ -822,6 +834,12 @@ techniques:
   status: implemented
   disposition: required
   owner: kg_construction.infrastructure.ontology.shacl.ShaclValidator
+- name: source_catalog
+  category: mapper
+  method_type: deterministic
+  status: implemented
+  disposition: required
+  owner: kg_construction.application.source_catalog.SourceCatalog
 - name: spacy_entity_ruler_extractor
   category: extractor
   method_type: rules

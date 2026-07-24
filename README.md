@@ -21,7 +21,7 @@ Nothing installed yet? The from-zero walkthrough (macOS/Linux/Windows, plus Olla
 
 The framework focuses on getting the graph *formation* right — and measures each part. Full detail and code entry points are in **[docs/knowledge_graph_modelling.md](docs/knowledge_graph_modelling.md)**.
 
-**1. Structured data → graph.** Each column is assigned a modelling role, then mapped: a categorical value like `"Engineering"` collapses into one shared `Department` node that every row links to (never a literal repeated thousands of times), a foreign key such as `manager_id` becomes a typed edge, and a supernode guard keeps very low-cardinality values as properties.
+**1. Structured data → graph.** Each column is resolved into a separate semantic role and physical materialization: a categorical value like `"Engineering"` collapses into one shared `Department` node that every row links to (never a literal repeated thousands of times), a foreign key such as `manager_id` becomes a typed edge, and a scalar value with no identity stays a property. Foreign keys resolve across tables from declared structure (database constraints, CSVW, R2RML, or explicit policy) with a profiler fallback, missing targets are never fabricated, and business keys merge across files by declared identity scope.
 
 **2. Unstructured data → graph.** Extracted mentions are canonicalised and linked — coreference, NIL handling, and alignment to the ontology to flag off-ontology terms — and coverage is reported so missed intent becomes a number, not a guess.
 
@@ -43,18 +43,23 @@ text_result = construct_kg("examples/data_to_kg/sample.txt", source_type="text")
 print([entity.name for entity in text_result.batch.entities])
 ```
 
-Drive the structured modelling pillar directly — profile columns into roles, then map
-(`rows` is a list of dicts):
+Structured sources (CSV/Excel/SQL) are mapped semantically by default. To resolve
+foreign keys across tables, declare their structure in a source catalog:
 
 ```python
-from kg_construction.application import SemanticColumnProfiler, SemanticTableMapper
+from kg_construction.application.source_catalog import (
+    CatalogTableMapper, DeclaredForeignKey, SourceCatalog, TableDeclaration,
+)
 from kg_construction.application.workflow import ConstructionWorkflow
-from kg_construction.domain.models import SourceRecord
 
-policy = SemanticColumnProfiler().profile(rows, record_type="Employee").to_modeling_policy()
-graph = ConstructionWorkflow(mappers=[SemanticTableMapper(policy)]).run(
-    [SourceRecord.from_rows(rows, source_type="csv", source_name="employees.csv")]
-).property_graph
+catalog = SourceCatalog().declare(
+    TableDeclaration(
+        table_name="employees.csv", record_type="Employee",
+        primary_key=["emp_id"],
+        foreign_keys=[DeclaredForeignKey(columns=["manager_id"], target_table="employees")],
+    )
+)
+graph = ConstructionWorkflow(mappers=[CatalogTableMapper(catalog)]).run(sources).property_graph
 ```
 
 Export without any live database:
@@ -72,7 +77,7 @@ cypher = Neo4jExporter().export_property_graph(result.property_graph)
 src/kg_construction/
   domain/           Pydantic models: sources, evidence, entities, relations, graphs, schema
   ports/            Protocol interfaces for plugin-style extension
-  application/      column profiling, modelling policy, semantic mapper, workflow, public API
+  application/      column profiling, resolved modelling contract, source catalog, semantic mapper, workflow, public API
   infrastructure/
     loaders/        CSV, JSON, text, Excel, SQL, API, XML, PDF, email, chat, ...
     mapping/        direct table, JSONPath, and standards mappings (R2RML/RML/CSVW)

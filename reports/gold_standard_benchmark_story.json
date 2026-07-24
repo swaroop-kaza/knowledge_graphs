@@ -2,7 +2,7 @@
   "details": {
     "benchmark_count": 5,
     "fixture_root": "tests/fixtures/gold_standards",
-    "generated_at": "2026-07-22",
+    "generated_at": "2026-07-24",
     "research_alignment": [
       "NER span benchmarks usually score exact span and label matches.",
       "Relation extraction benchmarks score typed source-relation-target predictions.",

@@ -198,6 +198,8 @@ def resolve_modeling_plan(
                     relationship_name=relationship_name,
                     cardinality=_cardinality(null_rate),
                     on_missing=OnMissingTarget.SKIP,
+                    self_referential=is_self_reference,
+                    target_available=is_self_reference,
                 )
             )
 
