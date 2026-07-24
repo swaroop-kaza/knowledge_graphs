@@ -79,7 +79,7 @@ jobs:
             CERT_EXECUTION_REPORT="certification/execution-report-${KG_CERT_PROFILE}.yaml"
       - name: Upload immutable execution evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: certification-${{ matrix.profile }}
           path: |
@@ -101,7 +101,7 @@ jobs:
       - run: uv sync --frozen --all-groups
       - run: uv run python -m build
       - run: uv run python -m twine check dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: package-dist
           path: dist/*
