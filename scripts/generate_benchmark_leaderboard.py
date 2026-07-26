@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from kg_construction.application.benchmark_runner import (
+from kg_construction.research.benchmark_runner import (
     TechniqueEvaluationConfig,
     TechniqueEvaluationRunner,
 )
@@ -172,15 +172,25 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
     lines = [
         "# Small Benchmark Leaderboard",
         "",
-        f"Generated: {generated_at}",
+        "[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Research guide](../research/README.md)",
+        "",
+        "| Metadata | Value |",
+        "| --- | --- |",
+        f"| Generated | {generated_at} |",
+        "| Scope | Tiny deterministic research fixtures |",
+        "",
+        "> **Research only.** This weighted comparison is non-authoritative; it is "
+        "neither construction-correctness evidence nor publication authorization.",
         "",
         "This committed leaderboard is intentionally small and reproducible. It uses tiny fixtures under `tests/fixtures/golden_benchmarks/`, deterministic runtime settings, and the same scoring path used by `TechniqueEvaluationRunner`. Big multi-dataset experiment outputs remain generated artifacts outside the committed repo.",
         "",
         "Runtime/resource columns are deterministic controls for comparability:",
         "",
-        f"- latency: `{DEFAULT_FIXED_LATENCY_SECONDS}` seconds",
-        f"- memory/resource usage: `{DEFAULT_FIXED_MEMORY_MB}` MB",
-        f"- throughput: `{DEFAULT_FIXED_THROUGHPUT}` items/second",
+        "| Control | Fixed value |",
+        "| --- | ---: |",
+        f"| Latency | `{DEFAULT_FIXED_LATENCY_SECONDS}` seconds |",
+        f"| Memory/resource usage | `{DEFAULT_FIXED_MEMORY_MB}` MB |",
+        f"| Throughput | `{DEFAULT_FIXED_THROUGHPUT}` items/second |",
         "",
         "Regenerate with:",
         "",
@@ -208,6 +218,7 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
             "- `validation_pass_rate`: `1 - validation_failure_rate` from the validation metrics.",
             "- `latency` and `memory/resource`: deterministic operational controls, not hardware benchmarks.",
             "- `final_score`: weighted quality plus runtime score after penalties.",
+            "- No rank or weighted score can replace graph-bound quality gates or certification.",
             "",
             "## Dataset Notes",
             "",

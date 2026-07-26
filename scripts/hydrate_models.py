@@ -21,6 +21,7 @@ from kg_construction.certification.preflight import (
     check_models_present,
 )
 from kg_construction.certification.profiles import select_profile
+from kg_construction.service_runtime import DEFAULT_OLLAMA_BASE_URL
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "models.manifest.yaml"
@@ -40,7 +41,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Hash and validate local artifacts without attempting hydration.",
     )
-    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    parser.add_argument(
+        "--ollama-url",
+        default=os.getenv("OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL),
+    )
     return parser
 
 

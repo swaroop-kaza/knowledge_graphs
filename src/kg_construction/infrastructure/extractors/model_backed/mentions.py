@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from importlib.resources import files
 from pathlib import Path
@@ -11,7 +12,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from kg_construction.application.unstructured_pipeline import MentionDetector
 from kg_construction.domain.claim import (
     DocumentRef,
     Evidence,
@@ -32,6 +32,7 @@ from kg_construction.infrastructure.extractors.model_backed.contracts import (
     enforce_offline_model_environment,
     require_local_directory,
 )
+from kg_construction.unstructured.pipeline import MentionDetector
 
 _TRANSFORMERS_TYPES = {
     "PER": "Person",
@@ -78,9 +79,42 @@ _GENERIC_ENTITY_TYPES = frozenset(
     }
 )
 _MENTION_TYPE_SELECTION_POLICY = (
-    "provider_vote>specific_over_generic>mean_confidence>"
-    "max_confidence>normalized_type"
+    "provider_vote>specific_over_generic>source_lexical_form>source_suffix>"
+    "reject_unresolved_tie"
 )
+_LEXICAL_FORM_TYPE_HINTS = (
+    ("date", re.compile(r"\d{4}-\d{2}-\d{2}")),
+    ("emailaddress", re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")),
+    ("version", re.compile(r"v\d+(?:\.\d+)+")),
+    ("identifier", re.compile(r"[A-Z]{2,}-\d+")),
+)
+_LEXICAL_SUFFIX_TYPE_HINTS = {
+    "api": "artifact",
+    "bombe": "artifact",
+    "company": "organization",
+    "corp": "organization",
+    "corporation": "organization",
+    "engine": "artifact",
+    "labs": "organization",
+    "machine": "artifact",
+    "park": "place",
+}
+
+
+class NestedMentionSuppression(BaseModel):
+    """Audit record for one exact mention hidden by a unique maximal span."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    fragment_item_key: str = Field(min_length=1)
+    containing_item_key: str = Field(min_length=1)
+    fragment_start: int = Field(ge=0)
+    fragment_end: int = Field(gt=0)
+    fragment_surface: str = Field(min_length=1)
+    containing_start: int = Field(ge=0)
+    containing_end: int = Field(gt=0)
+    containing_surface: str = Field(min_length=1)
+    reason: str = "strict_fragment_under_unique_maximal_mention"
 
 
 class MentionProviderConfig(BaseModel):
@@ -526,6 +560,7 @@ class MandatoryMentionEnsemble(MentionDetector):
         if len(self.provider_ids) != len(set(self.provider_ids)):
             raise ValueError("mandatory mention provider IDs must be unique")
         self.last_agreements: tuple[ProviderAgreement, ...] = ()
+        self.last_suppressions: tuple[NestedMentionSuppression, ...] = ()
 
     def detect(
         self,
@@ -533,6 +568,8 @@ class MandatoryMentionEnsemble(MentionDetector):
         text: str,
         segments: tuple[Evidence, ...],
     ) -> tuple[Mention, ...]:
+        self.last_agreements = ()
+        self.last_suppressions = ()
         failures: dict[str, BaseException] = {}
         results: list[tuple[str, tuple[Mention, ...]]] = []
         for provider, provider_id in zip(self.providers, self.provider_ids, strict=True):
@@ -544,7 +581,6 @@ class MandatoryMentionEnsemble(MentionDetector):
             except Exception as exc:  # noqa: BLE001 - run all providers, aggregate exact failures
                 failures[provider_id] = exc
         if failures:
-            self.last_agreements = ()
             raise MandatoryProviderError("mention detection", failures)
 
         grouped: dict[
@@ -563,8 +599,10 @@ class MandatoryMentionEnsemble(MentionDetector):
                     mention
                 )
 
+        containing_by_fragment = _unique_maximal_containers(tuple(grouped))
         agreements: list[ProviderAgreement] = []
-        merged: list[Mention] = []
+        merged_by_key: dict[tuple[str, int, int, str], Mention] = {}
+        item_keys: dict[tuple[str, int, int, str], str] = {}
         provider_count = len(self.providers)
         for key, by_provider in sorted(
             grouped.items(),
@@ -578,7 +616,10 @@ class MandatoryMentionEnsemble(MentionDetector):
                 provider_id: _provider_type_vote(items)
                 for provider_id, items in by_provider.items()
             }
-            selected_type_key = _selected_type_key(provider_votes)
+            selected_type_key = _selected_type_key(
+                provider_votes,
+                surface=str(key[3]),
+            )
             selected_votes = {
                 provider_id: mention
                 for provider_id, mention in provider_votes.items()
@@ -601,6 +642,7 @@ class MandatoryMentionEnsemble(MentionDetector):
                 selected_type_key,
                 _MENTION_TYPE_SELECTION_POLICY,
             )
+            item_keys[key] = item_key
             agreement = ProviderAgreement(
                 item_key=item_key,
                 agreeing_providers=agreeing,
@@ -634,28 +676,50 @@ class MandatoryMentionEnsemble(MentionDetector):
                     }
                 )
             )
-            merged.append(
-                exemplar.model_copy(
-                    update={
-                        "provenance": Provenance(
-                            extractor="mandatory_mention_ensemble",
-                            provider="+".join(agreeing),
-                            model_version="+".join(versions),
-                            configuration_id=(
-                                "mandatory-occurrence-type-union-v2;"
-                                f"agreement={len(agreeing)}/{provider_count};"
-                                f"participation={len(participants)}/{provider_count};"
-                                f"type={selected_type};"
-                                f"type_policy={_MENTION_TYPE_SELECTION_POLICY};"
-                                f"item={item_key}"
-                            ),
-                            confidence=confidence,
-                        )
-                    }
-                )
+            merged_by_key[key] = exemplar.model_copy(
+                update={
+                    "provenance": Provenance(
+                        extractor="mandatory_mention_ensemble",
+                        provider="+".join(agreeing),
+                        model_version="+".join(versions),
+                        configuration_id=(
+                            "mandatory-occurrence-type-union-v3;"
+                            f"agreement={len(agreeing)}/{provider_count};"
+                            f"participation={len(participants)}/{provider_count};"
+                            f"type={selected_type};"
+                            f"type_policy={_MENTION_TYPE_SELECTION_POLICY};"
+                            f"item={item_key}"
+                        ),
+                        confidence=confidence,
+                    )
+                }
             )
         self.last_agreements = tuple(agreements)
-        return tuple(merged)
+        self.last_suppressions = tuple(
+            NestedMentionSuppression(
+                fragment_item_key=item_keys[fragment],
+                containing_item_key=item_keys[container],
+                fragment_start=fragment[1],
+                fragment_end=fragment[2],
+                fragment_surface=fragment[3],
+                containing_start=container[1],
+                containing_end=container[2],
+                containing_surface=container[3],
+            )
+            for fragment, container in sorted(
+                containing_by_fragment.items(),
+                key=lambda row: (
+                    row[0][1],
+                    row[0][2],
+                    row[0][3],
+                ),
+            )
+        )
+        return tuple(
+            mention
+            for key, mention in merged_by_key.items()
+            if key not in containing_by_fragment
+        )
 
 
 def _provider_type_vote(mentions: list[Mention]) -> Mention:
@@ -675,8 +739,12 @@ def _provider_type_vote(mentions: list[Mention]) -> Mention:
     )
 
 
-def _selected_type_key(provider_votes: Mapping[str, Mention]) -> str:
-    """Choose one type by votes, specificity, confidence, then type name."""
+def _selected_type_key(
+    provider_votes: Mapping[str, Mention],
+    *,
+    surface: str,
+) -> str:
+    """Choose one type without using confidence or provider priority."""
 
     by_type: dict[str, list[Mention]] = {}
     for mention in provider_votes.values():
@@ -684,20 +752,105 @@ def _selected_type_key(provider_votes: Mapping[str, Mention]) -> str:
     if not by_type:
         raise ValueError("mention type selection requires provider votes")
 
-    def rank(item: tuple[str, list[Mention]]) -> tuple[object, ...]:
-        entity_type, mentions = item
-        confidences = [
-            mention.provenance.confidence for mention in mentions
-        ]
-        return (
-            -len(mentions),
-            _is_generic_type(entity_type),
-            -(sum(confidences) / len(confidences)),
-            -max(confidences),
-            entity_type,
-        )
+    maximum_votes = max(len(mentions) for mentions in by_type.values())
+    tied = {
+        entity_type
+        for entity_type, mentions in by_type.items()
+        if len(mentions) == maximum_votes
+    }
+    if len(tied) == 1:
+        return next(iter(tied))
 
-    return min(by_type.items(), key=rank)[0]
+    specific = {
+        entity_type
+        for entity_type in tied
+        if not _is_generic_type(entity_type)
+    }
+    if len(specific) == 1:
+        return next(iter(specific))
+    if specific:
+        tied = specific
+
+    lexical_form_hint = _lexical_form_type_hint(surface)
+    if lexical_form_hint is not None and lexical_form_hint in tied:
+        return lexical_form_hint
+
+    suffix_hint = _lexical_suffix_type_hint(surface)
+    if suffix_hint is not None and suffix_hint in tied:
+        return suffix_hint
+    raise ProviderOutputError(
+        "unresolved exact-span type vote tie has no conservative source "
+        f"lexical hint: surface={surface!r}, types={sorted(tied)}"
+    )
+
+
+def _lexical_form_type_hint(surface: str) -> str | None:
+    """Return a type only for a reviewed whole-surface lexical form."""
+
+    matches = tuple(
+        entity_type
+        for entity_type, pattern in _LEXICAL_FORM_TYPE_HINTS
+        if pattern.fullmatch(surface) is not None
+    )
+    return matches[0] if len(matches) == 1 else None
+
+
+def _lexical_suffix_type_hint(surface: str) -> str | None:
+    """Return one reviewed whole-token suffix hint, never a guessed type."""
+
+    normalized = surface.casefold().strip(
+        " \t\n\r.,;:!?()[]{}'\""
+    )
+    if not normalized:
+        return None
+    suffix = normalized.rsplit(maxsplit=1)[-1]
+    return _LEXICAL_SUFFIX_TYPE_HINTS.get(suffix)
+
+
+def _unique_maximal_containers(
+    occurrences: tuple[tuple[str, int, int, str], ...],
+) -> dict[
+    tuple[str, int, int, str],
+    tuple[str, int, int, str],
+]:
+    """Map strict fragments only when one maximal containing span exists."""
+
+    result: dict[
+        tuple[str, int, int, str],
+        tuple[str, int, int, str],
+    ] = {}
+    for fragment in occurrences:
+        containers = [
+            candidate
+            for candidate in occurrences
+            if _strictly_contains(candidate, fragment)
+        ]
+        maximal = [
+            candidate
+            for candidate in containers
+            if not any(
+                _strictly_contains(other, candidate)
+                for other in containers
+                if other != candidate
+            )
+        ]
+        if len(maximal) == 1:
+            result[fragment] = maximal[0]
+    return result
+
+
+def _strictly_contains(
+    outer: tuple[str, int, int, str],
+    inner: tuple[str, int, int, str],
+) -> bool:
+    """Return whether ``outer`` strictly contains ``inner`` in one document."""
+
+    return (
+        outer[0] == inner[0]
+        and outer[1] <= inner[1]
+        and inner[2] <= outer[2]
+        and (outer[1] < inner[1] or inner[2] < outer[2])
+    )
 
 
 def _is_generic_type(entity_type: str) -> bool:

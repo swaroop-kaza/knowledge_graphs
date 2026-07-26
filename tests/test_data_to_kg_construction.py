@@ -7,13 +7,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.hybrid_gliner import (
-    HybridGlinerPipelineConfig,
-    extract_entities_with_ollama_labels_and_gliner,
-)
-from kg_construction.application.planner import TechniquePlanner
-from kg_construction.application.registry import default_registry, research_registry
+from kg_construction.certification.registry import default_registry, research_registry
+from kg_construction.construction.config import DataToKGConfig
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
@@ -22,7 +17,7 @@ from kg_construction.domain.models import (
     stable_id,
 )
 from kg_construction.domain.schema import SchemaRegistry
-from kg_construction.infrastructure.evaluation.validation_metrics import ValidationMetrics
+from kg_construction.evaluation.validation_metrics import ValidationMetrics
 from kg_construction.infrastructure.extractors.ollama_graph import OllamaGraphExtractor
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
 from kg_construction.infrastructure.graph_builders.evidence_graph import EvidenceGraphBuilder
@@ -69,6 +64,11 @@ from kg_construction.infrastructure.resolution import (
 )
 from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
 from kg_construction.interfaces.cli.construct import main as construct_main
+from kg_construction.research.hybrid_gliner import (
+    HybridGlinerPipelineConfig,
+    extract_entities_with_ollama_labels_and_gliner,
+)
+from kg_construction.research.planner import TechniquePlanner
 
 
 class FakeGlinerModel:
@@ -934,11 +934,12 @@ class DataToKGConstructionTests(unittest.TestCase):
             "neo4j_ingestion_adapter",
             "rdf_exporter",
             "rdflib_exporter",
-            "benchmark_runner",
         }
 
         self.assertTrue(required_categories <= registry.categories())
         self.assertTrue(required_names <= registry.names())
+        self.assertNotIn("benchmark_runner", registry.names())
+        self.assertIn("benchmark_runner", research_registry().names())
 
     def test_planner_prefers_deterministic_before_llm_and_human_review(self) -> None:
         registry = research_registry()
@@ -960,21 +961,23 @@ class DataToKGConstructionTests(unittest.TestCase):
         self.assertEqual(config.llm.provider, "ollama")
         self.assertIn("csv", config.enabled_techniques()["loaders"])
 
-    def test_cli_refuses_to_construct_without_a_sealed_evaluation_suite(self) -> None:
+    def test_cli_constructs_without_a_suite_and_always_writes_a_graph(self) -> None:
+        # A missing evaluation suite no longer ends the conversion: the CLI
+        # always writes the graph and its metrics.
         with tempfile.TemporaryDirectory() as tmpdir:
             output = Path(tmpdir) / "graph.json"
-            with self.assertRaises(SystemExit):
-                construct_main(
-                    [
-                        "--input",
-                        "examples/data_to_kg/sample.txt",
-                        "--source-type",
-                        "text",
-                        "--output",
-                        str(output),
-                    ]
-                )
-            self.assertFalse(output.exists())
+            exit_code = construct_main(
+                [
+                    "--input",
+                    "examples/data_to_kg/sample.txt",
+                    "--source-type",
+                    "text",
+                    "--output",
+                    str(output),
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(output.exists())
 
 
 if __name__ == "__main__":

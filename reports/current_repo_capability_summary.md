@@ -1,13 +1,19 @@
 # Current Repo Capability Summary
 
-Report date: 2026-07-24
+[Reports index](README.md) · [Architecture](../docs/architecture.md) · [Research guide](../research/README.md)
 
-This report is generated from the live `kg_construction.application.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.
+| Metadata | Value |
+| --- | --- |
+| Report date | 2026-07-26 |
+| Registered techniques | 104 |
+
+This report is generated from the live `kg_construction.certification.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.
 
 ## Registry totals
 
-- Total registered techniques: 105
-- implemented: 105
+| Status | Count |
+| --- | ---: |
+| implemented | 104 |
 
 ## Public support levels
 
@@ -15,7 +21,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 | Support level | Count | Meaning |
 | --- | ---: | --- |
-| Mandatory | 105 | Part of the executable release contract; certification permits no skip or fallback. |
+| Mandatory | 104 | Part of the executable release contract; certification permits no skip or fallback. |
 | Research inventory | 0 | Implemented or adapted outside the focused release contract; retained for comparative research. |
 | Roadmap | 0 | A non-executable extension point kept outside the release registry. |
 
@@ -23,7 +29,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 | Category | Count |
 | --- | ---: |
-| evaluation | 6 |
+| evaluation | 5 |
 | extractor | 17 |
 | graph_builder | 3 |
 | graph_store | 9 |
@@ -42,7 +48,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 | --- | ---: |
 | deterministic | 37 |
 | embedding | 2 |
-| evaluation | 6 |
+| evaluation | 5 |
 | human | 5 |
 | hybrid | 5 |
 | llm | 6 |
@@ -59,7 +65,7 @@ The package is still `0.1.x` and classified as Alpha, but each registered techni
 
 ### evaluation
 
-- Mandatory: benchmark_runner, claim_evaluation_suite, construction_metrics_evaluator, intended_use_metrics_evaluator, knowledge_graph_quality_evaluator, schema_quality_evaluator
+- Mandatory: claim_evaluation_suite, construction_metrics_evaluator, intended_use_metrics_evaluator, knowledge_graph_quality_evaluator, schema_quality_evaluator
 - Research inventory: none
 - Roadmap: none
 

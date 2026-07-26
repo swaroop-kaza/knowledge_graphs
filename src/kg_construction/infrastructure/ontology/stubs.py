@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from kg_construction.domain.models import ConstructionBatch
+from kg_construction.domain.validation import ValidationReport
 from kg_construction.infrastructure.loaders.stubs import AdapterNotConfigured
-from kg_construction.infrastructure.ontology.validation import ValidationReport
 from kg_construction.infrastructure.production.review import HumanReviewQueue
 
 

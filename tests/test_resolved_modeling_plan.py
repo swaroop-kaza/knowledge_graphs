@@ -12,8 +12,8 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.plan_resolution import resolve_modeling_plan
-from kg_construction.application.resolved_plan import (
+from kg_construction.structured.plan_resolution import resolve_modeling_plan
+from kg_construction.structured.resolved_plan import (
     Cardinality,
     ClassKind,
     Materialization,
@@ -22,12 +22,12 @@ from kg_construction.application.resolved_plan import (
     ResolvedModelingPlan,
     ResolvedProperty,
 )
-from kg_construction.application.schema_projections import (
+from kg_construction.structured.schema_projections import (
     assert_projections_agree,
     project_all,
     projection_disagreements,
 )
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 

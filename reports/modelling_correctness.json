@@ -45,7 +45,7 @@
       "passed": true
     }
   ],
-  "generated": "2026-07-24",
+  "generated": "2026-07-26",
   "overall_passed": true,
-  "thresholds_version": "kg-quality-v2"
+  "thresholds_version": "kg-quality-v3"
 }

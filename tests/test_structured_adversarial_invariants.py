@@ -6,24 +6,24 @@ from unittest.mock import patch
 
 import pytest
 
-from kg_construction.application.plan_resolution import resolve_modeling_plan
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
-from kg_construction.application.semantic_table_mapper import SemanticTableMapper
-from kg_construction.application.source_catalog import (
+from kg_construction.construction.workflow import DraftConstructionWorkflow
+from kg_construction.domain.graph_objects import PropertyGraph, PropertyNode
+from kg_construction.domain.modeling import ColumnRole, ControlledVocabulary
+from kg_construction.domain.models import SourceRecord
+from kg_construction.evaluation.schema_quality import (
+    SchemaQualityEvaluator,
+)
+from kg_construction.infrastructure.ontology.shacl import ShaclValidator
+from kg_construction.structured.plan_resolution import resolve_modeling_plan
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
+from kg_construction.structured.semantic_table_mapper import SemanticTableMapper
+from kg_construction.structured.source_catalog import (
     CatalogTableMapper,
     DeclaredColumnMapping,
     DeclaredForeignKey,
     SourceCatalog,
     TableDeclaration,
 )
-from kg_construction.application.workflow import ConstructionWorkflow
-from kg_construction.domain.graph_objects import PropertyGraph, PropertyNode
-from kg_construction.domain.modeling import ColumnRole, ControlledVocabulary
-from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.evaluation.schema_quality import (
-    SchemaQualityEvaluator,
-)
-from kg_construction.infrastructure.ontology.shacl import ShaclValidator
 
 
 def _source(name: str, rows: list[dict[str, object]]) -> SourceRecord:
@@ -81,7 +81,7 @@ def test_category_variants_share_scheme_and_canonical_code_and_retain_occurrence
         "validate_rdf_graph",
         wraps=ShaclValidator().validate_rdf_graph,
     ) as validate:
-        result = ConstructionWorkflow(mappers=[mapper]).run([source])
+        result = DraftConstructionWorkflow(mappers=[mapper]).run([source])
 
     departments = [
         node for node in result.property_graph.nodes if "Department" in node.labels
@@ -187,7 +187,7 @@ def test_runtime_shacl_in_rejects_a_non_permissible_concept_code() -> None:
             ]
             return batch.model_copy(update={"entities": entities})
 
-    result = ConstructionWorkflow(mappers=[InvalidCodeMapper()]).run([source])
+    result = DraftConstructionWorkflow(mappers=[InvalidCodeMapper()]).run([source])
 
     assert (
         result.quality_report.metric_payload()["shacl_violation_count"]
@@ -418,7 +418,7 @@ def test_composite_alternate_key_fk_resolves_to_target_primary_node() -> None:
             },
         ],
     )
-    graph = ConstructionWorkflow(
+    graph = DraftConstructionWorkflow(
         mappers=[CatalogTableMapper(_alternate_key_catalog())]
     ).run([customers, orders]).property_graph
 

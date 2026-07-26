@@ -14,7 +14,7 @@ from kg_construction.domain.models import (
     RelationCandidate,
     SourceRecord,
 )
-from kg_construction.infrastructure.evaluation.extraction_coverage import CoverageEvaluator
+from kg_construction.evaluation.extraction_coverage import CoverageEvaluator
 from kg_construction.infrastructure.ontology.ontology_alignment import OntologyAligner
 from kg_construction.infrastructure.resolution.canonicalization import (
     LinkResult,

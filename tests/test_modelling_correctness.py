@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.modelling_correctness import (
+from kg_construction.evaluation.modelling_correctness import (
     evaluate_structured_case,
     evaluate_unstructured_case,
 )

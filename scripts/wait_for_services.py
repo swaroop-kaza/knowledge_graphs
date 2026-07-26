@@ -15,6 +15,7 @@ from typing import Any
 import yaml
 
 from kg_construction.certification.profiles import select_profile
+from kg_construction.service_runtime import LockedServiceRuntime
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,12 +24,33 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=float, default=float(os.getenv("SERVICE_WAIT_TIMEOUT", "120")))
     parser.add_argument("--profile", default=os.getenv("KG_CERT_PROFILE"))
-    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    parser.add_argument(
+        "--ollama-url",
+        default=None,
+        help=(
+            "Compatibility assertion only; it must match OLLAMA_BASE_URL from "
+            "the locked service environment."
+        ),
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    try:
+        runtime = LockedServiceRuntime.from_environment()
+    except ValueError as exc:
+        print(f"[FAIL] locked-service-runtime: {exc}")
+        return 1
+    if (
+        args.ollama_url is not None
+        and args.ollama_url.rstrip("/") != runtime.ollama_base_url
+    ):
+        print(
+            "[FAIL] locked-service-runtime: --ollama-url must match "
+            "OLLAMA_BASE_URL"
+        )
+        return 1
     manifest = _mapping(_ROOT / "models.manifest.yaml")
     lock = _mapping(_ROOT / "models.lock.yaml")
     try:
@@ -38,9 +60,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     required = set(profile.mandatory_services)
     probes: dict[str, Callable[[], str]] = {
-        "ollama": lambda: _probe_ollama(args.ollama_url, lock, profile.name),
-        "neo4j": _probe_neo4j,
-        "memgraph": _probe_memgraph,
+        "ollama": lambda: _probe_ollama(
+            runtime.ollama_base_url,
+            lock,
+            profile.name,
+        ),
+        "neo4j": lambda: _probe_neo4j(runtime),
+        "memgraph": lambda: _probe_memgraph(runtime),
         "ladybug": _probe_ladybug,
     }
     missing_probe = sorted(required - set(probes))
@@ -120,16 +146,18 @@ def _canonical_ollama_digest(value: object) -> str:
     return digest
 
 
-def _probe_neo4j() -> str:
+def _probe_neo4j(runtime: LockedServiceRuntime | None = None) -> str:
     from neo4j import GraphDatabase
 
-    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    user = os.getenv("NEO4J_USER", "neo4j")
-    password = os.getenv("NEO4J_PASSWORD", "certification")
-    driver = GraphDatabase.driver(uri, auth=(user, password), connection_timeout=3)
+    resolved = runtime or LockedServiceRuntime.from_environment()
+    driver = GraphDatabase.driver(
+        resolved.neo4j_uri,
+        auth=(resolved.neo4j_user, resolved.neo4j_password),
+        connection_timeout=3,
+    )
     try:
         driver.verify_connectivity()
-        with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+        with driver.session(database=resolved.neo4j_database) as session:
             record = session.run("RETURN 1 AS ok").single()
     finally:
         driver.close()
@@ -138,11 +166,15 @@ def _probe_neo4j() -> str:
     return "authenticated query passed"
 
 
-def _probe_memgraph() -> str:
+def _probe_memgraph(runtime: LockedServiceRuntime | None = None) -> str:
     from neo4j import GraphDatabase
 
-    uri = os.getenv("MEMGRAPH_URI", "bolt://localhost:7688")
-    driver = GraphDatabase.driver(uri, auth=None, connection_timeout=3)
+    resolved = runtime or LockedServiceRuntime.from_environment()
+    driver = GraphDatabase.driver(
+        resolved.memgraph_uri,
+        auth=None,
+        connection_timeout=3,
+    )
     try:
         with driver.session() as session:
             record = session.run("RETURN 1 AS ok").single()
@@ -160,7 +192,7 @@ def _probe_ladybug() -> str:
         database_path = str(Path(directory) / "doctor.lbdb")
         database = ladybug.Database(database_path)
         connection = ladybug.Connection(database)
-        result = connection.execute("RETURN 1 AS ok")
+        result: Any = connection.execute("RETURN 1 AS ok")
         if not result.has_next() or result.get_next()[0] != 1:
             raise RuntimeError("Ladybug semantic query returned the wrong value")
     return "embedded query passed"

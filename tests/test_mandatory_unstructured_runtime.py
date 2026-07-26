@@ -4,17 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from kg_construction.application.mandatory_unstructured_runtime import (
-    HeldOutClaimCase,
-    HeldOutClaimDataset,
-    MandatoryUnstructuredRuntime,
-)
-from kg_construction.application.unstructured_pipeline import (
-    ExplicitNilObservedResolver,
-    PatternClaimExtractor,
-    RuleMentionDetector,
-    UnstructuredPipeline,
-)
 from kg_construction.domain.claim import (
     Evidence,
     EvidenceKind,
@@ -31,7 +20,7 @@ from kg_construction.domain.models import (
     SourceRecord,
     stable_id,
 )
-from kg_construction.infrastructure.evaluation.claim_evaluations import (
+from kg_construction.evaluation.claim_evaluations import (
     HardCoverageThresholds,
 )
 from kg_construction.infrastructure.extractors.model_backed.claims import (
@@ -48,16 +37,32 @@ from kg_construction.infrastructure.extractors.model_backed.identity import (
     MandatoryCanonicalIdentityEnsemble,
     _cosine,
 )
+from kg_construction.infrastructure.graph_builders import PropertyGraphBuilder
 from kg_construction.infrastructure.graph_builders.rdf_graph import RDFGraphBuilder
 from kg_construction.infrastructure.ontology.unstructured_governance import (
     GovernedResourceShaclGate,
     GovernedUnstructuredSchema,
     final_rdf_graph_sha256,
 )
+from kg_construction.infrastructure.resolution.common import (
+    reconcile_entity_references,
+)
 from kg_construction.infrastructure.resolution.mandatory_ensemble import (
     ExternalIdentityPromotionPolicy,
     GovernedExternalIdentityPromoter,
     MandatoryScopedResolutionEnsemble,
+)
+from kg_construction.unstructured.pipeline import (
+    ExplicitNilObservedResolver,
+    PatternClaimExtractor,
+    RuleMentionDetector,
+    UnstructuredPipeline,
+)
+from kg_construction.unstructured.runtime import (
+    HeldOutClaimCase,
+    HeldOutClaimDataset,
+    MandatoryUnstructuredRuntime,
+    _publication_only_batch,
 )
 
 
@@ -131,6 +136,57 @@ def test_governed_alignment_and_real_shacl_run_before_promotion() -> None:
     assert result.claim_shacl_results
     assert all(item.executed and item.conforms for item in result.claim_shacl_results)
     assert result.governed_schema_sha256 == schema.source_sha256
+
+
+def test_publication_batch_excludes_quarantine_resources_but_keeps_audit() -> None:
+    document = _entity("document", "Document")
+    promoted = _entity("promoted", "Claim").model_copy(
+        update={"properties": {"promotion_status": "promoted"}}
+    )
+    quarantined = _entity("quarantined", "Claim").model_copy(
+        update={"properties": {"promotion_status": "quarantined"}}
+    )
+    promoted_edge = RelationCandidate.build(
+        source=document.candidate_id,
+        relation_type="ASSERTS",
+        target=promoted.candidate_id,
+        evidence=document.evidence,
+        extractor_name="test",
+        technique="test",
+    )
+    quarantined_edge = RelationCandidate.build(
+        source=document.candidate_id,
+        relation_type="ASSERTS",
+        target=quarantined.candidate_id,
+        evidence=document.evidence,
+        extractor_name="test",
+        technique="test",
+    )
+    audit_batch = ConstructionBatch(
+        entities=[document, promoted, quarantined],
+        relations=[promoted_edge, quarantined_edge],
+        metadata={
+            "quarantined_claim_ids": ["domain-quarantined"],
+            "quarantined_claim_count": 1,
+        },
+    )
+
+    publication = _publication_only_batch(audit_batch)
+
+    assert [entity.name for entity in publication.entities] == [
+        "document",
+        "promoted",
+    ]
+    assert publication.relations == [promoted_edge]
+    assert publication.metadata["quarantined_claim_ids"] == [
+        "domain-quarantined"
+    ]
+    assert publication.metadata["publication_resource_filter"] == {
+        "excluded_quarantined_entity_ids": [quarantined.candidate_id],
+        "excluded_entity_count": 1,
+        "excluded_relation_count": 1,
+        "excluded_fact_count": 0,
+    }
 
 
 def test_unmapped_provider_type_is_quarantined_before_coreference() -> None:
@@ -459,6 +515,85 @@ def test_external_identity_consensus_creates_canonical_and_links_occurrences() -
     assert set(decision["provider_ids"]) == {"wikidata", "openrefine"}
 
 
+def test_final_reconciliation_preserves_external_semantic_endpoints() -> None:
+    alan = _with_external_links(
+        _entity(
+            "Alan Turing",
+            "Person",
+            identity_layer="observed",
+            mention_ids=["m1"],
+        ).model_copy(
+            update={
+                "properties": {
+                    "identity_layer": "observed",
+                    "canonical_entity_id": "local-alan",
+                    "mention_ids": ["m1"],
+                }
+            }
+        ),
+        ("wikidata", "Q7251", 1.0, False),
+        ("openrefine", "Q7251", 0.99, False),
+    )
+    charles = _with_external_links(
+        _entity(
+            "Charles Babbage",
+            "Person",
+            identity_layer="observed",
+            mention_ids=["m2"],
+        ).model_copy(
+            update={
+                "properties": {
+                    "identity_layer": "observed",
+                    "canonical_entity_id": "local-charles",
+                    "mention_ids": ["m2"],
+                }
+            }
+        ),
+        ("wikidata", "Q46633", 1.0, False),
+        ("openrefine", "Q46633", 0.99, False),
+    )
+    relationship = RelationCandidate.build(
+        source="local-alan",
+        relation_type="WORKS_WITH",
+        target="local-charles",
+        properties={
+            "original_source": alan.candidate_id,
+            "original_target": charles.candidate_id,
+        },
+        evidence=[*alan.evidence, *charles.evidence],
+        extractor_name="test",
+        technique="test",
+    )
+
+    promoted = _external_promoter().promote(
+        ConstructionBatch(
+            entities=[alan, charles],
+            relations=[relationship],
+        )
+    )
+    reconciled = reconcile_entity_references(promoted)
+    graph = PropertyGraphBuilder().build(reconciled)
+
+    alan_id = stable_id(
+        "canonical_entity",
+        "wikidata",
+        "Q7251",
+    )
+    charles_id = stable_id(
+        "canonical_entity",
+        "wikidata",
+        "Q46633",
+    )
+    assert reconciled.relations[0].source == alan_id
+    assert reconciled.relations[0].target == charles_id
+    assert any(
+        edge.source_id == alan_id
+        and edge.type == "WORKS_WITH"
+        and edge.target_id == charles_id
+        for edge in graph.edges
+    )
+
+
 def test_external_identity_conflict_is_reviewed_and_never_promoted() -> None:
     observed = _with_external_links(
         _entity(
@@ -560,8 +695,11 @@ def test_ollama_retry_policy_repairs_invalid_structured_output() -> None:
     assert backend.last_attempt_count == 2
     assert all(payload["think"] is False for payload in transport.payloads)
     assert all(payload["keep_alive"] == "10m" for payload in transport.payloads)
+    assert all(payload["options"]["num_ctx"] == 8192 for payload in transport.payloads)
     assert all(payload["options"]["num_predict"] == 2048 for payload in transport.payloads)
     assert "REPAIR REQUIRED" in transport.payloads[1]["messages"][-1]["content"]
+    assert "The required JSON Schema is" not in transport.payloads[1]["messages"][-1]["content"]
+    assert transport.payloads[1]["messages"][-1]["content"].endswith("extract")
 
 
 def test_runtime_executes_same_pipeline_on_versioned_gold_and_retains_report() -> None:
@@ -677,9 +815,27 @@ def test_runtime_executes_same_pipeline_on_versioned_gold_and_retains_report() -
     assert metadata["final_resource_shacl_executed"] is True
     assert metadata["final_resource_shacl_conforms"] is True
     assert metadata["final_resource_schema_sha256"] == schema.source_sha256
+    final_shacl = batch.metadata["final_resource_shacl"]
+    assert final_shacl["executed"] is True
+    assert final_shacl["conforms"] is True
+    assert final_shacl["schema_id"] == schema.schema_id
+    assert final_shacl["schema_version"] == schema.version
+    assert final_shacl["schema_sha256"] == schema.source_sha256
+    assert final_shacl["shacl_contract_version"]
+    assert (
+        metadata["final_shacl_contract_sha256"]
+        == final_shacl["shacl_contract_sha256"]
+    )
+    assert final_shacl["rdf_triple_count"] > 0
+    assert final_shacl["rdf_quad_count"] > 0
+    assert runtime.final_resource_shacl_result is not None
+    assert (
+        runtime.final_resource_shacl_result.model_dump(mode="json")
+        == final_shacl
+    )
     publication_rdf = RDFGraphBuilder().build(batch)
     assert (
         metadata["final_rdf_graph_sha256"]
         == final_rdf_graph_sha256(publication_rdf)
-        == batch.metadata["final_resource_shacl"]["rdf_graph_sha256"]
+        == final_shacl["rdf_graph_sha256"]
     )

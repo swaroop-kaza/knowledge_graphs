@@ -2,7 +2,8 @@
 version: 1
 purpose: research_and_roadmap_only
 generated_by: scripts/generate_capability_manifest.py
-count: 60
+count: 61
+artifact_count: 19
 techniques:
 - name: api_response_mapper
   category: mapper
@@ -14,6 +15,17 @@ techniques:
   - linux-cpu
   - linux-cuda
   owner: kg_construction.infrastructure.mapping.semi_structured.APIResponseMapper
+  certified: false
+- name: benchmark_runner
+  category: evaluation
+  method_type: evaluation
+  status: implemented
+  support_level: research
+  profiles:
+  - darwin-arm64
+  - linux-cpu
+  - linux-cuda
+  owner: kg_construction.research.simple_benchmark.BenchmarkRunner
   certified: false
 - name: blocking_resolver
   category: resolution
@@ -140,7 +152,7 @@ techniques:
   category: enrichment
   method_type: deterministic
   status: implemented
-  support_level: mandatory
+  support_level: research
   profiles:
   - darwin-arm64
   - linux-cpu
@@ -272,7 +284,7 @@ techniques:
   category: hybrid
   method_type: rules
   status: implemented
-  support_level: mandatory
+  support_level: research
   profiles:
   - darwin-arm64
   - linux-cpu
@@ -663,4 +675,62 @@ techniques:
   - linux-cpu
   - linux-cuda
   owner: kg_construction.infrastructure.mapping.semi_structured.XMLPathMapper
+  certified: false
+artifacts:
+- path: reports/benchmark_leaderboard.csv
+  kind: report
+  certified: false
+- path: reports/benchmark_leaderboard.md
+  kind: report
+  certified: false
+- path: reports/cross_source_identity_benchmark.csv
+  kind: report
+  certified: false
+- path: reports/cross_source_identity_benchmark.json
+  kind: report
+  certified: false
+- path: reports/cross_source_identity_benchmark.md
+  kind: report
+  certified: false
+- path: reports/gold_standard_benchmark_story.csv
+  kind: report
+  certified: false
+- path: reports/gold_standard_benchmark_story.json
+  kind: report
+  certified: false
+- path: reports/gold_standard_benchmark_story.md
+  kind: report
+  certified: false
+- path: notebooks/01_data_loading_and_profiling.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/02_structured_schema_mapping_rdf.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/03_jsonpath_xml_semistructured_mapping.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/04_text_extraction_gliner_ollama_labels.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/05_evaluation_resolution_production_hardening.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/06_graph_ml_capabilities.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/07_standards_mapping_and_virtual_kg.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/08_relation_extraction_and_entity_linking.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/09_enterprise_events_and_observability.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/10_graph_store_ingestion_and_exports.ipynb
+  kind: notebook
+  certified: false
+- path: notebooks/11_gold_benchmarks_and_retrieval.ipynb
+  kind: notebook
   certified: false

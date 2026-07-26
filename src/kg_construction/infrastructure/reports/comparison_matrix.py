@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kg_construction.application.scoring import TechniqueScore
+from kg_construction.research.scoring import TechniqueScore
 
 
 def build_comparison_matrix(scores: list[TechniqueScore]) -> list[dict[str, object]]:

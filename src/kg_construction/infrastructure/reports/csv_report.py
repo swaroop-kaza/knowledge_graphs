@@ -1,4 +1,4 @@
-"""CSV report writer for publishable benchmark tables."""
+"""CSV writer for non-authoritative technique-comparison tables."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class CsvReportWriter:
         "quality_score",
         "runtime_score",
         "score_uncertainty_method",
-        "publication_eligible",
+        "research_gate_passed",
         "gold_tasks",
         "hard_gates_passed",
         "hard_gates_failed",
@@ -82,7 +82,7 @@ class CsvReportWriter:
                     "quality_score": _rounded(score.quality_score),
                     "runtime_score": _rounded(score.runtime_score),
                     "score_uncertainty_method": score.confidence_interval_method,
-                    "publication_eligible": candidate.publication_eligible,
+                    "research_gate_passed": candidate.research_gate_passed,
                     "gold_tasks": ";".join(candidate.gold_evaluation.evaluated_tasks),
                     "hard_gates_passed": ";".join(passed),
                     "hard_gates_failed": ";".join(failed),

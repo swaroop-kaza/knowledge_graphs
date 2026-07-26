@@ -16,14 +16,13 @@ from typing import Any, Protocol
 
 import yaml
 
-from kg_construction.application.benchmark_runner import GoldDatasetManifest
 from kg_construction.domain.evidence import row_evidence
 from kg_construction.domain.models import ConstructionBatch, EntityCandidate, stable_id
-from kg_construction.infrastructure.evaluation.entity_resolution_metrics import (
+from kg_construction.evaluation.entity_resolution_metrics import (
     EntityResolutionMetrics,
     predicted_merge_pairs,
 )
-from kg_construction.infrastructure.evaluation.gold_standards import (
+from kg_construction.evaluation.gold_standards import (
     GoldEntityResolutionFixture,
 )
 from kg_construction.infrastructure.loaders.csv_loader import CsvLoader
@@ -32,6 +31,7 @@ from kg_construction.infrastructure.resolution.entity_resolution import (
     NormalizedStringResolver,
 )
 from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
+from kg_construction.research.benchmark_runner import GoldDatasetManifest
 
 BENCHMARK_DIR = Path("benchmarks/cross_source_identity/v1")
 MANIFEST_PATH = BENCHMARK_DIR / "benchmark_manifest.yaml"
@@ -340,9 +340,20 @@ def _write_markdown(rows: list[dict[str, Any]], metadata: dict[str, Any]) -> Non
     lines = [
         "# Cross-Source Identity and Deduplication Benchmark",
         "",
-        f"Benchmark: `{metadata['benchmark_id']}` v{metadata['benchmark_version']}",
+        "[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Benchmark fixture](../benchmarks/cross_source_identity/v1/README.md)",
         "",
-        "Status: **gold-candidate synthetic correctness fixture**. It is published for "
+        "| Metadata | Value |",
+        "| --- | --- |",
+        f"| Benchmark | `{metadata['benchmark_id']}` v{metadata['benchmark_version']} |",
+        f"| Run ID | `{metadata['run_id']}` |",
+        f"| Git commit | `{metadata['git_commit']}` |",
+        f"| Git tree state | `{metadata['git_tree_state']}` |",
+        f"| Python | `{metadata['environment']['python']}` |",
+        "",
+        "> **Research only.** This synthetic comparison is non-authoritative and "
+        "cannot certify identity quality, graph correctness, or publication eligibility.",
+        "",
+        "Status: **gold-candidate synthetic regression fixture**. It is published for "
         "review and CI, not presented as a production-scale or domain-release leaderboard.",
         "",
         "The fixture contains aliases, legal suffix variations, exact repeated names, and "
@@ -355,18 +366,18 @@ def _write_markdown(rows: list[dict[str, Any]], metadata: dict[str, Any]) -> Non
         "make cross-source-identity-benchmark",
         "```",
         "",
-        f"- Run ID: `{metadata['run_id']}`",
-        f"- Dataset hash: `{metadata['dataset_hash']}`",
-        f"- Input hash: `{metadata['input_hash']}`",
-        f"- Gold hash: `{metadata['gold_hash']}`",
-        f"- Manifest hash: `{metadata['manifest_hash']}`",
-        f"- Config hash: `{metadata['config_hash']}`",
-        f"- Git commit: `{metadata['git_commit']}`",
-        f"- Git tree state: `{metadata['git_tree_state']}`",
-        f"- Generator hash: `{metadata['generator_hash']}`",
-        f"- Source tree hash: `{metadata['source_tree_hash']}`",
-        f"- Results hash: `{metadata['results_hash']}`",
-        f"- Python: `{metadata['environment']['python']}`",
+        "### Reproducibility hashes",
+        "",
+        "| Artifact | SHA-256 |",
+        "| --- | --- |",
+        f"| Dataset | `{metadata['dataset_hash']}` |",
+        f"| Input | `{metadata['input_hash']}` |",
+        f"| Gold | `{metadata['gold_hash']}` |",
+        f"| Manifest | `{metadata['manifest_hash']}` |",
+        f"| Config | `{metadata['config_hash']}` |",
+        f"| Generator | `{metadata['generator_hash']}` |",
+        f"| Source tree | `{metadata['source_tree_hash']}` |",
+        f"| Results | `{metadata['results_hash']}` |",
         "",
         "## Results",
         "",
@@ -387,14 +398,12 @@ def _write_markdown(rows: list[dict[str, Any]], metadata: dict[str, Any]) -> Non
             "",
             "## Hard Gates",
             "",
-            "- Pairwise precision must be at least "
-            f"`{float(metadata['hard_gates']['minimum_pairwise_precision']):.2f}`.",
-            "- False-merge rate must be at most "
-            f"`{float(metadata['hard_gates']['maximum_false_merge_rate']):.2f}`.",
-            "- Evidence coverage must be at least "
-            f"`{float(metadata['hard_gates']['minimum_evidence_coverage']):.2f}`.",
-            "- Source-record order invariance is required: "
-            f"`{metadata['hard_gates']['require_source_order_invariance']}`.",
+            "| Gate | Requirement |",
+            "| --- | ---: |",
+            f"| Pairwise precision | at least `{float(metadata['hard_gates']['minimum_pairwise_precision']):.2f}` |",
+            f"| False-merge rate | at most `{float(metadata['hard_gates']['maximum_false_merge_rate']):.2f}` |",
+            f"| Evidence coverage | at least `{float(metadata['hard_gates']['minimum_evidence_coverage']):.2f}` |",
+            f"| Source-record order invariance | `{metadata['hard_gates']['require_source_order_invariance']}` |",
             "",
             "## Interpretation",
             "",

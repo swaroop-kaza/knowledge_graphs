@@ -14,7 +14,7 @@ COVERAGE_PATH = NOTEBOOK_DIR / "capability_coverage.yaml"
 
 sys.path.insert(0, str(ROOT / "src"))
 
-from kg_construction.application.registry import (  # noqa: E402
+from kg_construction.certification.registry import (  # noqa: E402
     default_registry,
     research_registry,
 )

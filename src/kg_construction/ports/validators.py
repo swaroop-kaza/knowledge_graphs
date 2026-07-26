@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from kg_construction.domain.models import ConstructionBatch
-from kg_construction.infrastructure.ontology.validation import ValidationReport
+from kg_construction.domain.validation import ValidationReport
 
 
 @runtime_checkable

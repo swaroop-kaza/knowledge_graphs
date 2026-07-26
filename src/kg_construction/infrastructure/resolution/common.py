@@ -183,7 +183,14 @@ def _updated_resolution_aliases(
 
 def _resolution_aliases(batch: ConstructionBatch) -> dict[str, str]:
     canonicalized_entities = [
-        entity for entity in batch.entities if entity.properties.get("canonical_entity_id")
+        entity
+        for entity in batch.entities
+        if entity.properties.get("canonical_entity_id")
+        or (
+            entity.properties.get("identity_layer")
+            in {"observed", "canonical"}
+            and entity.properties.get("linked_canonical_entity_id")
+        )
     ]
     stored_aliases = batch.metadata.get("entity_resolution_aliases", {})
     if not canonicalized_entities and not isinstance(stored_aliases, dict):
@@ -198,11 +205,30 @@ def _resolution_aliases(batch: ConstructionBatch) -> dict[str, str]:
     )
     current_ids: set[str] = set()
     for entity in batch.entities:
-        canonical_id = str(entity.properties.get("canonical_entity_id", entity.candidate_id))
-        if canonical_id != entity.candidate_id or entity.properties.get("canonical_entity_id"):
-            aliases[entity.candidate_id] = canonical_id
-            aliases[canonical_id] = canonical_id
-            current_ids.add(canonical_id)
+        local_canonical_id = str(
+            entity.properties.get(
+                "canonical_entity_id",
+                entity.candidate_id,
+            )
+        )
+        linked_canonical_id = (
+            str(entity.properties["linked_canonical_entity_id"])
+            if (
+                entity.properties.get("identity_layer")
+                in {"observed", "canonical"}
+                and entity.properties.get("linked_canonical_entity_id")
+            )
+            else None
+        )
+        endpoint_id = linked_canonical_id or local_canonical_id
+        if (
+            endpoint_id != entity.candidate_id
+            or entity.properties.get("canonical_entity_id")
+        ):
+            aliases[entity.candidate_id] = endpoint_id
+            aliases[local_canonical_id] = endpoint_id
+            aliases[endpoint_id] = endpoint_id
+            current_ids.add(endpoint_id)
     return _flatten_aliases(aliases, current_ids=current_ids)
 
 

@@ -8,9 +8,12 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from kg_construction import default_workflow_for_source_type, load_sources
-from kg_construction.application.benchmark_runner import TechniqueEvaluationConfig
-from kg_construction.application.config import DataToKGConfig
+from kg_construction import load_sources
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.research.benchmark_runner import TechniqueEvaluationConfig
+from kg_construction.research.workflow import (
+    draft_workflow_for_source_type,
+)
 
 _COMPLETE_CONFIG = Path("configs/data_to_kg_complete.example.yaml")
 _EVALUATION_CONFIG = Path("configs/evaluation.example.yaml")
@@ -55,7 +58,7 @@ def test_complete_profile_constructs_declared_edges_and_deduplicated_concepts() 
         "examples/data_to_kg/sample.csv",
         source_type="csv",
     )
-    result = default_workflow_for_source_type("csv", config).run(sources)
+    result = draft_workflow_for_source_type("csv", config).run(sources)
 
     assert len(
         [node for node in result.property_graph.nodes if "Team" in node.labels]
@@ -69,6 +72,19 @@ def test_complete_profile_constructs_declared_edges_and_deduplicated_concepts() 
 def test_complete_profile_mirrors_the_locked_platform_model_ensemble() -> None:
     config = DataToKGConfig.from_yaml(_COMPLETE_CONFIG)
 
+    assert config.extraction.runtime_profile == "model_backed"
+    assert set(config.extraction.entity_labels) <= {
+        "Person",
+        "Organization",
+        "Location",
+        "Event",
+        "Product",
+        "Date",
+        "Concept",
+        "System",
+        "Service",
+        "Incident",
+    }
     assert config.unstructured.require_all_platform_providers is True
     assert config.unstructured.models_lock_path == "models.lock.yaml"
     assert set(config.extractors) == {

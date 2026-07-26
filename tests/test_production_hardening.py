@@ -8,10 +8,10 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from kg_construction.application.config import DataToKGConfig
 from kg_construction.application.production import build_production_services
-from kg_construction.application.registry import default_registry
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.certification.registry import default_registry
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.claim import DocumentRef
 from kg_construction.domain.models import ConstructionBatch, SourceRecord
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
@@ -334,7 +334,7 @@ class ProductionHardeningTests(unittest.TestCase):
             metadata={"updated_at": "2026-07-09T10:00:00Z"},
         )
         with tempfile.TemporaryDirectory() as tmpdir:
-            workflow = ConstructionWorkflow(
+            workflow = DraftConstructionWorkflow(
                 extractors=[FailingExtractor(), RegexEntityExtractor()],
                 validators=[EvidenceRequiredValidator(policy="quarantine")],
                 manifest_writer=RunManifestWriter(Path(tmpdir) / "manifests"),

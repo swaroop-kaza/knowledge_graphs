@@ -17,10 +17,8 @@ from kg_construction.domain.models import (
     canonical_json,
     stable_id,
 )
-from kg_construction.infrastructure.ontology.validation import (
-    EvidenceRequiredValidator,
-    ValidationReport,
-)
+from kg_construction.domain.validation import ValidationReport
+from kg_construction.infrastructure.ontology.validation import EvidenceRequiredValidator
 
 JsonDict = dict[str, Any]
 

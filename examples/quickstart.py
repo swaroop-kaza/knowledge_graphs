@@ -1,11 +1,16 @@
-"""Mandatory-profile quickstart for data scientists."""
+"""Complete construction quickstart for structured and unstructured data.
+
+Run ``make setup`` first. The text path deliberately executes the locked,
+platform-mandatory model ensemble; this example does not substitute a lighter
+profile when a provider is unavailable.
+"""
 
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from kg_construction import construct_kg, evaluate_techniques, profile_dataset
+from kg_construction import construct_kg, profile_dataset
 from kg_construction.infrastructure.graph_stores import (
     Neo4jExporter,
     NetworkXExporter,
@@ -26,11 +31,12 @@ def _counts(result: Any) -> dict[str, Any]:
         "intended_use_passed": result.intended_use_report.passed,
         "missing_intended_uses": result.intended_use_report.missing_uses,
         "publication_passed": result.publication_gate.passed,
+        "release_eligible": result.release_eligible,
     }
 
 
 def run_quickstart() -> dict[str, Any]:
-    """Run strict structured/unstructured publication, benchmark, and exports."""
+    """Build evaluated draft graphs and demonstrate the three export forms."""
 
     csv_path = "examples/data_to_kg/sample.csv"
     text_path = "examples/data_to_kg/sample.txt"
@@ -49,12 +55,6 @@ def run_quickstart() -> dict[str, Any]:
         evaluation_suite_path="configs/graph_evaluation_suite.sample_text.yaml",
     )
 
-    benchmark = evaluate_techniques(
-        text_path,
-        source_type="text",
-        techniques="regex_entity_extractor,hybrid_rules_gazetteer_regex",
-    )
-
     rdf_payload = RDFExporter().export_rdf_graph(csv_result.rdf_graph)
     neo4j_cypher = Neo4jExporter().export_property_graph(csv_result.property_graph)
     networkx_payload = NetworkXExporter().export_property_graph(csv_result.property_graph)
@@ -63,7 +63,6 @@ def run_quickstart() -> dict[str, Any]:
         "csv_profile": profile_dataset(csv_path).model_dump(mode="json"),
         "csv_to_kg": _counts(csv_result),
         "text_to_kg": _counts(text_result),
-        "best_benchmark_technique": benchmark.best_technique,
         "export_preview": {
             "rdf_turtle_lines": len(rdf_payload["turtle"].splitlines()),
             "neo4j_cypher_statements": len(neo4j_cypher),

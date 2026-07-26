@@ -30,7 +30,7 @@ from kg_construction.domain.graph_objects import (
     PropertyGraph,
     PropertyNode,
 )
-from kg_construction.infrastructure.evaluation import (
+from kg_construction.evaluation import (
     GraphBoundIntendedUseEvaluator,
     IntendedUseEvaluationReport,
     IntendedUseMetricsEvaluator,

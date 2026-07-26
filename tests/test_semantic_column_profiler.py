@@ -6,12 +6,12 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.modeling_policy import ModelingPolicy, PromotionThresholds
-from kg_construction.application.semantic_profiler import (
+from kg_construction.domain.modeling import ColumnRole
+from kg_construction.structured.modeling_policy import ModelingPolicy, PromotionThresholds
+from kg_construction.structured.semantic_profiler import (
     ModelingPlan,
     SemanticColumnProfiler,
 )
-from kg_construction.domain.modeling import ColumnRole
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 

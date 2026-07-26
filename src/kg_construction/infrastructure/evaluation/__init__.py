@@ -1,224 +1,36 @@
-"""Evaluation modules."""
+"""Compatibility facade for the canonical evaluation and research packages.
+
+Product evaluation implementations moved to ``kg_construction.evaluation``.
+The former simple technique benchmark moved to
+``kg_construction.research.simple_benchmark``.
+"""
 
 from __future__ import annotations
 
-from kg_construction.infrastructure.evaluation.accuracy_metrics import AccuracyMetrics
-from kg_construction.infrastructure.evaluation.benchmark import BenchmarkResult, BenchmarkRunner
-from kg_construction.infrastructure.evaluation.coverage_metrics import CoverageMetrics
-from kg_construction.infrastructure.evaluation.entity_resolution_metrics import (
-    EntityResolutionMetrics,
-)
-from kg_construction.infrastructure.evaluation.extraction_coverage import (
-    CoverageEvaluator,
-    CoverageReport,
-    IntentJudge,
-)
-from kg_construction.infrastructure.evaluation.gold_standards import (
-    GoldBenchmarkEvaluator,
-    GoldBenchmarkFixture,
-    GoldBenchmarkScore,
-    GoldEntityResolutionFixture,
-    GoldEntityResolutionRecord,
-    GoldEntitySpan,
-    GoldRelation,
-    GoldRetrievalCase,
-    GoldRetrievalContext,
-    GoldRetrievalEdge,
-    GoldRetrievalFixture,
-    GoldTriple,
-)
-from kg_construction.infrastructure.evaluation.graph_bound_suite import (
-    GRAPH_EVALUATION_SUITE_VERSION,
-    BoundGraphRAGCase,
-    BoundGraphRAGSuite,
-    BoundLinkPredictionCase,
-    BoundLinkPredictionSuite,
-    BoundNoSQLCase,
-    BoundNoSQLSuite,
-    BoundReasoningCase,
-    BoundReasoningSuite,
-    BoundRecommendationCase,
-    BoundRecommendationSuite,
-    BoundSQLLikeCase,
-    BoundSQLLikeSuite,
-    BoundVectorCase,
-    BoundVectorSuite,
-    DeterministicVectorWorkloadBackend,
-    EvidenceGroundedPathAnswerBackend,
-    GraphBoundExecution,
-    GraphBoundIntendedUseEvaluator,
-    GraphBoundQualityGold,
-    GraphNodeSelector,
-    GraphTraversalQuery,
-    GraphWorkloadRunner,
-    LexicalRetrievalQuery,
-    NeighborRankingQuery,
-    Neo4jVectorWorkloadBackend,
-    PathQuery,
-    ReasoningPathQuery,
-    SQLNodeQuery,
-    StructuredFormationGold,
-    VectorSearchQuery,
-    VectorWorkloadBackend,
-    VectorWorkloadObservation,
-    VersionedGraphEvaluationSuite,
-    evaluation_fixture_sha256,
-    predicted_quality_mappings,
-    property_graph_sha256,
-)
-from kg_construction.infrastructure.evaluation.intended_use_metrics import (
-    GraphRAGCase,
-    GraphRAGEvaluationInput,
-    IntendedUseEvaluationInputs,
-    IntendedUseEvaluationReport,
-    IntendedUseMetricReport,
-    IntendedUseMetricsEvaluator,
-    LinkPredictionCase,
-    LinkPredictionEvaluationInput,
-    MetricThresholdResult,
-    NoSQLEvaluationInput,
-    NoSQLTraversalCase,
-    PopularityStratumReport,
-    ReasoningCase,
-    ReasoningEvaluationInput,
-    ReasoningFact,
-    RecommendationCase,
-    RecommendationEvaluationInput,
-    SQLLikeEvaluationInput,
-    SQLLikeQueryCase,
-    VectorIndexCase,
-    VectorIndexEvaluationInput,
-)
-from kg_construction.infrastructure.evaluation.metrics import (
-    ConstructionMetricsEvaluator,
-    precision_recall_f1,
-)
-from kg_construction.infrastructure.evaluation.operational_metrics import (
-    OperationalMetrics,
-    OperationalMetricsRecorder,
-    RuntimeReport,
-)
-from kg_construction.infrastructure.evaluation.quality_gates import (
-    QUALITY_THRESHOLDS_VERSION,
-    KnowledgeGraphQualityEvaluator,
-    KnowledgeGraphQualityReport,
-    MetricFamilyReport,
-    QualityEvaluationInputs,
-    QualityGateResult,
-    QualityThreshold,
-    VersionedQualityThresholds,
-)
-from kg_construction.infrastructure.evaluation.retrieval_metrics import RetrievalMetrics
-from kg_construction.infrastructure.evaluation.schema_quality import (
-    SchemaQualityEvaluator,
-    SchemaQualityGate,
-    SchemaQualityGateSettings,
-    SchemaQualityReport,
-)
-from kg_construction.infrastructure.evaluation.statistical_confidence import (
-    bootstrap_mean_interval,
-    wilson_score_interval,
-)
-from kg_construction.infrastructure.evaluation.validation_metrics import ValidationMetrics
+from importlib import import_module
+from typing import Any
 
-__all__ = [
-    "AccuracyMetrics",
+from kg_construction.evaluation import __all__ as _EVALUATION_EXPORTS
+
+_RESEARCH_EXPORTS = {
     "BenchmarkResult",
     "BenchmarkRunner",
-    "ConstructionMetricsEvaluator",
-    "CoverageEvaluator",
-    "CoverageMetrics",
-    "CoverageReport",
-    "EntityResolutionMetrics",
-    "IntentJudge",
-    "GoldBenchmarkEvaluator",
-    "GoldBenchmarkFixture",
-    "GoldBenchmarkScore",
-    "GoldEntityResolutionFixture",
-    "GoldEntityResolutionRecord",
-    "GoldEntitySpan",
-    "GoldRelation",
-    "GoldRetrievalCase",
-    "GoldRetrievalContext",
-    "GoldRetrievalEdge",
-    "GoldRetrievalFixture",
-    "GoldTriple",
-    "GRAPH_EVALUATION_SUITE_VERSION",
-    "BoundGraphRAGCase",
-    "BoundGraphRAGSuite",
-    "BoundLinkPredictionCase",
-    "BoundLinkPredictionSuite",
-    "BoundNoSQLCase",
-    "BoundNoSQLSuite",
-    "BoundReasoningCase",
-    "BoundReasoningSuite",
-    "BoundRecommendationCase",
-    "BoundRecommendationSuite",
-    "BoundSQLLikeCase",
-    "BoundSQLLikeSuite",
-    "BoundVectorCase",
-    "BoundVectorSuite",
-    "DeterministicVectorWorkloadBackend",
-    "EvidenceGroundedPathAnswerBackend",
-    "GraphBoundExecution",
-    "GraphBoundIntendedUseEvaluator",
-    "GraphBoundQualityGold",
-    "GraphNodeSelector",
-    "GraphTraversalQuery",
-    "GraphWorkloadRunner",
-    "LexicalRetrievalQuery",
-    "NeighborRankingQuery",
-    "Neo4jVectorWorkloadBackend",
-    "PathQuery",
-    "ReasoningPathQuery",
-    "SQLNodeQuery",
-    "StructuredFormationGold",
-    "VectorSearchQuery",
-    "VectorWorkloadBackend",
-    "VectorWorkloadObservation",
-    "VersionedGraphEvaluationSuite",
-    "evaluation_fixture_sha256",
-    "predicted_quality_mappings",
-    "property_graph_sha256",
-    "GraphRAGCase",
-    "GraphRAGEvaluationInput",
-    "IntendedUseEvaluationInputs",
-    "IntendedUseEvaluationReport",
-    "IntendedUseMetricReport",
-    "IntendedUseMetricsEvaluator",
-    "LinkPredictionCase",
-    "LinkPredictionEvaluationInput",
-    "MetricThresholdResult",
-    "NoSQLEvaluationInput",
-    "NoSQLTraversalCase",
-    "OperationalMetrics",
-    "OperationalMetricsRecorder",
-    "QUALITY_THRESHOLDS_VERSION",
-    "KnowledgeGraphQualityEvaluator",
-    "KnowledgeGraphQualityReport",
-    "MetricFamilyReport",
-    "QualityEvaluationInputs",
-    "QualityGateResult",
-    "QualityThreshold",
-    "PopularityStratumReport",
-    "ReasoningCase",
-    "ReasoningEvaluationInput",
-    "ReasoningFact",
-    "RecommendationCase",
-    "RecommendationEvaluationInput",
-    "RetrievalMetrics",
-    "RuntimeReport",
-    "SchemaQualityEvaluator",
-    "SchemaQualityGate",
-    "SchemaQualityGateSettings",
-    "SchemaQualityReport",
-    "SQLLikeEvaluationInput",
-    "SQLLikeQueryCase",
-    "ValidationMetrics",
-    "VectorIndexCase",
-    "VectorIndexEvaluationInput",
-    "VersionedQualityThresholds",
-    "bootstrap_mean_interval",
-    "precision_recall_f1",
-    "wilson_score_interval",
-]
+    "TechniqueRunner",
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve a former infrastructure export from its canonical owner."""
+
+    if name in _RESEARCH_EXPORTS:
+        module = import_module("kg_construction.research.simple_benchmark")
+    elif name in _EVALUATION_EXPORTS:
+        module = import_module("kg_construction.evaluation")
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+__all__ = sorted([*_EVALUATION_EXPORTS, *_RESEARCH_EXPORTS])

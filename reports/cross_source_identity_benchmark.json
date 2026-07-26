@@ -16,8 +16,8 @@
     "generated_at": "2026-07-21T00:00:00+00:00",
     "generation_command": "make cross-source-identity-benchmark",
     "generation_time_policy": "SOURCE_DATE_EPOCH_or_manifest_publication_date",
-    "generator_hash": "c403349333a3c5a221c8b8bbd33cee44893d4aecf357ac7bde82c0c687164222",
-    "git_commit": "1198383cd4de50f7fbf8f6ef88b3e688fe6ccce8",
+    "generator_hash": "759cc7fceb9cb9981bb3cff113a4c72f6bd1ff161b79fc1cffb3caf3fcfc950c",
+    "git_commit": "e77eaf27994dd5e4ee84ed5ffbd6f0233126cbd9",
     "git_tree_state": "dirty",
     "gold_fixture": "benchmarks/cross_source_identity/v1/gold_entity_resolution.json",
     "gold_hash": "11825ea8262338d1b1f60997ffe54d9d96d26b6ee3ca4640119fa3e4dbe91432",
@@ -41,7 +41,7 @@
     "manifest_hash": "9107ee02d7ba4eed59ef5612f0642c7832006f4cb261d01c523652eb0198cf19",
     "publication_date": "2026-07-21",
     "results_hash": "e7356ff86936af5b693240fd52d102e998c0212b9953f28ce4851ed4c9da54e3",
-    "run_id": "19ad18fce82182b0",
+    "run_id": "8708f082795d8cdf",
     "schema_version": "1.0",
     "source_files": [
       "benchmarks/cross_source_identity/v1/crm.csv",
@@ -53,7 +53,7 @@
       "benchmarks/cross_source_identity/v1/crm.csv": "274c983dac1aa725c6a12f8e10a6a3462a9a61b1cc2da920deadc9ccf13464c0",
       "benchmarks/cross_source_identity/v1/support.csv": "e94a3e7aa0b3a5cf10cb7fb2a684344c2bbc6bf54b6b1e82b7f0c72a7c64399f"
     },
-    "source_tree_hash": "938d5eebb4f008b6f39e4a1f898e12ead8245a1b28091d16400eb894b057b31c"
+    "source_tree_hash": "5a7eb622afe0c98f5fe251f702acc02d3a0581524f899a9c0ec01a7f89ade050"
   },
   "results": [
     {

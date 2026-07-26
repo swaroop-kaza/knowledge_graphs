@@ -24,7 +24,7 @@ class DoctorCliTests(unittest.TestCase):
             patch.object(doctor, "_check_core_imports", return_value=_ok("core_imports", "dependencies")),
             patch.object(
                 doctor,
-                "_check_installed_extras",
+                "_check_mandatory_dependency_groups",
                 return_value=_ok("mandatory_dependency_groups", "dependencies"),
             ),
             patch.object(doctor, "_check_platform_runtime", return_value=_ok("platform_runtime", "runtime")),

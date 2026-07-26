@@ -5,13 +5,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from kg_construction.application.benchmark_runner import (
-    TechniqueEvaluationConfig,
-    TechniqueEvaluationRunner,
-)
 from kg_construction.infrastructure.reports.csv_report import CsvReportWriter
 from kg_construction.infrastructure.reports.json_report import JsonReportWriter
 from kg_construction.infrastructure.reports.markdown_report import MarkdownReportWriter
+from kg_construction.research.benchmark_runner import (
+    TechniqueEvaluationConfig,
+    TechniqueEvaluationRunner,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,0 +1,47 @@
+# Draft-conversion configuration for `convert(data, source_format, technique)`.
+#
+# This file changes construction semantics and reported thresholds; it never
+# authorizes publication. The zero-skip certification workflow uses the locked
+# complete profile and requires every platform-applicable provider.
+
+pipeline:
+  name: configurable_convert
+
+extraction:
+  # deterministic = evidence-first rules
+  # model_backed = every provider in the immutable platform lock; provider or
+  # artifact failure ends the run and never changes it to deterministic
+  runtime_profile: model_backed
+  entity_labels:
+    - Person
+    - Organization
+    - Location
+    - Event
+    - Product
+    - Date
+    - Concept
+    - System
+    - Service
+    - Incident
+
+# Every named field maps to an executed VersionedQualityThresholds metric. These
+# thresholds classify the returned draft; certification owns release policy.
+evaluation_thresholds:
+  ner_f1_min: 0.80
+  span_f1_min: 0.80
+  relation_f1_min: 0.80
+  coreference_f1_min: 0.80
+  linking_accuracy_min: 0.80
+  query_accuracy_min: 0.80
+  vector_recall_at_k_min: 0.70
+  max_retry_rate: 0.05
+
+  quality_overrides:
+    - family: formation
+      metric: source_coverage
+      operator: ">="
+      threshold: 1.0
+    - family: category
+      metric: categorical_duplication_rate
+      operator: "<="
+      threshold: 0.0

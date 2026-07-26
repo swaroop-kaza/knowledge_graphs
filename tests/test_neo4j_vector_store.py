@@ -7,7 +7,9 @@ import unittest
 from collections.abc import Iterator
 from typing import Any
 
-from kg_construction.application.registry import default_registry
+import numpy as np
+
+from kg_construction.certification.registry import default_registry
 from kg_construction.infrastructure.graph_stores import (
     Neo4jVectorStoreAdapter,
     Neo4jVectorStoreConfig,
@@ -58,6 +60,10 @@ class FakeSession:
             return FakeResult([self.driver.index_record])
         if "db.index.vector.queryNodes" in query:
             return FakeResult(self.driver.search_rows)
+        if "RETURN count(n) AS indexed_count" in query:
+            return FakeResult(
+                [{"indexed_count": self.driver.indexed_count}]
+            )
         return FakeResult()
 
     def execute_write(self, callback: Any, rows: list[dict[str, object]]) -> None:
@@ -71,9 +77,11 @@ class FakeDriver:
         *,
         index_record: dict[str, object] | None = None,
         search_rows: list[dict[str, object]] | None = None,
+        indexed_count: int = 0,
     ) -> None:
         self.index_record = index_record or online_index_record()
         self.search_rows = search_rows or []
+        self.indexed_count = indexed_count
         self.runs: list[tuple[str, dict[str, object]]] = []
         self.databases: list[str | None] = []
         self.write_transactions = 0
@@ -186,6 +194,12 @@ class Neo4jVectorStoreTests(unittest.TestCase):
         ]
         self.assertEqual(len(writes), 2)
         self.assertTrue(all("$rows" in query for query, _ in writes))
+        self.assertTrue(
+            all(
+                "SET n += row.properties WITH n, row CALL" in query
+                for query, _ in writes
+            )
+        )
         self.assertEqual(writes[0][1]["embedding_property"], "embedding")
         self.assertEqual(
             {
@@ -194,6 +208,56 @@ class Neo4jVectorStoreTests(unittest.TestCase):
                 "properties": {"tenant": "blue", "chunk": 1},
             },
             writes[0][1]["rows"][0],  # type: ignore[index]
+        )
+
+    def test_live_numpy_vectors_are_converted_to_finite_float_lists(self) -> None:
+        driver = FakeDriver()
+        adapter = configured_adapter(driver)
+
+        adapter.upsert(
+            [
+                VectorRecord(
+                    vector_id="numpy-doc",
+                    embedding=np.asarray([1.0, 0.0, 0.0]),
+                )
+            ]
+        )
+        adapter.query(np.asarray([1.0, 0.0, 0.0]), top_k=1)
+
+        write = next(
+            parameters
+            for query, parameters in driver.runs
+            if "db.create.setNodeVectorProperty" in query
+        )
+        search = next(
+            parameters
+            for query, parameters in driver.runs
+            if "db.index.vector.queryNodes" in query
+        )
+        self.assertEqual(
+            write["rows"][0]["embedding"],  # type: ignore[index]
+            [1.0, 0.0, 0.0],
+        )
+        self.assertEqual(search["query_vector"], [1.0, 0.0, 0.0])
+
+    def test_count_queries_live_indexed_nodes_with_filters(self) -> None:
+        driver = FakeDriver(indexed_count=7)
+        adapter = configured_adapter(driver)
+
+        observed = adapter.count(
+            filters={"evaluation_graph_sha256": "abc123"},
+        )
+
+        self.assertEqual(observed, 7)
+        query, parameters = next(
+            (query, parameters)
+            for query, parameters in driver.runs
+            if "RETURN count(n) AS indexed_count" in query
+        )
+        self.assertIn("n.`embedding` IS NOT NULL", query)
+        self.assertEqual(
+            parameters["filters"],
+            {"evaluation_graph_sha256": "abc123"},
         )
 
     def test_invalid_batch_fails_before_any_database_call(self) -> None:

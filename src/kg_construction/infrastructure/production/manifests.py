@@ -11,7 +11,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.domain.models import ConstructionBatch, SourceRecord, stable_id, utc_now
-from kg_construction.infrastructure.ontology.validation import ValidationReport
+from kg_construction.domain.validation import ValidationReport
 
 JsonDict = dict[str, Any]
 RunStatus = Literal["running", "completed", "failed"]

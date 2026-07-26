@@ -1,7 +1,7 @@
 version: kg-graph-evaluation-suite-v1
 construction_profile: structured
 fixture_id: sample-csv-publication-v1
-fixture_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+fixture_sha256: 472cf1c439162c3d0faf2bdd1fa1facaa556437280b1fa358d4ef4e8f342c0bf
 quality:
   structured_formation:
     record_label: Person
@@ -27,6 +27,8 @@ sql_like:
         projections:
           id: $property.id
           name: $property.name
+        aggregations:
+          person_count: count
       expected_rows:
         - {id: "1", name: Ada Lovelace}
         - {id: "2", name: Grace Hopper}

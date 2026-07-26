@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import ssl
 import unittest
 import urllib.parse
 from typing import Any
+from unittest.mock import patch
 
-from kg_construction.application.registry import default_registry
+import numpy as np
+
+from kg_construction.certification.registry import default_registry
 from kg_construction.domain.evidence import span_evidence
 from kg_construction.domain.models import ConstructionBatch, EntityCandidate, SourceRecord
 from kg_construction.infrastructure.resolution import (
@@ -18,6 +22,7 @@ from kg_construction.infrastructure.resolution import (
     OpenRefineReconcilerConfig,
     WikidataLinker,
 )
+from kg_construction.infrastructure.resolution.linking import http_json_transport
 
 
 def batch_with_entities(*names: str, entity_type: str = "System") -> ConstructionBatch:
@@ -57,6 +62,17 @@ class FakeEmbeddingModel:
         return vectors
 
 
+class NumpyEmbeddingModel:
+    def encode(self, texts: list[str]) -> Any:
+        return np.asarray(
+            [
+                [1.0, 0.0] if "Recommendation" in text else [0.99, 0.01]
+                for text in texts
+            ],
+            dtype=float,
+        )
+
+
 class FakeCrossEncoderModel:
     def predict(self, pairs: list[tuple[str, str]]) -> list[float]:
         scores: list[float] = []
@@ -67,6 +83,28 @@ class FakeCrossEncoderModel:
 
 
 class EntityLinkingTests(unittest.TestCase):
+    def test_shared_http_transport_uses_verified_certifi_trust_store(self) -> None:
+        with patch(
+            "kg_construction.infrastructure.resolution.linking."
+            "urllib.request.urlopen"
+        ) as urlopen:
+            response = urlopen.return_value.__enter__.return_value
+            response.headers.get_content_charset.return_value = "utf-8"
+            response.read.return_value = b'{"ok": true}'
+
+            payload = http_json_transport("https://example.test/api")
+
+        context = urlopen.call_args.kwargs["context"]
+        request = urlopen.call_args.args[0]
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+        self.assertTrue(context.get_ca_certs())
+        self.assertEqual(
+            request.get_header("User-agent"),
+            "kg-construction/0.1.0 (mandatory external identity linking)",
+        )
+        self.assertEqual(payload, {"ok": True})
+
     def test_wikidata_linker_attaches_external_link_candidates(self) -> None:
         def transport(url: str, **kwargs: Any) -> dict[str, object]:
             self.assertIn("wikidata.org", url)
@@ -95,6 +133,7 @@ class EntityLinkingTests(unittest.TestCase):
         def transport(url: str, **kwargs: Any) -> dict[str, object]:
             self.assertIn("dbpedia", url)
             self.assertEqual(kwargs["params"]["query"], "Feature Store")
+            self.assertEqual(kwargs["params"]["format"], "json")
             return {
                 "docs": [
                     {
@@ -165,6 +204,48 @@ class EntityLinkingTests(unittest.TestCase):
         self.assertEqual(resolved.entities[0].properties["openrefine_id"], "wd:Q37156")
         self.assertEqual(resolved.metadata["entity_resolution_audit"][0]["resolver"], "openrefine_reconciler")
 
+    def test_openrefine_uses_governed_type_for_canonical_identity(self) -> None:
+        def transport(_url: str, **kwargs: Any) -> dict[str, object]:
+            body = kwargs["body"].decode("utf-8")
+            queries = json.loads(
+                urllib.parse.parse_qs(body)["queries"][0]
+            )
+            self.assertEqual(queries["q0"]["type"], "Q5")
+            return {
+                "q0": {
+                    "result": [
+                        {
+                            "id": "Q7251",
+                            "name": "Alan Turing",
+                            "score": 100,
+                            "match": True,
+                        }
+                    ]
+                }
+            }
+
+        batch = batch_with_entities("Alan Turing", entity_type="CanonicalEntity")
+        canonical = batch.entities[0].model_copy(
+            update={
+                "properties": {
+                    "semantic_entity_type": "Person",
+                    "identity_layer": "canonical",
+                }
+            }
+        )
+        resolved = OpenRefineReconciler(
+            OpenRefineReconcilerConfig(
+                type_map={"Person": "Q5"},
+                merge_on_match=False,
+            ),
+            transport=transport,
+        ).resolve(batch.model_copy(update={"entities": [canonical]}))
+
+        self.assertEqual(resolved.entities[0].properties["openrefine_id"], "Q7251")
+        self.assertFalse(
+            resolved.entities[0].properties["openrefine_review_required"]
+        )
+
     def test_embedding_resolver_merges_semantically_similar_entities(self) -> None:
         batch = batch_with_entities("Recommendation API", "Recommender API", "Feature Store")
         resolved = EmbeddingResolver(
@@ -181,6 +262,24 @@ class EntityLinkingTests(unittest.TestCase):
         self.assertEqual(len(recommendation_ids), 1)
         self.assertTrue(all(entity.properties.get("review_required") for entity in resolved.entities if "API" in entity.name))
         self.assertNotIn("canonical_entity_id", feature_store.properties)
+
+    def test_embedding_resolver_accepts_live_numpy_vectors(self) -> None:
+        batch = batch_with_entities("Recommendation API", "Recommender API")
+
+        resolved = EmbeddingResolver(
+            EmbeddingResolverConfig(threshold=0.95),
+            model=NumpyEmbeddingModel(),
+        ).resolve(batch)
+
+        self.assertEqual(
+            len(
+                {
+                    entity.properties["canonical_entity_id"]
+                    for entity in resolved.entities
+                }
+            ),
+            1,
+        )
 
     def test_cross_encoder_resolver_merges_high_scoring_pairs(self) -> None:
         batch = batch_with_entities("Recommendation API", "Recommender API", "Feature Store")

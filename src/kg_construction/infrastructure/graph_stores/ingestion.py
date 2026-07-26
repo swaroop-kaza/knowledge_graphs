@@ -14,16 +14,30 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode, RDFGraph
+from kg_construction.domain.graph_objects import (
+    PropertyEdge,
+    PropertyGraph,
+    PropertyNode,
+    RDFGraph,
+)
+from kg_construction.domain.models import canonical_json
 from kg_construction.infrastructure.loaders.stubs import AdapterNotConfigured
 from kg_construction.infrastructure.production.dead_letter import DeadLetterQueue
 from kg_construction.infrastructure.production.retry import (
     BatchRetryPolicy,
     RetryExhaustedError,
 )
+from kg_construction.service_runtime import (
+    DEFAULT_NEO4J_DATABASE,
+    DEFAULT_NEO4J_PASSWORD,
+    DEFAULT_NEO4J_URI,
+    DEFAULT_NEO4J_USER,
+)
 
 JsonDict = dict[str, Any]
 _SAFE_IDENTIFIER_RE = re.compile(r"[^A-Za-z0-9_]")
+_NEO4J_JSON_PROPERTIES_KEY = "__kg_json_encoded_properties"
+_NEO4J_NODE_LABEL = "KGNode"
 
 
 def _safe_identifier(value: str, *, fallback: str) -> str:
@@ -36,7 +50,7 @@ def _safe_identifier(value: str, *, fallback: str) -> str:
 
 
 def _json_value(value: object) -> object:
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [_json_value(item) for item in value]
     if isinstance(value, dict):
         return {str(key): _json_value(item) for key, item in value.items()}
@@ -48,6 +62,52 @@ def _json_value(value: object) -> object:
 def _json_dict(value: JsonDict) -> JsonDict:
     normalized = _json_value(value)
     return normalized if isinstance(normalized, dict) else {}
+
+
+def _neo4j_property_value(value: object) -> tuple[object, bool]:
+    """Return a Neo4j-native property value plus its JSON-encoding state."""
+
+    normalized = _json_value(value)
+    if isinstance(normalized, dict):
+        return canonical_json(normalized), True
+    if isinstance(normalized, list):
+        if not normalized:
+            return normalized, False
+        primitive_types = {
+            type(item)
+            for item in normalized
+            if isinstance(item, str | int | float | bool)
+            and item is not None
+        }
+        native_array = (
+            len(primitive_types) == 1
+            and len(primitive_types) == len({type(item) for item in normalized})
+            and all(
+                isinstance(item, str | int | float | bool)
+                and item is not None
+                for item in normalized
+            )
+        )
+        if native_array:
+            return normalized, False
+        return canonical_json(normalized), True
+    return normalized, False
+
+
+def _neo4j_properties(value: JsonDict) -> JsonDict:
+    """Encode nested JSON without losing which properties require decoding."""
+
+    properties: JsonDict = {}
+    encoded: list[str] = []
+    for raw_key, raw_value in value.items():
+        key = str(raw_key)
+        property_value, is_encoded = _neo4j_property_value(raw_value)
+        properties[key] = property_value
+        if is_encoded:
+            encoded.append(key)
+    if encoded:
+        properties[_NEO4J_JSON_PROPERTIES_KEY] = sorted(encoded)
+    return properties
 
 
 def _chunks(items: Sequence[Any], batch_size: int) -> Iterable[list[Any]]:
@@ -90,10 +150,10 @@ class IngestionWriteReport(BaseModel):
 class Neo4jIngestionConfig:
     """Configuration for Neo4j transactional property graph ingestion."""
 
-    uri: str = "bolt://localhost:7687"
-    user: str | None = None
-    password: str | None = None
-    database: str | None = None
+    uri: str = DEFAULT_NEO4J_URI
+    user: str | None = DEFAULT_NEO4J_USER
+    password: str | None = DEFAULT_NEO4J_PASSWORD
+    database: str | None = DEFAULT_NEO4J_DATABASE
     batch_size: int = 500
     ensure_constraints: bool = True
     raise_on_failure: bool = True
@@ -215,7 +275,31 @@ class Neo4jIngestionAdapter:
         driver = self._driver_instance()
         session_kwargs = {"database": self.config.database} if self.config.database else {}
         with driver.session(**session_kwargs) as session:
-            stats = session.execute_write(self._write_property_graph_tx, graph)
+            schema_stats = _WriteStats(transaction_count=0)
+            labels = self._node_labels(graph.nodes)
+            if self.config.ensure_constraints and labels:
+                schema_stats = session.execute_write(
+                    self._ensure_property_graph_schema_tx,
+                    labels,
+                )
+            data_stats = session.execute_write(
+                self._write_property_graph_tx,
+                graph,
+            )
+            stats = _WriteStats(
+                statement_count=(
+                    schema_stats.statement_count
+                    + data_stats.statement_count
+                ),
+                transaction_count=(
+                    schema_stats.transaction_count
+                    + data_stats.transaction_count
+                ),
+                attempted_batches=(
+                    schema_stats.attempted_batches
+                    + data_stats.attempted_batches
+                ),
+            )
         return IngestionWriteReport(
             store_name=self.name,
             graph_model="property_graph",
@@ -262,19 +346,32 @@ class Neo4jIngestionAdapter:
         )
         return _WriteStats(statement_count=1, transaction_count=1, attempted_batches=1)
 
+    @staticmethod
+    def _ensure_property_graph_schema_tx(
+        tx: Any,
+        labels: Sequence[str],
+    ) -> _WriteStats:
+        for label in labels:
+            query = (
+                f"CREATE CONSTRAINT kg_{label}_id IF NOT EXISTS "
+                f"FOR (n:{label}) REQUIRE n.id IS UNIQUE"
+            )
+            _consume(tx.run(query))
+        return _WriteStats(
+            statement_count=len(labels),
+            transaction_count=1,
+        )
+
     def _write_property_graph_tx(self, tx: Any, graph: PropertyGraph) -> _WriteStats:
         statement_count = 0
         attempted_batches = 0
-        if self.config.ensure_constraints:
-            for label in self._node_labels(graph.nodes):
-                query = f"CREATE CONSTRAINT kg_{label}_id IF NOT EXISTS FOR (n:{label}) REQUIRE n.id IS UNIQUE"
-                _consume(tx.run(query))
-                statement_count += 1
 
         for labels, nodes in self._nodes_by_label_set(graph.nodes).items():
             label_clause = ":".join(labels)
             query = (
-                f"UNWIND $rows AS row MERGE (n:{label_clause} {{id: row.id}}) "
+                f"UNWIND $rows AS row "
+                f"MERGE (n:{_NEO4J_NODE_LABEL} {{id: row.id}}) "
+                f"SET n:{label_clause} "
                 "SET n += row.properties"
             )
             for batch in _chunks(nodes, self.config.batch_size):
@@ -286,8 +383,8 @@ class Neo4jIngestionAdapter:
         for rel_type, edges in self._edges_by_type(graph.edges).items():
             query = (
                 "UNWIND $rows AS row "
-                "MATCH (s {id: row.source_id}) "
-                "MATCH (t {id: row.target_id}) "
+                f"MATCH (s:{_NEO4J_NODE_LABEL} {{id: row.source_id}}) "
+                f"MATCH (t:{_NEO4J_NODE_LABEL} {{id: row.target_id}}) "
                 f"MERGE (s)-[r:{rel_type} {{id: row.id}}]->(t) "
                 "SET r += row.properties"
             )
@@ -326,12 +423,7 @@ class Neo4jIngestionAdapter:
 
     @staticmethod
     def _node_labels(nodes: list[PropertyNode]) -> list[str]:
-        labels = {
-            _safe_identifier(label, fallback="Entity")
-            for node in nodes
-            for label in (node.labels or ["Entity"])
-        }
-        return sorted(labels)
+        return [_NEO4J_NODE_LABEL] if nodes else []
 
     @staticmethod
     def _nodes_by_label_set(nodes: list[PropertyNode]) -> dict[tuple[str, ...], list[PropertyNode]]:
@@ -354,7 +446,7 @@ class Neo4jIngestionAdapter:
     def _node_row(node: PropertyNode) -> JsonDict:
         return {
             "id": node.node_id,
-            "properties": _json_dict(
+            "properties": _neo4j_properties(
                 {
                     **node.properties,
                     "id": node.node_id,
@@ -369,7 +461,7 @@ class Neo4jIngestionAdapter:
             "id": edge.edge_id,
             "source_id": edge.source_id,
             "target_id": edge.target_id,
-            "properties": _json_dict(
+            "properties": _neo4j_properties(
                 {
                     **edge.properties,
                     "id": edge.edge_id,

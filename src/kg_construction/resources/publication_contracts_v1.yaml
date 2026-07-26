@@ -1,11 +1,11 @@
 version: kg-publication-contract-registry-v1
-registry_sha256: 69b1111c73c416713883a5c66ae43b80c0a74f8037bae0e468387fd803b7a5da
+registry_sha256: f65ad01c0f2a8fa7a832ccf2ef63cff21e2b93b0580e9c20185e51dec05f01c8
 
 # These floors and ceilings are code-independent release policy. A custom suite
 # may demand more, but cannot lower a floor or raise a resource/latency ceiling.
 policy:
   policy_id: kg-publication-minima-v1
-  policy_sha256: 35b4c40b5647b0fb65f59572df86112110ebc9b6efda0e3e0461075a09ff3bef
+  policy_sha256: 324ee7405c2fe67ca7a6b56aaf9882b0fc867d416c0f1a3eb9a1175321f50008
   quality_thresholds_version: kg-quality-v3
   quality_thresholds_sha256: cca0ed6ce03eb9a1168c86b5f542e8a90a60f92d3be82857dee5840ba60b3a20
   suite_minimums:
@@ -34,8 +34,8 @@ policy:
     recommendation.min_recall_at_k: 0.01
     recommendation.min_ndcg_at_k: 0.01
     recommendation.min_catalog_coverage: 0.01
-    recommendation.min_novelty: 0.0
-    recommendation.min_intra_list_diversity: 0.0
+    recommendation.min_novelty: 0.01
+    recommendation.min_intra_list_diversity: 0.01
     reasoning.min_competency_question_accuracy: 0.80
     reasoning.min_inferred_fact_f1: 0.80
   suite_maximums:
@@ -66,42 +66,41 @@ contracts:
   - contract_id: sample-csv-release-v1
     construction_profile: structured
     fixture_id: sample-csv-publication-v1
-    evaluation_fixture_sha256: 4702bed9f75451ca321028036c712d997660cfaf07065ac6e4e214dd93c53c40
-    evaluation_file_sha256: 7ed642190ce65276a4c7ac69519b4eadbf4953fac76f74b5b32ee54224375e01
+    evaluation_fixture_sha256: 472cf1c439162c3d0faf2bdd1fa1facaa556437280b1fa358d4ef4e8f342c0bf
+    evaluation_file_sha256: a368cedadce503a7212ca0ca1fe81e3f474075fb37ea5e5166e1767f2d92f09f
     source_snapshot_sha256:
       - 95459293d4f9d00286c94b19083c926b0e40dc32ff6ad85f83d0e789b4f6bd59
     runtime_source_snapshot_sha256:
       - 8401a943e80bd6a6085c775ad10997b7311e79b6e4cf632f01cbb3edd996e8cf
     allowed_config_sha256:
-      - 09f6242d93aef1811f6cb5d74decd423a7c8efba55e3ad87919903a610952962
-      - a6d052568c47982442f7d226eb7d8e5fc276e33b26d68e64dd9833141ba3efc7
+      - 0be82e65c37db2e0e3faaf7c5790825b7f82adfe0084d7e94a9b7eddcc963250
+      - 811b3ccce4bd7062767b46aa0ce463dd9fb4dde22ff5320767ba54d27f136640
     allowed_source_catalog_sha256:
       - 130dbc6fda2f985d1a6ee6313aba1b04c6ae95b68c68d27c45d8f6bad0e60fef
       - 8ae83b570059ccc653dc6faf804b30396ed36960c99a647fc8264661356190a6
     model_lock_sha256: 2ee066dfb218f41207070aa25d32aa99575fed4c38c5af3ac7b8b70e7943c4a0
+    service_runtime_sha256: 27df7f46426571f4bb80d7491e82db811b9de025f396e5bd15445616e8f2a2f7
     governed_schema_sha256: null
     held_out_gold_sha256: null
     required_gold_paths:
-      - quality.expected_batch.entities
-      - quality.expected_batch.relations
+      - quality.structured_formation
     graph_builder_contract_version: property-rdf-evidence-builders-v1
 
-  - contract_id: sample-text-release-v2
+  - contract_id: sample-text-release-v3
     construction_profile: unstructured
-    fixture_id: sample-text-publication-v2
-    evaluation_fixture_sha256: af2bb73e2193c222c2cd9be9725db5d7a260f4f2284eccab25cfcd9f4180173d
-    evaluation_file_sha256: 287d1825d3ffd98a1f2a8554a18ee95c254d03d211edafee70509f6b36fcafbf
+    fixture_id: sample-text-publication-v3
+    evaluation_fixture_sha256: 9e88e9c79cebdc1a4f933f567d713e50589c1d7113c123a8affec056e1674a6e
+    evaluation_file_sha256: c067b834f700f5cfb74e30ea8c3a88feb64d105ed5b0c0451472ca58a970a6a6
     source_snapshot_sha256:
       - 12be81d6f4bec8ccfe57072437628c0ec6a5918a92dccf469b1f0acaeaf28c32
     runtime_source_snapshot_sha256:
       - d55b9889c2d0ba93c011287453391453d690ffabbc0c32a3e42521ab8d5aaef5
     allowed_config_sha256:
-      - 09f6242d93aef1811f6cb5d74decd423a7c8efba55e3ad87919903a610952962
-      - a6d052568c47982442f7d226eb7d8e5fc276e33b26d68e64dd9833141ba3efc7
+      - 811b3ccce4bd7062767b46aa0ce463dd9fb4dde22ff5320767ba54d27f136640
     allowed_source_catalog_sha256:
-      - 130dbc6fda2f985d1a6ee6313aba1b04c6ae95b68c68d27c45d8f6bad0e60fef
       - 8ae83b570059ccc653dc6faf804b30396ed36960c99a647fc8264661356190a6
     model_lock_sha256: 2ee066dfb218f41207070aa25d32aa99575fed4c38c5af3ac7b8b70e7943c4a0
+    service_runtime_sha256: 27df7f46426571f4bb80d7491e82db811b9de025f396e5bd15445616e8f2a2f7
     governed_schema_sha256: 3bb5760ee34d11aa2acfd4c58976f876f94ccb6eeae359c9b3b3c0da2380dde5
     held_out_gold_sha256: 7f625e2036bbbf2dcee40c962a7383b1832541ddb2f84a805764c7ba476491ed
     required_gold_paths:

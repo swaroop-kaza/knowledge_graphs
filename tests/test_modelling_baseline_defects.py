@@ -25,14 +25,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kg_construction import default_registry, default_workflow_for_source_type
-from kg_construction.application.modelling_correctness import evaluate_unstructured_case
-from kg_construction.application.plan_resolution import resolve_modeling_plan
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
-from kg_construction.application.semantic_table_mapper import SemanticTableMapper
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.certification import default_registry
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.evaluation.schema_quality import SchemaQualityEvaluator
+from kg_construction.evaluation.modelling_correctness import evaluate_unstructured_case
+from kg_construction.evaluation.schema_quality import SchemaQualityEvaluator
+from kg_construction.research.workflow import (
+    draft_workflow_for_source_type,
+)
+from kg_construction.structured.plan_resolution import resolve_modeling_plan
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
+from kg_construction.structured.semantic_table_mapper import SemanticTableMapper
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 
@@ -51,7 +54,9 @@ def _semantic_graph(table: dict):
     source = SourceRecord.from_rows(
         table["records"], source_type="csv", source_name=f"{table['table_name']}.csv"
     )
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
+    graph = DraftConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run(
+        [source]
+    ).property_graph
     return resolved, policy, graph
 
 
@@ -71,7 +76,9 @@ class StructuredPathClosed(unittest.TestCase):
                 source_type="csv",
                 source_name="employees.csv",
             )
-            graph = default_workflow_for_source_type("csv").run([source]).property_graph
+            graph = draft_workflow_for_source_type("csv").run(
+                [source]
+            ).property_graph
         finally:
             Path(path).unlink(missing_ok=True)
 

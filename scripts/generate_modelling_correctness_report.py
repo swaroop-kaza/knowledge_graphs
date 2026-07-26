@@ -14,12 +14,12 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from kg_construction.application.modelling_correctness import (
+from kg_construction.evaluation.modelling_correctness import (
     ModellingCase,
     evaluate_structured_case,
     evaluate_unstructured_case,
 )
-from kg_construction.infrastructure.evaluation.quality_gates import (
+from kg_construction.evaluation.quality_gates import (
     QUALITY_THRESHOLDS_VERSION,
 )
 
@@ -53,13 +53,16 @@ def _markdown(cases: list[ModellingCase], overall: bool) -> str:
     lines = [
         "# Modelling Correctness Report",
         "",
-        f"Generated: {date.today().isoformat()}",
-        f"Thresholds: `{QUALITY_THRESHOLDS_VERSION}`",
+        "[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Testing guide](../docs/testing_guide.md)",
+        "",
+        "| Metadata | Value |",
+        "| --- | --- |",
+        f"| Generated | {date.today().isoformat()} |",
+        f"| Thresholds | `{QUALITY_THRESHOLDS_VERSION}` |",
+        f"| Overall | **{'PASS' if overall else 'FAIL'}** |",
         "",
         "Runs the gold modelling cases through the real pipeline and verifies the output "
         "conforms to the expected graph (RML/R2RML conformance style). CI fails on regression.",
-        "",
-        f"**Overall: {'PASS' if overall else 'FAIL'}**",
         "",
     ]
     for case in cases:
@@ -70,9 +73,20 @@ def _markdown(cases: list[ModellingCase], overall: bool) -> str:
         for name, passed in case.checks.items():
             lines.append(f"| {name} | {'PASS' if passed else 'FAIL'} |")
         lines.append("")
-        lines.append("Metrics: " + ", ".join(f"`{key}={value:g}`" for key, value in sorted(case.metrics.items())))
+        lines.append("| Metric | Value |")
+        lines.append("| --- | ---: |")
+        for key, value in sorted(case.metrics.items()):
+            lines.append(f"| `{key}` | {value:g} |")
         lines.append("")
-    lines.append("Regenerate with `make modelling-correctness`.")
+    lines.extend(
+        [
+            "## Reproduce",
+            "",
+            "```bash",
+            "make modelling-correctness",
+            "```",
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 

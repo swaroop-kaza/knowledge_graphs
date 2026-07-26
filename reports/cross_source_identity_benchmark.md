@@ -1,8 +1,18 @@
 # Cross-Source Identity and Deduplication Benchmark
 
-Benchmark: `cross_source_identity_dedup` v1.0.0
+[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Benchmark fixture](../benchmarks/cross_source_identity/v1/README.md)
 
-Status: **gold-candidate synthetic correctness fixture**. It is published for review and CI, not presented as a production-scale or domain-release leaderboard.
+| Metadata | Value |
+| --- | --- |
+| Benchmark | `cross_source_identity_dedup` v1.0.0 |
+| Run ID | `8708f082795d8cdf` |
+| Git commit | `e77eaf27994dd5e4ee84ed5ffbd6f0233126cbd9` |
+| Git tree state | `dirty` |
+| Python | `3.12.9` |
+
+> **Research only.** This synthetic comparison is non-authoritative and cannot certify identity quality, graph correctness, or publication eligibility.
+
+Status: **gold-candidate synthetic regression fixture**. It is published for review and CI, not presented as a production-scale or domain-release leaderboard.
 
 The fixture contains aliases, legal suffix variations, exact repeated names, and a deliberate namesake. A failed gate is reported honestly; rows are never removed because they score poorly.
 
@@ -12,18 +22,18 @@ The fixture contains aliases, legal suffix variations, exact repeated names, and
 make cross-source-identity-benchmark
 ```
 
-- Run ID: `19ad18fce82182b0`
-- Dataset hash: `4ed31b012643663e3aa32ad3b6c0228bf9f0be7b375d757f6ab0d8f4729fe3cb`
-- Input hash: `36acf7cb9eedd83454f647f1542c8990474dd2231bf5212be40e0db21689fb0b`
-- Gold hash: `11825ea8262338d1b1f60997ffe54d9d96d26b6ee3ca4640119fa3e4dbe91432`
-- Manifest hash: `9107ee02d7ba4eed59ef5612f0642c7832006f4cb261d01c523652eb0198cf19`
-- Config hash: `bd04d1bfe1fe2cd1c70359e6bf17fd51b0050dafb97eecfd1e98f033b4f228f2`
-- Git commit: `1198383cd4de50f7fbf8f6ef88b3e688fe6ccce8`
-- Git tree state: `dirty`
-- Generator hash: `c403349333a3c5a221c8b8bbd33cee44893d4aecf357ac7bde82c0c687164222`
-- Source tree hash: `938d5eebb4f008b6f39e4a1f898e12ead8245a1b28091d16400eb894b057b31c`
-- Results hash: `e7356ff86936af5b693240fd52d102e998c0212b9953f28ce4851ed4c9da54e3`
-- Python: `3.12.9`
+### Reproducibility hashes
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Dataset | `4ed31b012643663e3aa32ad3b6c0228bf9f0be7b375d757f6ab0d8f4729fe3cb` |
+| Input | `36acf7cb9eedd83454f647f1542c8990474dd2231bf5212be40e0db21689fb0b` |
+| Gold | `11825ea8262338d1b1f60997ffe54d9d96d26b6ee3ca4640119fa3e4dbe91432` |
+| Manifest | `9107ee02d7ba4eed59ef5612f0642c7832006f4cb261d01c523652eb0198cf19` |
+| Config | `bd04d1bfe1fe2cd1c70359e6bf17fd51b0050dafb97eecfd1e98f033b4f228f2` |
+| Generator | `759cc7fceb9cb9981bb3cff113a4c72f6bd1ff161b79fc1cffb3caf3fcfc950c` |
+| Source tree | `5a7eb622afe0c98f5fe251f702acc02d3a0581524f899a9c0ec01a7f89ade050` |
+| Results | `e7356ff86936af5b693240fd52d102e998c0212b9953f28ce4851ed4c9da54e3` |
 
 ## Results
 
@@ -36,10 +46,12 @@ make cross-source-identity-benchmark
 
 ## Hard Gates
 
-- Pairwise precision must be at least `0.98`.
-- False-merge rate must be at most `0.02`.
-- Evidence coverage must be at least `1.00`.
-- Source-record order invariance is required: `True`.
+| Gate | Requirement |
+| --- | ---: |
+| Pairwise precision | at least `0.98` |
+| False-merge rate | at most `0.02` |
+| Evidence coverage | at least `1.00` |
+| Source-record order invariance | `True` |
 
 ## Interpretation
 

@@ -55,8 +55,11 @@ _TEMPLATE_UUID_RE = re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-
 _TEMPLATE_ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 
 
-def _optional_dependency(package: str, install_hint: str) -> AdapterNotConfigured:
-    return AdapterNotConfigured(f"{package} is required for this loader. {install_hint}")
+def _missing_mandatory_dependency(package: str) -> AdapterNotConfigured:
+    return AdapterNotConfigured(
+        f"mandatory loader dependency {package} is missing; "
+        "run `uv sync --frozen --all-groups` and rerun the doctor"
+    )
 
 
 def _load_json_payload(path: Path) -> Any:
@@ -99,7 +102,7 @@ class ExcelLoader:
         try:
             from openpyxl import load_workbook
         except ImportError as exc:  # pragma: no cover - exercised when dependency is absent
-            raise _optional_dependency("openpyxl", "Install kg-construction with Excel support.") from exc
+            raise _missing_mandatory_dependency("openpyxl") from exc
 
         workbook_path = Path(path)
         workbook = load_workbook(workbook_path, read_only=True, data_only=True)
@@ -188,7 +191,7 @@ class SQLDatabaseLoader:
         try:
             from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
         except ImportError as exc:  # pragma: no cover - exercised when dependency is absent
-            raise _optional_dependency("SQLAlchemy", "Install kg-construction with SQL support.") from exc
+            raise _missing_mandatory_dependency("SQLAlchemy") from exc
 
         database_url = self.connection_url or f"sqlite:///{Path(path)}"
         engine = create_engine(database_url)
@@ -1244,7 +1247,7 @@ class PDFLoader:
         try:
             from pypdf import PdfReader
         except ImportError as exc:  # pragma: no cover - exercised when dependency is absent
-            raise _optional_dependency("pypdf", "Install kg-construction with PDF support.") from exc
+            raise _missing_mandatory_dependency("pypdf") from exc
 
         pdf_path = Path(path)
         reader = PdfReader(str(pdf_path))

@@ -4,9 +4,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from kg_construction.application.graph_store_benchmark import generate_graph_store_benchmark_fixture
-from kg_construction.application.registry import default_registry, research_registry
+from kg_construction.certification.registry import default_registry, research_registry
 from kg_construction.domain.graph_objects import RDFGraph, RDFTriple
 from kg_construction.domain.models import (
     ConstructionBatch,
@@ -16,6 +16,7 @@ from kg_construction.domain.models import (
     RelationCandidate,
     SourceRecord,
 )
+from kg_construction.evaluation import GoldBenchmarkEvaluator, GoldBenchmarkFixture
 from kg_construction.infrastructure.enrichment import (
     GraphRetrievalBenchmark,
     GraphSageLinkPredictionTrainer,
@@ -24,7 +25,6 @@ from kg_construction.infrastructure.enrichment import (
     LargeGraphAnalyticsBackend,
     Node2VecEmbeddingAdapter,
 )
-from kg_construction.infrastructure.evaluation import GoldBenchmarkEvaluator, GoldBenchmarkFixture
 from kg_construction.infrastructure.graph_stores import (
     LadybugIngestionAdapter,
     LadybugIngestionConfig,
@@ -32,6 +32,7 @@ from kg_construction.infrastructure.graph_stores import (
     Neo4jIngestionConfig,
 )
 from kg_construction.infrastructure.loaders import EventPayloadLoader, LogLoader
+from kg_construction.infrastructure.loaders.stubs import AdapterNotConfigured
 from kg_construction.infrastructure.mapping import (
     CSVWColumnConfig,
     CSVWDialectConfig,
@@ -52,6 +53,7 @@ from kg_construction.infrastructure.mapping import (
     TriplesMapConfig,
 )
 from kg_construction.infrastructure.mapping.semi_structured import LogEventMapper
+from kg_construction.research.graph_store_benchmark import generate_graph_store_benchmark_fixture
 
 
 class FakeResult:
@@ -119,6 +121,19 @@ class NextStageUpgradeTests(unittest.TestCase):
         self.assertTrue(batch.facts)
         self.assertEqual(batch.metadata["standard"], "JSON-LD")
         self.assertIn("expanded", batch.metadata)
+
+    def test_jsonld_mapper_fails_closed_without_mandatory_pyld(self) -> None:
+        payload = {
+            "@context": {"name": "http://schema.org/name"},
+            "@id": "urn:svc:recommendation",
+            "name": "Recommendation API",
+        }
+
+        with (
+            patch.dict("sys.modules", {"pyld": None}),
+            self.assertRaisesRegex(AdapterNotConfigured, "mandatory pyld"),
+        ):
+            JSONLDMapper().expand(payload)
 
     def test_r2rml_referencing_object_map_cross_source_join(self) -> None:
         people = SourceRecord.from_rows(

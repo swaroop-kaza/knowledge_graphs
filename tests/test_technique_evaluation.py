@@ -5,18 +5,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kg_construction.application.benchmark_runner import (
-    TechniqueEvaluationConfig,
-    TechniqueEvaluationRunner,
-)
-from kg_construction.application.dataset_profiler import DatasetProfiler
-from kg_construction.application.registry import default_registry
-from kg_construction.application.scoring import ScoringEngine
-from kg_construction.application.technique_selector import TechniqueSelector
-from kg_construction.infrastructure.evaluation.statistical_confidence import wilson_score_interval
+from kg_construction.certification.registry import default_registry
+from kg_construction.construction.profiling import DatasetProfiler
+from kg_construction.evaluation.statistical_confidence import wilson_score_interval
 from kg_construction.infrastructure.loaders.csv_loader import CsvLoader
 from kg_construction.infrastructure.reports.markdown_report import MarkdownReportWriter
 from kg_construction.interfaces.cli.benchmark import main as benchmark_main
+from kg_construction.research.benchmark_runner import (
+    TechniqueEvaluationConfig,
+    TechniqueEvaluationRunner,
+)
+from kg_construction.research.scoring import ScoringEngine
+from kg_construction.research.technique_selector import TechniqueSelector
 
 GOLDEN_FIXTURES = Path("tests/fixtures/golden_benchmarks")
 
@@ -134,7 +134,7 @@ class TechniqueEvaluationTests(unittest.TestCase):
             first.run_metadata.tie_breaking_policy,
             [
                 "final_score_desc",
-                "production_thresholds_pass_desc",
+                "research_screening_thresholds_pass_desc",
                 "latency_asc",
                 "maintainability_desc",
                 "technique_name_asc",
@@ -205,7 +205,8 @@ class TechniqueEvaluationTests(unittest.TestCase):
             markdown = markdown_path.read_text(encoding="utf-8")
 
         self.assertEqual(code, 0)
-        self.assertIn("KG Construction Technique Evaluation Report", markdown)
+        self.assertIn("KG Construction Technique Research Report", markdown)
+        self.assertIn("Research only", markdown)
         self.assertIn("## Benchmark Metadata", markdown)
         self.assertIn("Quality", markdown)
         self.assertIn("recommendations", report_payload)

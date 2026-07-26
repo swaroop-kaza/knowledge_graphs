@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from kg_construction.application.unstructured_pipeline import UnstructuredPipeline
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
@@ -8,7 +7,8 @@ from kg_construction.domain.models import (
     RelationCandidate,
     SourceRecord,
 )
-from kg_construction.infrastructure.evaluation import AccuracyMetrics
+from kg_construction.evaluation import AccuracyMetrics
+from kg_construction.unstructured.pipeline import UnstructuredPipeline
 
 
 def _entity(

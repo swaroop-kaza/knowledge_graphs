@@ -8,10 +8,8 @@ from typing import Any
 
 from kg_construction.domain.graph_objects import RDFGraph, RDFQuad, RDFTriple
 from kg_construction.domain.models import ConstructionBatch, EvidenceRef
-from kg_construction.infrastructure.ontology.validation import (
-    EvidenceRequiredValidator,
-    ValidationReport,
-)
+from kg_construction.domain.validation import ValidationReport
+from kg_construction.infrastructure.ontology.validation import EvidenceRequiredValidator
 
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"

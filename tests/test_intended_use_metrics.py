@@ -5,7 +5,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from kg_construction.infrastructure.evaluation import (
+from kg_construction.evaluation import (
     GraphRAGCase,
     GraphRAGEvaluationInput,
     IntendedUseEvaluationInputs,

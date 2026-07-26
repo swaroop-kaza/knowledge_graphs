@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from kg_construction.application.registry import default_registry
+from kg_construction.certification.registry import default_registry
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "capability_manifest.yaml"
@@ -69,6 +69,25 @@ class ManifestCompletenessTests(unittest.TestCase):
             for row in _load_generator().research_registry().techniques
         }
         self.assertEqual(set(self.techniques) | research, broad)
+        certified_artifacts = {
+            row["path"]
+            for section in ("reports", "notebooks")
+            for row in self.manifest[section]
+        }
+        research_artifacts = {row["path"] for row in inventory["artifacts"]}
+        self.assertFalse(certified_artifacts & research_artifacts)
+        self.assertTrue(
+            all(row["certified"] is False for row in inventory["artifacts"])
+        )
+
+    def test_research_reports_and_notebooks_are_not_release_evidence(self) -> None:
+        report_paths = {row["path"] for row in self.manifest["reports"]}
+        self.assertNotIn("reports/benchmark_leaderboard.md", report_paths)
+        self.assertNotIn(
+            "reports/cross_source_identity_benchmark.md",
+            report_paths,
+        )
+        self.assertEqual(self.manifest["notebooks"], [])
 
     def test_summary_counts_match_rows(self) -> None:
         for section, summary in self.manifest["summary"].items():

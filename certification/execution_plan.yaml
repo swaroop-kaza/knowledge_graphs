@@ -22,7 +22,6 @@ capabilities:
   alias_table_resolver: *semantic-certifier
   api_response_loader: *semantic-certifier
   batch_retry_policy: *semantic-certifier
-  benchmark_runner: *semantic-certifier
   chat_transcript_loader: *semantic-certifier
   claim_evaluation_suite: *semantic-certifier
   column_to_property_mapping: *semantic-certifier

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from kg_construction.domain.evidence import cell_evidence
 from kg_construction.domain.graph_objects import (
     PropertyEdge,
@@ -22,14 +24,18 @@ from kg_construction.domain.models import (
     RelationCandidate,
     SourceRecord,
 )
-from kg_construction.infrastructure.evaluation import (
+from kg_construction.evaluation import (
     QUALITY_THRESHOLDS_VERSION,
+    ConstructionReplayEvidence,
     KnowledgeGraphQualityEvaluator,
     QualityEvaluationInputs,
+    RetryObservation,
     RuntimeReport,
     SchemaQualityEvaluator,
+    property_graph_sha256,
 )
 from kg_construction.infrastructure.ontology.validation import ValidationReport
+from kg_construction.infrastructure.production import RunManifest
 
 
 def _ontology() -> OntologySchema:
@@ -143,6 +149,8 @@ def _batch() -> ConstructionBatch:
 
 def _all_inputs() -> QualityEvaluationInputs:
     graph = _graph()
+    initial_run = _terminal_manifest("quality-run-initial")
+    replay_run = _terminal_manifest("quality-run-replay")
     policy = SimpleNamespace(
         record_class="Employee",
         attributes=[
@@ -160,6 +168,12 @@ def _all_inputs() -> QualityEvaluationInputs:
         shacl_violation_count=0,
         expected_batch=_batch(),
         replay_graph=graph.model_copy(deep=True),
+        replay_evidence=ConstructionReplayEvidence(
+            initial_run=initial_run,
+            replay_run=replay_run,
+            initial_graph_sha256=property_graph_sha256(graph),
+            replay_graph_sha256=property_graph_sha256(graph),
+        ),
         predicted_coreference={"m1": "alex", "m2": "alex"},
         gold_coreference={"m1": "alex", "m2": "alex"},
         predicted_links={"m1": "employee-1", "m2": "employee-1"},
@@ -172,10 +186,39 @@ def _all_inputs() -> QualityEvaluationInputs:
             processed_items=1,
             latency_seconds=0.01,
             throughput=100.0,
-            retry_rate=0.0,
+            retry_observations=(
+                RetryObservation(
+                    operation_id="quality-construction",
+                    attempt_count=1,
+                    retry_count=0,
+                ),
+            ),
         ),
-        successful_runs=1,
-        total_runs=1,
+        operational_run_manifests=(initial_run,),
+    )
+
+
+def _terminal_manifest(
+    run_id: str,
+    *,
+    status: str = "completed",
+    config_hash: str = "config-sha256",
+) -> RunManifest:
+    return RunManifest(
+        run_id=run_id,
+        pipeline_name="quality-test-workflow",
+        status=status,
+        completed_at="2026-07-25T00:00:00+00:00",
+        config_hash=config_hash,
+        input_hash="input-sha256",
+        git_commit="0123456789abcdef0123456789abcdef01234567",
+        source_ids=["source-quality-test"],
+        source_names=["memory://quality-test"],
+        errors=(
+            []
+            if status == "completed"
+            else [{"stage": "workflow", "error_type": "RuntimeError"}]
+        ),
     )
 
 
@@ -187,6 +230,200 @@ def test_complete_quality_contract_executes_every_family() -> None:
     assert report.passed
     assert all(family.executed for family in report.families.values())
     assert all(family.passed for family in report.families.values())
+    structured_gate_metrics = {
+        gate.metric for gate in report.families["structured"].gates
+    }
+    assert {
+        "schema_gate_node_conciseness",
+        "schema_gate_connectivity",
+        "schema_gate_consistency",
+        "schema_gate_categorical_conciseness",
+        "schema_gate_categorical_occurrence_reconciliation",
+        "schema_gate_property_completeness",
+        "schema_gate_relationship_completeness",
+        "schema_gate_shacl_execution",
+        "schema_gate_shacl_conformance",
+    } <= structured_gate_metrics
+
+
+def test_idempotence_requires_manifest_bound_workflow_replay() -> None:
+    inputs = _all_inputs().model_copy(
+        update={
+            "replay_evidence": None,
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+
+    assert not report.families["idempotence"].executed
+    assert not report.families["idempotence"].passed
+    assert "manifests" in report.families["idempotence"].reason
+
+
+def test_idempotence_rejects_graphs_that_do_not_match_replay_evidence() -> None:
+    inputs = _all_inputs()
+    inputs = inputs.model_copy(
+        update={
+            "replay_evidence": inputs.replay_evidence.model_copy(
+                update={"replay_graph_sha256": "0" * 64}
+            )
+            if inputs.replay_evidence is not None
+            else None,
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+
+    assert not report.families["idempotence"].executed
+    assert "hashes do not match" in report.families["idempotence"].reason
+
+
+def test_idempotence_ignores_only_recursive_construction_audit_timestamps() -> None:
+    initial = _graph()
+    replay = _graph()
+    initial.nodes[0].properties.update(
+        {
+            "created_at": "2026-07-25T00:00:00+00:00",
+            "candidate_provenance": [
+                {
+                    "created_at": "2026-07-25T00:00:00+00:00",
+                    "extractor": "test",
+                }
+            ],
+        }
+    )
+    replay.nodes[0].properties.update(
+        {
+            "created_at": "2026-07-25T00:00:01+00:00",
+            "candidate_provenance": [
+                {
+                    "created_at": "2026-07-25T00:00:01+00:00",
+                    "extractor": "test",
+                }
+            ],
+        }
+    )
+    initial_run = _terminal_manifest("timestamp-initial")
+    replay_run = _terminal_manifest("timestamp-replay")
+    inputs = _all_inputs().model_copy(
+        update={
+            "property_graph": initial,
+            "replay_graph": replay,
+            "replay_evidence": ConstructionReplayEvidence(
+                initial_run=initial_run,
+                replay_run=replay_run,
+                initial_graph_sha256=property_graph_sha256(initial),
+                replay_graph_sha256=property_graph_sha256(replay),
+            ),
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+
+    idempotence = report.families["idempotence"]
+    assert idempotence.passed
+    assert idempotence.metrics["graph_idempotence_score"] == 1.0
+    assert idempotence.metrics["idempotence_added_object_count"] == 0.0
+    assert idempotence.metrics["idempotence_missing_object_count"] == 0.0
+
+
+def test_idempotence_keeps_semantic_temporal_properties_in_comparison() -> None:
+    initial = _graph()
+    replay = _graph()
+    initial.nodes[0].properties["occurred_at"] = "2026-07-25T00:00:00+00:00"
+    replay.nodes[0].properties["occurred_at"] = "2026-07-26T00:00:00+00:00"
+    initial_run = _terminal_manifest("semantic-time-initial")
+    replay_run = _terminal_manifest("semantic-time-replay")
+    inputs = _all_inputs().model_copy(
+        update={
+            "property_graph": initial,
+            "replay_graph": replay,
+            "replay_evidence": ConstructionReplayEvidence(
+                initial_run=initial_run,
+                replay_run=replay_run,
+                initial_graph_sha256=property_graph_sha256(initial),
+                replay_graph_sha256=property_graph_sha256(replay),
+            ),
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+
+    idempotence = report.families["idempotence"]
+    assert not idempotence.passed
+    assert idempotence.metrics["graph_idempotence_score"] < 1.0
+    assert idempotence.metrics["idempotence_added_object_count"] == 1.0
+    assert idempotence.metrics["idempotence_missing_object_count"] == 1.0
+
+
+def test_replay_evidence_requires_same_reproducible_configuration() -> None:
+    graph = _graph()
+
+    with pytest.raises(ValueError, match="reproducibility fields"):
+        ConstructionReplayEvidence(
+            initial_run=_terminal_manifest("initial"),
+            replay_run=_terminal_manifest("replay", config_hash="different-config"),
+            initial_graph_sha256=property_graph_sha256(graph),
+            replay_graph_sha256=property_graph_sha256(graph),
+        )
+
+
+def test_operational_family_requires_retry_and_terminal_run_observations() -> None:
+    inputs = _all_inputs().model_copy(
+        update={
+            "runtime_report": RuntimeReport(
+                processed_items=1,
+                latency_seconds=0.01,
+                throughput=100.0,
+            ),
+            "operational_run_manifests": (),
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+
+    assert not report.families["operational"].executed
+    assert not report.families["operational"].metrics
+    assert "retry observations" in report.families["operational"].reason
+
+
+def test_operational_metrics_are_derived_from_observed_attempts_and_manifests() -> None:
+    inputs = _all_inputs().model_copy(
+        update={
+            "runtime_report": RuntimeReport(
+                processed_items=2,
+                latency_seconds=0.02,
+                throughput=100.0,
+                retry_observations=(
+                    RetryObservation(
+                        operation_id="first-write",
+                        attempt_count=2,
+                        retry_count=1,
+                    ),
+                    RetryObservation(
+                        operation_id="second-write",
+                        attempt_count=1,
+                        retry_count=0,
+                    ),
+                ),
+            ),
+            "operational_run_manifests": (
+                _terminal_manifest("successful-run"),
+                _terminal_manifest("failed-run", status="failed"),
+            ),
+        }
+    )
+
+    report = KnowledgeGraphQualityEvaluator().evaluate(_batch(), inputs=inputs)
+    operational = report.families["operational"]
+
+    assert operational.executed
+    assert operational.metrics["retry_rate"] == 0.5
+    assert operational.metrics["retry_count"] == 1.0
+    assert operational.metrics["retry_attempt_count"] == 3.0
+    assert operational.metrics["pipeline_success_rate"] == 0.5
+    assert operational.metrics["pipeline_run_support"] == 2.0
+    assert not operational.passed
 
 
 def test_missing_inputs_are_explicit_failed_families() -> None:

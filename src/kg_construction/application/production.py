@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from kg_construction.application.config import DataToKGConfig
+from kg_construction.construction.config import DataToKGConfig
 from kg_construction.infrastructure.production import (
     ErrorQuarantine,
     HumanReviewQueue,
@@ -21,7 +21,7 @@ from kg_construction.infrastructure.production import (
 
 @dataclass(frozen=True, slots=True)
 class ProductionServices:
-    """Optional hardening services supplied to ConstructionWorkflow."""
+    """Configured hardening services supplied to ``ConstructionWorkflow``."""
 
     structured_logger: StructuredLogger | None = None
     manifest_writer: RunManifestWriter | None = None

@@ -592,7 +592,7 @@ def download_wikiann(records: list[dict[str, Any]], *, force: bool, max_rows: in
         return
     try:
         import pandas as pd
-    except ImportError as exc:  # pragma: no cover - optional dependency guard.
+    except ImportError as exc:  # pragma: no cover - dataset-tool dependency guard.
         records.append(
             note_record(
                 "wikiann_en_ner",

@@ -10,7 +10,7 @@ from kg_construction.domain.models import (
     RelationCandidate,
     SourceRecord,
 )
-from kg_construction.infrastructure.evaluation.validation_metrics import ValidationMetrics
+from kg_construction.evaluation.validation_metrics import ValidationMetrics
 from kg_construction.infrastructure.graph_builders.property_graph import PropertyGraphBuilder
 from kg_construction.infrastructure.ontology.validation import (
     ValidationFinding,

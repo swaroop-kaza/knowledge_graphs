@@ -9,7 +9,6 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from kg_construction.application.unstructured_pipeline import IdentityResolution
 from kg_construction.domain.claim import CanonicalEntity, Mention, ResolutionStatus
 from kg_construction.domain.models import normalize_text, stable_id
 from kg_construction.infrastructure.extractors.model_backed.contracts import (
@@ -21,6 +20,7 @@ from kg_construction.infrastructure.resolution.linking import (
     CrossEncoderModelProtocol,
     EmbeddingModelProtocol,
 )
+from kg_construction.unstructured.pipeline import IdentityResolution
 
 
 class NilIdentityPolicy(StrEnum):

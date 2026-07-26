@@ -18,7 +18,10 @@ class MarkdownReportWriter:
         recommendations = report.recommendations
         rows = build_comparison_matrix(report.ranked_scores)
         lines = [
-            "# KG Construction Technique Evaluation Report",
+            "# KG Construction Technique Research Report",
+            "",
+            "> **Research only.** Weighted ranks and candidate gates are "
+            "non-authoritative and never grant publication eligibility.",
             "",
             "## Benchmark Metadata",
             f"- Run ID: {report.run_metadata.run_id}",
@@ -73,26 +76,29 @@ class MarkdownReportWriter:
         lines.extend(
             [
                 "",
-                "## Best-Ranked Result (Smoke Result Until Gates Pass)",
+                "## Best-Ranked Research Result",
                 self._decision_line(recommendations.best_single_technique),
                 "",
                 "## Best Hybrid Pipeline",
                 self._decision_line(recommendations.best_hybrid_technique),
                 "",
-                "## Production Recommendation",
-                self._decision_line(recommendations.production_safe_technique),
+                "## Threshold-Passing Research Candidate",
+                self._decision_line(recommendations.threshold_passing_technique),
             ]
         )
-        if recommendations.fallback_recommendation:
-            lines.append(f"- Fallback: {recommendations.fallback_recommendation}")
+        if recommendations.contingency_recommendation:
+            lines.append(
+                f"- Contingency: {recommendations.contingency_recommendation}"
+            )
 
         lines.extend(
             [
                 "",
-                "## Correctness and Publication Gates",
+                "## Research Gold and Task Gates",
                 "",
-                "A ranking is a publishable quality result only when its candidate passes every gate. "
-                "Runs without compatible gold labels remain useful smoke tests but do not establish accuracy.",
+                "These gates classify the comparison only. Even a passing candidate "
+                "does not establish graph publishability; release authorization belongs "
+                "exclusively to zero-skip certification.",
                 "",
                 "| Technique | Gold tasks | Gate | Metric | Requirement | Actual | Result |",
                 "|---|---|---|---|---:|---:|---|",
@@ -111,16 +117,19 @@ class MarkdownReportWriter:
                     f"| `{candidate.technique_name}` | {gold_tasks} | {gate.gate} | "
                     f"`{gate.metric}` | {gate.operator} {gate.threshold} | {actual} | {result} |"
                 )
-        publication_eligible = [
+        research_gate_passing = [
             candidate.technique_name
             for candidate in report.candidates
-            if candidate.publication_eligible
+            if candidate.research_gate_passed
         ]
         lines.extend(
             [
                 "",
-                "- Publication-eligible candidates: "
-                + (", ".join(f"`{name}`" for name in publication_eligible) or "none"),
+                "- Research-gate-passing candidates: "
+                + (
+                    ", ".join(f"`{name}`" for name in research_gate_passing)
+                    or "none"
+                ),
                 "- Gold tasks exposed to recommendation logic: "
                 + (
                     ", ".join(

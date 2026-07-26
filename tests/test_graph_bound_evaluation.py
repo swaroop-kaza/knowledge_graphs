@@ -8,18 +8,15 @@ import pytest
 from pydantic import ValidationError
 
 from kg_construction import load_sources
-from kg_construction.application.unstructured_pipeline import UnstructuredPipeline
-from kg_construction.application.workflow import (
-    ConstructionWorkflow,
-    PublicationGateError,
-)
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.graph_objects import (
     PropertyEdge,
     PropertyGraph,
     PropertyNode,
 )
 from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.evaluation import (
+from kg_construction.evaluation import (
     AccuracyMetrics,
     GraphBoundIntendedUseEvaluator,
     Neo4jVectorWorkloadBackend,
@@ -27,11 +24,12 @@ from kg_construction.infrastructure.evaluation import (
     predicted_quality_mappings,
     property_graph_sha256,
 )
-from kg_construction.infrastructure.graph_builders.property_graph import (
-    PropertyGraphBuilder,
-)
 from kg_construction.infrastructure.production.pii import PIIRedactionPolicy
 from kg_construction.interfaces.cli.construct import main as construct_main
+from kg_construction.research.workflow import (
+    draft_workflow_for_source_type,
+)
+from kg_construction.unstructured.pipeline import UnstructuredPipeline
 
 
 def _graph() -> PropertyGraph:
@@ -146,6 +144,7 @@ def _suite_payload() -> dict[str, object]:
                     "query": {
                         "selector": user,
                         "projections": {"name": "$property.name"},
+                        "aggregations": {"count": "count"},
                     },
                     "expected_rows": [{"name": "User"}],
                     "expected_aggregations": {"count": 1},
@@ -272,6 +271,17 @@ def test_graph_bound_suite_computes_predictions_and_binds_all_evidence() -> None
         "torso",
         "tail",
     }
+    # Every direct LIKES gold edge is absent from the ranking graph: all cases
+    # receive the same deterministic no-direct-edge ranking rather than having
+    # their own held-out label promoted to rank one.
+    assert [
+        case.ranked_entity_ids
+        for case in execution.inputs.link_prediction.cases
+    ] == [["item-1", "item-2", "middle"]] * 3
+    assert [
+        case.known_true_entity_ids
+        for case in execution.inputs.link_prediction.cases
+    ] == [["item-1"], ["item-2"], ["middle"]]
     assert report.formation_gold_executed
     assert report.formation_gold_passed
     assert report.formation_gold_metrics["identity_key_uniqueness"] == 1.0
@@ -307,6 +317,10 @@ def test_live_vector_backend_waits_for_the_complete_frozen_snapshot() -> None:
                 return []
             return [SimpleNamespace(vector_id="item-1")]
 
+        def count(self, *, filters: object) -> int:
+            del filters
+            return len(self.upserted)
+
     class LockedEmbedding:
         @staticmethod
         def encode(texts: list[str]) -> list[list[float]]:
@@ -338,6 +352,19 @@ def test_suite_rejects_predictions_and_tampered_fixture_hash() -> None:
     assert isinstance(first, dict)
     first["predicted_rows"] = [{"name": "User"}]
     with pytest.raises(ValidationError, match="predicted_rows"):
+        VersionedGraphEvaluationSuite.seal(payload)
+
+    payload = _suite_payload()
+    sql = payload["sql_like"]
+    assert isinstance(sql, dict)
+    cases = sql["cases"]
+    assert isinstance(cases, list)
+    first = cases[0]
+    assert isinstance(first, dict)
+    query = first["query"]
+    assert isinstance(query, dict)
+    query["aggregations"] = {"different_name": "count"}
+    with pytest.raises(ValidationError, match="aggregation names"):
         VersionedGraphEvaluationSuite.seal(payload)
 
     sealed = _suite().model_dump(mode="json")
@@ -377,16 +404,16 @@ def test_structured_formation_failure_is_conjunctive() -> None:
     assert not report.passed
 
 
-def test_cli_gate_failure_is_nonzero_and_writes_no_graph_outputs(
+def test_cli_draft_writes_outputs_even_when_release_gates_fail(
     tmp_path: Path,
 ) -> None:
-    draft = ConstructionWorkflow().run(
+    draft = DraftConstructionWorkflow().run(
         [SourceRecord.from_text("draft", source_name="memory://draft")]
     )
     output = tmp_path / "graph.json"
     with patch(
         "kg_construction.interfaces.cli.construct.construct_kg",
-        side_effect=PublicationGateError(draft),
+        return_value=draft,
     ):
         result = construct_main(
             [
@@ -394,16 +421,15 @@ def test_cli_gate_failure_is_nonzero_and_writes_no_graph_outputs(
                 "examples/data_to_kg/sample.txt",
                 "--source-type",
                 "text",
-                "--evaluation-suite",
-                str(tmp_path / "suite.yaml"),
                 "--output",
                 str(output),
             ]
         )
 
-    assert result == 2
-    assert not output.exists()
-    assert not list(tmp_path.glob("graph.*"))
+    assert result == 0
+    assert output.exists()
+    assert (tmp_path / "graph.quality.json").exists()
+    assert (tmp_path / "graph.intended-use.json").exists()
 
 
 def test_repository_sample_suites_are_sealed_and_dataset_specific() -> None:
@@ -421,7 +447,33 @@ def test_repository_sample_suites_are_sealed_and_dataset_specific() -> None:
     assert text_suite.quality.expected_batch.relations
 
 
-def test_sample_text_suite_is_bound_to_the_actual_redacted_snapshot() -> None:
+def test_sample_csv_suite_executes_substantive_structured_formation_gold() -> None:
+    suite = VersionedGraphEvaluationSuite.from_path(
+        "configs/graph_evaluation_suite.sample_csv.yaml"
+    )
+    config = DataToKGConfig.from_yaml(
+        "configs/data_to_kg_complete.example.yaml"
+    )
+    graph = draft_workflow_for_source_type("csv", config).run(
+        load_sources("examples/data_to_kg/sample.csv", source_type="csv")
+    ).property_graph
+
+    report, execution = GraphBoundIntendedUseEvaluator().evaluate(graph, suite)
+
+    assert report.passed
+    assert execution.formation_gold_executed
+    assert execution.formation_gold_passed
+    assert execution.formation_gold_metrics["record_count_exact"] == 1.0
+    assert execution.formation_gold_metrics["required_property_coverage"] == 1.0
+    assert execution.formation_gold_metrics["identity_key_uniqueness"] == 1.0
+    assert set(execution.held_out_edge_ids) == {
+        "edge_024a4cb1dd36f4832383",
+        "edge_94034278dcc3250c4d53",
+        "edge_e1dd07dfae5157fcabd4",
+    }
+
+
+def test_sample_text_quality_gold_is_bound_to_the_actual_redacted_snapshot() -> None:
     suite = VersionedGraphEvaluationSuite.from_path(
         "configs/graph_evaluation_suite.sample_text.yaml"
     )
@@ -454,10 +506,8 @@ def test_sample_text_suite_is_bound_to_the_actual_redacted_snapshot() -> None:
 
     pipeline = UnstructuredPipeline()
     batch = pipeline.extract(redacted)
-    graph = PropertyGraphBuilder().build(batch)
     accuracy = AccuracyMetrics().evaluate(batch, suite.quality.expected_batch)
     predicted_coreference, predicted_links = predicted_quality_mappings(batch)
-    report, execution = GraphBoundIntendedUseEvaluator().evaluate(graph, suite)
 
     assert accuracy["entity_f1"] == 1.0
     assert accuracy["span_f1"] == 1.0
@@ -480,5 +530,30 @@ def test_sample_text_suite_is_bound_to_the_actual_redacted_snapshot() -> None:
     }
     assert predicted_partition == gold_partition
     assert predicted_links == suite.quality.entity_links
-    assert report.passed
-    assert execution.graph_sha256 == property_graph_sha256(graph)
+
+
+def test_sample_text_workloads_are_bound_only_to_the_mandatory_profile() -> None:
+    suite = VersionedGraphEvaluationSuite.from_path(
+        "configs/graph_evaluation_suite.sample_text.yaml"
+    )
+    original = load_sources(
+        "examples/data_to_kg/sample.txt",
+        source_type="text",
+    )[0]
+    redacted = PIIRedactionPolicy().redact_source_record(original)
+    deterministic_batch = UnstructuredPipeline().extract(redacted)
+    deterministic_ids = {
+        entity.candidate_id for entity in deterministic_batch.entities
+    }
+    mandatory_workload_ids = {
+        node_id
+        for case in suite.link_prediction.cases
+        for node_id in (
+            *case.query.source.node_ids,
+            *case.query.candidates.node_ids,
+        )
+    }
+
+    assert suite.fixture_id == "sample-text-publication-v3"
+    assert mandatory_workload_ids
+    assert mandatory_workload_ids.isdisjoint(deterministic_ids)

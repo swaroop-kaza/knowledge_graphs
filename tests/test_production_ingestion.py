@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 
-from kg_construction.application.registry import default_registry
+from kg_construction.certification.registry import default_registry
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
 from kg_construction.infrastructure.graph_stores import (
     LadybugIngestionAdapter,
@@ -42,7 +44,6 @@ class FakeNeo4jTx:
 class FakeNeo4jSession:
     def __init__(self, driver: FakeNeo4jDriver) -> None:
         self.driver = driver
-        self.tx = FakeNeo4jTx()
 
     def __enter__(self) -> FakeNeo4jSession:
         return self
@@ -50,13 +51,19 @@ class FakeNeo4jSession:
     def __exit__(self, _exc_type: object, exc: object, _tb: object) -> None:
         return None
 
-    def execute_write(self, callback: object, graph: PropertyGraph) -> object:
+    def execute_write(
+        self,
+        callback: Callable[[FakeNeo4jTx, object], object],
+        value: object,
+    ) -> object:
         self.driver.execute_write_calls += 1
         if self.driver.failures_before_success > 0:
             self.driver.failures_before_success -= 1
             raise TransientError("temporary service unavailable")
-        result = callback(self.tx, graph)  # type: ignore[misc]
-        self.driver.runs.extend(self.tx.runs)
+        tx = FakeNeo4jTx()
+        result = callback(tx, value)
+        self.driver.runs.extend(tx.runs)
+        self.driver.transaction_runs.append(list(tx.runs))
         return result
 
 
@@ -66,6 +73,9 @@ class FakeNeo4jDriver:
         self.execute_write_calls = 0
         self.session_databases: list[str | None] = []
         self.runs: list[tuple[str, dict[str, object]]] = []
+        self.transaction_runs: list[
+            list[tuple[str, dict[str, object]]]
+        ] = []
 
     def session(self, **kwargs: object) -> FakeNeo4jSession:
         database = kwargs.get("database")
@@ -106,7 +116,19 @@ def sample_graph() -> PropertyGraph:
             PropertyNode(
                 node_id="svc:recommendation",
                 labels=["Entity", "System"],
-                properties={"name": "Recommendation API"},
+                properties={
+                    "name": "Recommendation API",
+                    "tags": ["retrieval", "production"],
+                    "property_sources": {
+                        "name": "candidate-recommendation",
+                    },
+                    "candidate_provenance": [
+                        {
+                            "provider": "test",
+                            "confidence": 0.97,
+                        }
+                    ],
+                },
             ),
             PropertyNode(
                 node_id="incident:1042",
@@ -140,13 +162,64 @@ class ProductionIngestionTests(unittest.TestCase):
         self.assertEqual(report.store_name, "neo4j_ingestion_adapter")
         self.assertEqual(report.node_count, 2)
         self.assertEqual(report.edge_count, 1)
-        self.assertEqual(report.transaction_count, 1)
-        self.assertEqual(driver.execute_write_calls, 1)
+        self.assertEqual(report.transaction_count, 2)
+        self.assertEqual(driver.execute_write_calls, 2)
         self.assertEqual(driver.session_databases, ["neo4j"])
-        self.assertTrue(any("UNWIND $rows AS row MERGE" in query for query, _ in driver.runs))
+        self.assertTrue(
+            any(
+                "MERGE (n:KGNode {id: row.id})" in query
+                for query, _ in driver.runs
+            )
+        )
         self.assertTrue(any("MERGE (s)-[r:AFFECTED" in query for query, _ in driver.runs))
+        self.assertTrue(
+            any(
+                "MATCH (s:KGNode {id: row.source_id})" in query
+                and "MATCH (t:KGNode {id: row.target_id})" in query
+                for query, _ in driver.runs
+            )
+        )
+        self.assertTrue(
+            all(
+                query.startswith("CREATE CONSTRAINT")
+                for query, _ in driver.transaction_runs[0]
+            )
+        )
+        self.assertTrue(
+            all(
+                not query.startswith("CREATE CONSTRAINT")
+                for query, _ in driver.transaction_runs[1]
+            )
+        )
         row_batches = [params["rows"] for _, params in driver.runs if "rows" in params]
         self.assertTrue(row_batches)
+        node_rows: list[dict[str, object]] = []
+        for rows in row_batches:
+            if not isinstance(rows, list):
+                continue
+            node_rows.extend(
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and row.get("id") == "svc:recommendation"
+            )
+        self.assertEqual(len(node_rows), 1)
+        stored = node_rows[0]["properties"]
+        self.assertIsInstance(stored, dict)
+        assert isinstance(stored, dict)
+        self.assertEqual(stored["tags"], ["retrieval", "production"])
+        self.assertEqual(
+            json.loads(str(stored["property_sources"])),
+            {"name": "candidate-recommendation"},
+        )
+        self.assertEqual(
+            json.loads(str(stored["candidate_provenance"])),
+            [{"confidence": 0.97, "provider": "test"}],
+        )
+        self.assertEqual(
+            stored["__kg_json_encoded_properties"],
+            ["candidate_provenance", "property_sources"],
+        )
 
     def test_retry_policy_retries_transient_write_failures(self) -> None:
         driver = FakeNeo4jDriver(failures_before_success=1)

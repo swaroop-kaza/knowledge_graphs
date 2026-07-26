@@ -6,12 +6,12 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.plan_resolution import resolve_modeling_plan
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
-from kg_construction.application.semantic_table_mapper import SemanticTableMapper
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.graph_objects import PropertyGraph
 from kg_construction.domain.models import SourceRecord
+from kg_construction.structured.plan_resolution import resolve_modeling_plan
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
+from kg_construction.structured.semantic_table_mapper import SemanticTableMapper
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 
@@ -34,7 +34,9 @@ def _graph(table_name: str, record_type: str) -> tuple[PropertyGraph, dict]:
     records = table["records"]
     source = SourceRecord.from_rows(records, source_type="csv", source_name=f"{table_name}.csv")
     resolved = _resolved(table_name, record_type)
-    result = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source])
+    result = DraftConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run(
+        [source]
+    )
     return result.property_graph, {"records": records, "validation": result.validation_report}
 
 

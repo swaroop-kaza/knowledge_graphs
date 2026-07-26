@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 from kg_construction.infrastructure.graph_stores import (
@@ -15,6 +14,7 @@ from kg_construction.infrastructure.graph_stores import (
 )
 from kg_construction.infrastructure.production import DeadLetterQueue, DeadLetterReplayTool
 from kg_construction.infrastructure.production.dead_letter import DeadLetterWriter
+from kg_construction.service_runtime import LockedServiceRuntime
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,10 +27,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--limit", type=int, default=None, help="Maximum pending records to replay.")
     parser.add_argument("--dry-run", action="store_true", help="Inspect replay candidates without writing.")
-    parser.add_argument("--neo4j-uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7687"))
-    parser.add_argument("--neo4j-user", default=os.getenv("NEO4J_USER"))
-    parser.add_argument("--neo4j-password", default=os.getenv("NEO4J_PASSWORD"))
-    parser.add_argument("--neo4j-database", default=os.getenv("NEO4J_DATABASE"))
     parser.add_argument(
         "--ladybug-database",
         default="data/processed/ladybug_graph",
@@ -40,16 +36,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    runtime = LockedServiceRuntime.from_environment()
     queue = DeadLetterQueue(Path(args.dead_letter_path))
     writers: dict[str, DeadLetterWriter] = {}
     if not args.dry_run:
         if args.store == "neo4j_ingestion_adapter":
             writers[args.store] = Neo4jIngestionAdapter(
                 Neo4jIngestionConfig(
-                    uri=args.neo4j_uri,
-                    user=args.neo4j_user,
-                    password=args.neo4j_password,
-                    database=args.neo4j_database,
+                    uri=runtime.neo4j_uri,
+                    user=runtime.neo4j_user,
+                    password=runtime.neo4j_password,
+                    database=runtime.neo4j_database,
                 )
             )
         else:

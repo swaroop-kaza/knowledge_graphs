@@ -19,6 +19,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.infrastructure.loaders.stubs import AdapterNotConfigured
+from kg_construction.service_runtime import (
+    DEFAULT_NEO4J_DATABASE,
+    DEFAULT_NEO4J_PASSWORD,
+    DEFAULT_NEO4J_URI,
+    DEFAULT_NEO4J_USER,
+)
 
 JsonDict = dict[str, Any]
 VectorSimilarity = Literal["cosine", "euclidean"]
@@ -55,10 +61,10 @@ def _quoted_identifier(value: str) -> str:
 class Neo4jVectorStoreConfig:
     """Fixed-schema configuration for a Neo4j node vector index."""
 
-    uri: str = "bolt://localhost:7687"
-    user: str | None = None
-    password: str | None = None
-    database: str | None = None
+    uri: str = DEFAULT_NEO4J_URI
+    user: str | None = DEFAULT_NEO4J_USER
+    password: str | None = DEFAULT_NEO4J_PASSWORD
+    database: str | None = DEFAULT_NEO4J_DATABASE
     index_name: str = "kg_vector_index"
     node_label: str = "KGVector"
     id_property: str = "id"
@@ -338,6 +344,37 @@ class Neo4jVectorStoreAdapter:
             )
         return hits
 
+    def count(self, filters: Mapping[str, object] | None = None) -> int:
+        """Return the live count of indexed nodes matching equality filters."""
+
+        normalized_filters = _validate_filters({} if filters is None else filters)
+        label = _quoted_identifier(self.config.node_label)
+        embedding_property = _quoted_identifier(
+            self.config.embedding_property
+        )
+        query = (
+            f"MATCH (n:{label}) "
+            f"WHERE n.{embedding_property} IS NOT NULL "
+            "AND all(key IN keys($filters) WHERE n[key] = $filters[key]) "
+            "RETURN count(n) AS indexed_count"
+        )
+        session_kwargs = (
+            {"database": self.config.database}
+            if self.config.database
+            else {}
+        )
+        with self._driver_instance().session(**session_kwargs) as session:
+            record = session.run(
+                query,
+                filters=normalized_filters,
+            ).single()
+        count = _record_get(record, "indexed_count")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise VectorIndexConfigurationError(
+                "Neo4j vector count did not return a non-negative integer"
+            )
+        return count
+
     def close(self) -> None:
         """Close a driver created by this adapter."""
 
@@ -481,6 +518,7 @@ class Neo4jVectorStoreAdapter:
             "UNWIND $rows AS row "
             f"MERGE (n:{label} {{{id_property}: row.id}}) "
             "SET n += row.properties "
+            "WITH n, row "
             "CALL db.create.setNodeVectorProperty("
             "n, $embedding_property, row.embedding"
             ") "
@@ -531,21 +569,32 @@ def _finite_float(value: object, *, field_name: str) -> float:
 
 
 def _validate_vector(
-    values: Sequence[float],
+    values: object,
     *,
     dimensions: int,
     similarity: VectorSimilarity,
     field_name: str,
 ) -> list[float]:
-    if isinstance(values, str | bytes) or not isinstance(values, Sequence):
+    if isinstance(values, str | bytes | Mapping | set | frozenset):
         raise VectorStoreValidationError(f"{field_name} must be a numeric sequence")
-    if len(values) != dimensions:
+    try:
+        observed_dimensions = len(values)  # type: ignore[arg-type]
+        indexed_values = [
+            values[position]  # type: ignore[index]
+            for position in range(observed_dimensions)
+        ]
+    except (TypeError, KeyError, IndexError) as exc:
         raise VectorStoreValidationError(
-            f"{field_name} has dimension {len(values)}; expected exactly {dimensions}"
+            f"{field_name} must be a numeric sequence"
+        ) from exc
+    if observed_dimensions != dimensions:
+        raise VectorStoreValidationError(
+            f"{field_name} has dimension {observed_dimensions}; "
+            f"expected exactly {dimensions}"
         )
     normalized = [
         _finite_float(value, field_name=f"{field_name}[{position}]")
-        for position, value in enumerate(values)
+        for position, value in enumerate(indexed_values)
     ]
     if similarity == "cosine":
         norm = math.hypot(*normalized)
@@ -601,7 +650,9 @@ def _validate_filters(filters: Mapping[str, object]) -> JsonDict:
     normalized: JsonDict = {}
     for key, value in filters.items():
         _validate_identifier(key, field_name="filter property")
-        if value is None or isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        if value is None or (
+            isinstance(value, Sequence) and not isinstance(value, str | bytes)
+        ):
             raise VectorStoreValidationError(
                 f"filter {key!r} must use one non-null scalar equality value"
             )

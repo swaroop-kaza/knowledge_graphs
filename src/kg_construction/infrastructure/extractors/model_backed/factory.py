@@ -6,11 +6,6 @@ import platform
 from dataclasses import dataclass
 from pathlib import Path
 
-from kg_construction.application.unstructured_pipeline import (
-    ClaimExtractor,
-    PatternClaimExtractor,
-    RuleMentionDetector,
-)
 from kg_construction.infrastructure.extractors.model_backed.claims import (
     MandatoryClaimEnsemble,
     MlxQwenClaimExtractor,
@@ -58,6 +53,11 @@ from kg_construction.infrastructure.resolution.mandatory_ensemble import (
     MandatoryScopedResolutionEnsemble,
     Resolver,
 )
+from kg_construction.unstructured.pipeline import (
+    ClaimExtractor,
+    PatternClaimExtractor,
+    RuleMentionDetector,
+)
 
 DEFAULT_ENTITY_LABELS = (
     "Person",
@@ -97,6 +97,10 @@ DEFAULT_RELATION_LABELS = (
     "requires",
     "has property",
 )
+_OPENREFINE_GOVERNED_TYPE_MAP = {
+    # Reviewed Wikidata class binding: Q5 is "human".
+    "Person": "Q5",
+}
 
 
 @dataclass(frozen=True)
@@ -285,7 +289,15 @@ def build_mandatory_model_providers(
         WikidataLinker(transport=clients.external_link_transport),
         DBpediaLinker(transport=clients.external_link_transport),
         OpenRefineReconciler(
-            OpenRefineReconcilerConfig(merge_on_match=False),
+            OpenRefineReconcilerConfig(
+                merge_on_match=False,
+                type_map={
+                    entity_type: wikidata_type
+                    for entity_type, wikidata_type
+                    in _OPENREFINE_GOVERNED_TYPE_MAP.items()
+                    if entity_type in governed_entity_types
+                },
+            ),
             transport=clients.external_link_transport,
         ),
     )

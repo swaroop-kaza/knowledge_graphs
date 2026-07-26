@@ -6,6 +6,10 @@ CERT_PROFILE_ARG = $(if $(CERT_PROFILE),--profile $(CERT_PROFILE),)
 CERT_SERVICE_LOCK ?= certification/services.lock.yaml
 CERT_EXECUTION_PLAN ?= certification/execution_plan.yaml
 CERT_EXECUTION_REPORT ?= certification/execution-report.yaml
+include src/kg_construction/resources/service-runtime.env
+export SERVICE_RUNTIME_CONTRACT_VERSION
+export NEO4J_URI NEO4J_USER NEO4J_PASSWORD NEO4J_DATABASE
+export MEMGRAPH_URI OLLAMA_BASE_URL OLLAMA_MODEL
 
 # Use the project virtualenv interpreter when it exists, otherwise fall back to
 # BASE_PYTHON. This is re-evaluated on each use, so `make setup quickstart` in a
@@ -18,7 +22,7 @@ endif
 PYTHONPATH ?= src
 
 .DEFAULT_GOAL := help
-.PHONY: benchmark-leaderboard capability-manifest certify certify-preflight clean compile config-check cross-source-identity-benchmark doctor gold-benchmark-story help hydrate install lock-check modelling-correctness notebook-check package-check quality quickstart registry-reports release-locks schema-quality services-start services-wait setup smoke test venv verify
+.PHONY: all-checks benchmark-leaderboard capability-manifest certify certify-preflight clean compile config-check cross-source-identity-benchmark docs-check doctor gold-benchmark-story help hydrate install lock-check modelling-correctness notebook-check package-check product-smoke quality quickstart registry-reports release-locks research-smoke schema-quality services-start services-wait setup smoke test venv verify
 
 help:
 	@echo "kg-construction - common tasks"
@@ -29,9 +33,13 @@ help:
 	@echo "  make doctor        Hard-fail on any missing runtime, model, or service"
 	@echo "  make quickstart    Build sample graphs and print a summary"
 	@echo "  make test          Run the unit test suite"
-	@echo "  make smoke         Run construction + benchmark smoke flows"
-	@echo "  make verify        Run tests and smoke flows"
-	@echo "  make quality       Run ruff, mypy, vulture, config, and notebook checks"
+	@echo "  make docs-check    Validate documentation links and source layout"
+	@echo "  make product-smoke Run construction and graph-bound evaluation"
+	@echo "  make research-smoke Run comparative technique research"
+	@echo "  make smoke         Compatibility alias for product-smoke"
+	@echo "  make verify        Run tests and the product smoke flow"
+	@echo "  make all-checks    Run quality, product verification, and research smoke"
+	@echo "  make quality       Run code, config, docs, and notebook quality gates"
 	@echo ""
 	@echo "First run (no virtualenv setup needed - 'setup' creates one for you):"
 	@echo "  make setup && make quickstart"
@@ -71,7 +79,7 @@ doctor:
 	$(UV) run --frozen python -m kg_construction.interfaces.cli.doctor --strict
 
 quickstart:
-	$(PYTHON) examples/quickstart_60_second.py
+	$(PYTHON) examples/quickstart.py
 
 compile:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m compileall -q src tests
@@ -79,7 +87,16 @@ compile:
 test: compile
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
 
-smoke:
+product-smoke:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m kg_construction.interfaces.cli.construct \
+		--input examples/data_to_kg/sample.csv \
+		--source-type csv \
+		--config configs/data_to_kg_complete.example.yaml \
+		--evaluation-suite configs/graph_evaluation_suite.sample_csv.yaml \
+		--output data/processed/data_to_kg_csv_property_graph.json \
+		--rdf-output data/processed/data_to_kg_csv_rdf.json \
+		--evidence-output data/processed/data_to_kg_csv_evidence_graph.json \
+		--neo4j-output data/processed/data_to_kg_csv_neo4j.cypher
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m kg_construction.interfaces.cli.construct \
 		--input examples/data_to_kg/sample.txt \
 		--source-type text \
@@ -89,6 +106,8 @@ smoke:
 		--rdf-output data/processed/data_to_kg_text_rdf.json \
 		--evidence-output data/processed/data_to_kg_text_evidence_graph.json \
 		--neo4j-output data/processed/data_to_kg_text_neo4j.cypher
+
+research-smoke:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m kg_construction.interfaces.cli.benchmark \
 		--input examples/data_to_kg/sample.txt \
 		--source-type text \
@@ -99,8 +118,13 @@ smoke:
 		--csv-output data/processed/data_to_kg_technique_evaluation_report.csv \
 		--candidate-output-dir data/processed/data_to_kg_candidates
 
+smoke: product-smoke
+
 config-check:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_config_examples.py
+
+docs-check:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_markdown_docs.py
 
 notebook-check:
 	$(PYTHON) scripts/check_notebook_hygiene.py
@@ -137,10 +161,13 @@ quality:
 	$(PYTHON) -m mypy src/kg_construction
 	$(PYTHON) -m vulture src tests
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_config_examples.py
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_markdown_docs.py
 	$(PYTHON) scripts/check_notebook_hygiene.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_notebook_coverage.py
 
-verify: test smoke
+verify: test product-smoke
+
+all-checks: quality verify research-smoke
 
 # Package/model/container artifacts stay offline; live remote-linking certifiers
 # remain network checks and are never replaced by cached or static fallbacks.

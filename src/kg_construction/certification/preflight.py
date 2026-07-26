@@ -737,7 +737,7 @@ def check_local_service_images(lock_path: Path, *, profile: str | None = None) -
 
 
 def check_offline_environment(environ: dict[str, str] | None = None) -> CertCheck:
-    environ = environ or dict(os.environ)
+    environ = dict(os.environ) if environ is None else environ
     required = {
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",

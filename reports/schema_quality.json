@@ -1,8 +1,9 @@
 {
-  "attribute_richness": 3.0,
+  "attribute_richness": 2.5,
   "average_degree": 1.6666666666666667,
   "cardinality_violation_rate": 0.0,
   "categorical_duplication_rate": 0.0,
+  "categorical_source_occurrence_coverage": 1.0,
   "class_population": {
     "Employee": 3,
     "Team": 3
@@ -49,6 +50,14 @@
     },
     {
       "actual": 1.0,
+      "gate": "categorical_occurrence_reconciliation",
+      "metric": "categorical_source_occurrence_coverage",
+      "operator": ">=",
+      "passed": true,
+      "threshold": 1.0
+    },
+    {
+      "actual": 1.0,
       "gate": "property_completeness",
       "metric": "property_completeness",
       "operator": ">=",
@@ -87,7 +96,7 @@
   "passed": true,
   "property_completeness": 1.0,
   "relationship_completeness": 1.0,
-  "relationship_richness": 0.21739130434782608,
+  "relationship_richness": 0.25,
   "schema_completeness": 0.8571428571428571,
   "shacl_executed": true,
   "shacl_violation_count": 0,

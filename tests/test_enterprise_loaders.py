@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from kg_construction.application.dataset_profiler import DatasetProfiler
-from kg_construction.application.registry import default_registry
+from kg_construction.certification.registry import default_registry
+from kg_construction.construction.profiling import DatasetProfiler
 from kg_construction.infrastructure.loaders import (
     APIResponseLoader,
     ChatTranscriptLoader,

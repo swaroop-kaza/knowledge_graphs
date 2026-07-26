@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-from kg_construction.application.registry import (
+from kg_construction.certification.registry import (
     TechniqueDescriptor,
     default_registry,
     research_registry,
@@ -24,6 +24,26 @@ from kg_construction.application.registry import (
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "capability_manifest.yaml"
 _RESEARCH_INVENTORY = _ROOT / "certification" / "research_inventory.yaml"
+
+_CORE_REPORTS = (
+    "reports/current_registry_matrix.csv",
+    "reports/current_registry_summary.json",
+    "reports/current_repo_capability_summary.md",
+    "reports/modelling_correctness.json",
+    "reports/modelling_correctness.md",
+    "reports/schema_quality.json",
+    "reports/schema_quality.md",
+)
+_RESEARCH_REPORTS = (
+    "reports/benchmark_leaderboard.csv",
+    "reports/benchmark_leaderboard.md",
+    "reports/cross_source_identity_benchmark.csv",
+    "reports/cross_source_identity_benchmark.json",
+    "reports/cross_source_identity_benchmark.md",
+    "reports/gold_standard_benchmark_story.csv",
+    "reports/gold_standard_benchmark_story.json",
+    "reports/gold_standard_benchmark_story.md",
+)
 
 # Composite pipelines are wired from other techniques rather than a single class.
 _COMPOSITION_OWNER = "composition"
@@ -107,12 +127,30 @@ def build_research_inventory() -> dict[str, Any]:
                 "certified": False,
             }
         )
+    research_artifacts = [
+        {
+            "path": path,
+            "kind": "report",
+            "certified": False,
+        }
+        for path in _RESEARCH_REPORTS
+    ]
+    research_artifacts.extend(
+        {
+            "path": str(path.relative_to(_ROOT)),
+            "kind": "notebook",
+            "certified": False,
+        }
+        for path in sorted((_ROOT / "notebooks").glob("*.ipynb"))
+    )
     return {
         "version": 1,
         "purpose": "research_and_roadmap_only",
         "generated_by": "scripts/generate_capability_manifest.py",
         "count": len(rows),
+        "artifact_count": len(research_artifacts),
         "techniques": rows,
+        "artifacts": research_artifacts,
     }
 
 
@@ -125,30 +163,49 @@ def _dependencies() -> list[dict[str, Any]]:
     ]
     # Product dependencies are all required (no optional extras); tooling lives in
     # PEP 735 dependency-groups and is part of the certified hard pass.
-    for group, members in sorted(pyproject.get("dependency-groups", {}).items()):
-        packages = [item for item in members if isinstance(item, str)]
+    groups = pyproject.get("dependency-groups", {})
+
+    def resolve_group(group: str, parents: tuple[str, ...] = ()) -> list[str]:
+        if group in parents:
+            cycle = " -> ".join((*parents, group))
+            raise ValueError(f"dependency-group include cycle: {cycle}")
+        packages: list[str] = []
+        for item in groups.get(group, []):
+            if isinstance(item, str):
+                packages.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("include-group"), str):
+                packages.extend(
+                    resolve_group(
+                        item["include-group"],
+                        (*parents, group),
+                    )
+                )
+            else:
+                raise ValueError(
+                    f"unsupported dependency-group member in {group!r}: {item!r}"
+                )
+        return list(dict.fromkeys(packages))
+
+    for group in sorted(groups):
+        packages = resolve_group(group)
         rows.append(
             {"group": group, "kind": "tooling", "disposition": "mandatory", "packages": packages}
         )
     return rows
 
 
-def _files(subdir: str, patterns: tuple[str, ...]) -> list[dict[str, Any]]:
-    base = _ROOT / subdir
-    paths: set[Path] = set()
-    for pattern in patterns:
-        paths.update(base.glob(pattern))
+def _mandatory_files(paths: tuple[str, ...]) -> list[dict[str, Any]]:
     return [
-        {"path": str(path.relative_to(_ROOT)), "disposition": "mandatory"}
-        for path in sorted(paths)
+        {"path": path, "disposition": "mandatory"}
+        for path in paths
     ]
 
 
 def build_manifest() -> dict[str, Any]:
     techniques = _techniques()
     dependencies = _dependencies()
-    reports = _files("reports", ("*.md", "*.json", "*.csv"))
-    notebooks = _files("notebooks", ("*.ipynb",))
+    reports = _mandatory_files(_CORE_REPORTS)
+    notebooks: list[dict[str, Any]] = []
 
     def _count(rows: list[dict[str, Any]]) -> dict[str, int]:
         mandatory = sum(1 for row in rows if row["disposition"] == "mandatory")

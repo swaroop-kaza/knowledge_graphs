@@ -48,6 +48,7 @@ from kg_construction.domain.models import (
     normalize_text,
     stable_id,
 )
+from kg_construction.service_runtime import LockedServiceRuntime
 
 if TYPE_CHECKING:
     from kg_construction.infrastructure.extractors.model_backed import (
@@ -537,7 +538,7 @@ def _semantic_profiler(owner: Owner, context: CertificationContext) -> ScenarioR
 
 
 def _catalog_fixture():
-    from kg_construction.application.source_catalog import (
+    from kg_construction.structured.source_catalog import (
         DeclaredForeignKey,
         SourceCatalog,
         TableDeclaration,
@@ -591,7 +592,7 @@ def _catalog_fixture():
 def _source_catalog(owner: Owner, context: CertificationContext) -> ScenarioResult:
     _, departments, employees = _catalog_fixture()
     instance = owner()
-    from kg_construction.application.source_catalog import (
+    from kg_construction.structured.source_catalog import (
         DeclaredForeignKey,
         TableDeclaration,
     )
@@ -1073,19 +1074,18 @@ def _mandatory_bundle(
     )
 
     cache = os.environ.get("HF_HUB_CACHE")
+    runtime = LockedServiceRuntime.from_environment()
     return build_mandatory_model_providers_from_lock(
         context.root / "models.lock.yaml",
         profile=context.profile,
         cache_root=Path(cache) if cache else None,
-        ollama_base_url=os.environ.get(
-            "KG_CERT_OLLAMA_URL", "http://localhost:11434"
-        ),
+        ollama_base_url=runtime.ollama_base_url,
     )
 
 
 def _model_document():
-    from kg_construction.application.unstructured_pipeline import RuleSegmenter
     from kg_construction.domain.claim import DocumentRef
+    from kg_construction.unstructured.pipeline import RuleSegmenter
 
     source = SourceRecord.from_text(
         "Alan Turing worked at Bletchley Park.",
@@ -1187,7 +1187,7 @@ def _model_provider(owner: Owner, context: CertificationContext) -> ScenarioResu
         passed = {"Alan Turing", "Bletchley Park"} <= names
         details = {"provider": provider_id, "semantic_output_count": len(mentions)}
     else:
-        from kg_construction.application.unstructured_pipeline import (
+        from kg_construction.unstructured.pipeline import (
             RuleMentionDetector,
         )
 
@@ -1247,8 +1247,9 @@ def _model_provider(owner: Owner, context: CertificationContext) -> ScenarioResu
 def _ollama_provider(owner: Owner, context: CertificationContext) -> ScenarioResult:
     from kg_construction.infrastructure.llm.ollama import OllamaConfig
 
-    model = os.environ.get("KG_CERT_OLLAMA_MODEL", "qwen3:1.7b-q4_K_M")
-    base_url = os.environ.get("KG_CERT_OLLAMA_URL", "http://localhost:11434")
+    runtime = LockedServiceRuntime.from_environment()
+    model = runtime.ollama_model
+    base_url = runtime.ollama_base_url
     instance = owner(
         OllamaConfig(
             base_url=base_url,
@@ -1280,8 +1281,9 @@ def _ollama_provider(owner: Owner, context: CertificationContext) -> ScenarioRes
 def _ollama_graph(owner: Owner, context: CertificationContext) -> ScenarioResult:
     from kg_construction.infrastructure.llm.ollama import OllamaConfig, OllamaProvider
 
-    model = os.environ.get("KG_CERT_OLLAMA_MODEL", "qwen3:1.7b-q4_K_M")
-    base_url = os.environ.get("KG_CERT_OLLAMA_URL", "http://localhost:11434")
+    runtime = LockedServiceRuntime.from_environment()
+    model = runtime.ollama_model
+    base_url = runtime.ollama_base_url
     provider = OllamaProvider(
         OllamaConfig(
             base_url=base_url,
@@ -1322,8 +1324,9 @@ def _gliner_ollama(owner: Owner, context: CertificationContext) -> ScenarioResul
     from kg_construction.infrastructure.extractors.relations import RelationTypingConfig
     from kg_construction.infrastructure.llm.ollama import OllamaConfig, OllamaProvider
 
-    model = os.environ.get("KG_CERT_OLLAMA_MODEL", "qwen3:1.7b-q4_K_M")
-    base_url = os.environ.get("KG_CERT_OLLAMA_URL", "http://localhost:11434")
+    runtime = LockedServiceRuntime.from_environment()
+    model = runtime.ollama_model
+    base_url = runtime.ollama_base_url
     provider = OllamaProvider(
         OllamaConfig(
             base_url=base_url,
@@ -1366,7 +1369,7 @@ def _gliner_ollama(owner: Owner, context: CertificationContext) -> ScenarioResul
 
 
 def _unstructured_pipeline(owner: Owner, context: CertificationContext) -> ScenarioResult:
-    from kg_construction.application.unstructured_pipeline import (
+    from kg_construction.unstructured.pipeline import (
         RuntimeProfile,
         UnstructuredPipelineConfig,
     )
@@ -1584,10 +1587,10 @@ def _composed_graph_evaluation_suite(profile: str):
     """Return sealed gold/query contracts independent of runtime predictions."""
 
     from kg_construction.domain.claim import DocumentRef
-    from kg_construction.infrastructure.evaluation import (
+    from kg_construction.evaluation import (
         VersionedGraphEvaluationSuite,
     )
-    from kg_construction.infrastructure.evaluation.intended_use_metrics import (
+    from kg_construction.evaluation.intended_use_metrics import (
         ReasoningFact,
     )
 
@@ -1720,7 +1723,6 @@ def _composed_graph_evaluation_suite(profile: str):
         ada,
     ]
     person_selector = {"node_ids": all_people}
-    charles_selector = {"node_ids": [charles]}
     payload: JsonDict = {
         "version": "kg-graph-evaluation-suite-v1",
         "construction_profile": "unstructured",
@@ -1741,6 +1743,7 @@ def _composed_graph_evaluation_suite(profile: str):
                             "name": "$property.name",
                             "external_id": "$property.external_id",
                         },
+                        "aggregations": {"count": "count"},
                     },
                     "expected_rows": [
                         {
@@ -1840,27 +1843,55 @@ def _composed_graph_evaluation_suite(profile: str):
         "link_prediction": {
             "cases": [
                 {
-                    "case_id": f"link-{stratum}",
+                    "case_id": "link-alan-to-charles",
                     "query": {
                         "source": {"node_ids": [alan]},
                         "relationship_type": "WORKS_WITH",
-                        "candidates": charles_selector,
-                        "k": 1,
+                        "candidates": person_selector,
+                        "k": 3,
                     },
                     "true_entity_id": charles,
-                    "known_true_entity_ids": [charles],
-                    "popularity_stratum": stratum,
-                }
-                for stratum in ("head", "torso", "tail")
+                },
+                {
+                    "case_id": "link-charles-to-ada",
+                    "query": {
+                        "source": {"node_ids": [charles]},
+                        "relationship_type": "WORKS_WITH",
+                        "candidates": person_selector,
+                        "k": 3,
+                    },
+                    "true_entity_id": ada,
+                },
+                {
+                    "case_id": "link-charles-from-alan",
+                    "query": {
+                        "source": {"node_ids": [charles]},
+                        "relationship_type": "WORKS_WITH",
+                        "direction": "incoming",
+                        "candidates": person_selector,
+                        "k": 3,
+                    },
+                    "true_entity_id": alan,
+                },
             ],
             "hits_at": [1, 3, 10],
-            "min_filtered_mrr": 1.0,
-            "min_filtered_hits_at_k": {1: 1.0, 3: 1.0, 10: 1.0},
+            "min_filtered_mrr": 0.60,
+            "min_filtered_hits_at_k": {1: 0.30, 3: 1.0, 10: 1.0},
         },
         "recommendation": {
             "cases": [
                 {
-                    "case_id": "recommend-collaborator",
+                    "case_id": "recommend-alan-to-charles",
+                    "query": {
+                        "source": {"node_ids": [alan]},
+                        "relationship_type": "WORKS_WITH",
+                        "candidates": person_selector,
+                        "k": 3,
+                    },
+                    "relevant_item_ids": [charles],
+                },
+                {
+                    "case_id": "recommend-charles-to-ada",
                     "query": {
                         "source": {"node_ids": [charles]},
                         "relationship_type": "WORKS_WITH",
@@ -1868,13 +1899,24 @@ def _composed_graph_evaluation_suite(profile: str):
                         "k": 3,
                     },
                     "relevant_item_ids": [ada],
-                }
+                },
+                {
+                    "case_id": "recommend-charles-from-alan",
+                    "query": {
+                        "source": {"node_ids": [charles]},
+                        "relationship_type": "WORKS_WITH",
+                        "direction": "incoming",
+                        "candidates": person_selector,
+                        "k": 3,
+                    },
+                    "relevant_item_ids": [alan],
+                },
             ],
             "catalog": person_selector,
             "feature_properties": ["external_id"],
             "min_precision_at_k": 0.30,
             "min_recall_at_k": 1.0,
-            "min_ndcg_at_k": 1.0,
+            "min_ndcg_at_k": 0.50,
             "min_catalog_coverage": 1.0,
             "min_novelty": 0.01,
             "min_intra_list_diversity": 0.01,
@@ -1915,11 +1957,13 @@ def _mandatory_composed_unstructured_runtime(
 ) -> ScenarioResult:
     """Certify the single locked path through publication and live Neo4j."""
 
-    from kg_construction.application.config import DataToKGConfig
-    from kg_construction.application.workflow import ConstructionWorkflow
-    from kg_construction.infrastructure.evaluation import (
+    from kg_construction.construction.config import DataToKGConfig
+    from kg_construction.construction.workflow import ConstructionWorkflow
+    from kg_construction.evaluation import (
         GraphBoundIntendedUseEvaluator,
         GraphWorkloadRunner,
+        Neo4jGraphWorkloadBackend,
+        Neo4jGraphWorkloadConfig,
         Neo4jVectorWorkloadBackend,
         property_graph_sha256,
     )
@@ -1934,15 +1978,13 @@ def _mandatory_composed_unstructured_runtime(
 
     settings = DataToKGConfig().unstructured
     cache = os.environ.get("HF_HUB_CACHE")
+    runtime = LockedServiceRuntime.from_environment()
     instance = owner.from_lock(
         context.root / "models.lock.yaml",
         profile=context.profile,
         cache_root=Path(cache) if cache else None,
         entity_labels=settings.entity_labels,
-        ollama_base_url=os.environ.get(
-            "KG_CERT_OLLAMA_URL",
-            "http://localhost:11434",
-        ),
+        ollama_base_url=runtime.ollama_base_url,
         ollama_retry_on_invalid_output=True,
         ollama_max_retries=3,
     )
@@ -1952,11 +1994,11 @@ def _mandatory_composed_unstructured_runtime(
         f"{context.profile}:{context.run_id}:{_COMPOSED_FIXTURE_ID}".encode()
     ).hexdigest()[:12]
     driver, uri = _neo4j_driver(memgraph=False)
-    database = os.environ.get("KG_CERT_NEO4J_DATABASE") or None
+    database = runtime.neo4j_database
     vector_config = Neo4jVectorStoreConfig(
         uri=uri,
-        user=os.environ.get("KG_CERT_NEO4J_USER", "neo4j"),
-        password=os.environ.get("KG_CERT_NEO4J_PASSWORD", "certification"),
+        user=runtime.neo4j_user,
+        password=runtime.neo4j_password,
         database=database,
         index_name=f"kg_composed_vector_{suffix}",
         node_label=f"KGComposedVector_{suffix}",
@@ -1969,8 +2011,21 @@ def _mandatory_composed_unstructured_runtime(
         embedding_model=instance.embedding_model,
         model_id=instance.embedding_model.artifact.model_version,
     )
+    graph_backend = Neo4jGraphWorkloadBackend(
+        Neo4jGraphWorkloadConfig(
+            uri=uri,
+            user=runtime.neo4j_user,
+            password=runtime.neo4j_password,
+            database=database,
+            snapshot_namespace=f"kg_composed_{suffix}",
+        ),
+        driver=driver,
+    )
     graph_evaluator = GraphBoundIntendedUseEvaluator(
-        runner=GraphWorkloadRunner(vector_backend=vector_backend)
+        runner=GraphWorkloadRunner(
+            graph_backend=graph_backend,
+            vector_backend=vector_backend,
+        )
     )
     snapshot_builder = _CertificationSnapshotPropertyGraphBuilder(
         profile=context.profile,
@@ -1981,13 +2036,12 @@ def _mandatory_composed_unstructured_runtime(
         property_graph_builder=snapshot_builder,  # type: ignore[arg-type]
         graph_evaluation_suite=suite,
         graph_bound_evaluator=graph_evaluator,
-        require_publication_gates=True,
     )
     ingestion = Neo4jIngestionAdapter(
         Neo4jIngestionConfig(
             uri=uri,
-            user=os.environ.get("KG_CERT_NEO4J_USER", "neo4j"),
-            password=os.environ.get("KG_CERT_NEO4J_PASSWORD", "certification"),
+            user=runtime.neo4j_user,
+            password=runtime.neo4j_password,
             database=database,
             batch_size=100,
         ),
@@ -2021,6 +2075,7 @@ def _mandatory_composed_unstructured_runtime(
     finally:
         session_kwargs = {"database": database} if database else {}
         try:
+            graph_backend.cleanup()
             with driver.session(**session_kwargs) as session:
                 session.run(
                     "MATCH (n {certification_run: $run_id}) DETACH DELETE n",
@@ -2095,8 +2150,22 @@ def _mandatory_composed_unstructured_runtime(
         ),
         "same_frozen_graph_snapshot": (
             result.intended_use_report.graph_sha256 == graph_hash
+            and result.intended_use_report.readback_graph_sha256 == graph_hash
             and result.intended_use_report.graph_snapshot_id is not None
             and graph_hash in result.intended_use_report.graph_snapshot_id
+        ),
+        "all_workloads_live_store_backed": (
+            result.intended_use_report.certifiable_backend
+            and set(result.intended_use_report.backend_executed_families)
+            == {
+                "sql_like",
+                "nosql",
+                "graphrag",
+                "vector",
+                "link_prediction",
+                "recommendation",
+                "reasoning",
+            }
         ),
         "publication_conjunction": result.publication_gate.passed,
         "neo4j_exact_write_read": (
@@ -2110,7 +2179,7 @@ def _mandatory_composed_unstructured_runtime(
         instance=instance,
         operation=(
             "heldout+extract+identity+shacl+evaluate7+"
-            "neo4j_vector+neo4j_write_read"
+            "neo4j_readback_all7+neo4j_vector+neo4j_write_read"
         ),
         fixture={
             "source": source,
@@ -2140,7 +2209,10 @@ def _mandatory_composed_unstructured_runtime(
             }
             for name, passed in checks.items()
         ),
-        backend="locked-models+external-linkers+neo4j-vector+neo4j:live",
+        backend=(
+            "locked-models+external-linkers+"
+            "neo4j-readback-all7+neo4j-vector:live"
+        ),
         details={
             "profile": context.profile,
             "neo4j_uri": uri,
@@ -2153,8 +2225,30 @@ def _mandatory_composed_unstructured_runtime(
             "graph_sha256": graph_hash,
             "graph_backend_id": result.intended_use_report.graph_backend_id,
             "graph_snapshot_id": result.intended_use_report.graph_snapshot_id,
+            "readback_graph_sha256": (
+                result.intended_use_report.readback_graph_sha256
+            ),
+            "backend_executed_families": (
+                result.intended_use_report.backend_executed_families
+            ),
             "mandatory_provider_ids": sorted(required),
             "participating_provider_ids": sorted(participating),
+            "expected_ingestion_node_count": len(graph_node_ids),
+            "stored_ingestion_node_count": len(stored_node_ids),
+            "expected_ingestion_edge_count": len(graph_edge_ids),
+            "stored_ingestion_edge_count": len(stored_edge_ids),
+            "expected_ingestion_node_ids_sha256": hashlib.sha256(
+                canonical_json(graph_node_ids).encode("utf-8")
+            ).hexdigest(),
+            "stored_ingestion_node_ids_sha256": hashlib.sha256(
+                canonical_json(stored_node_ids).encode("utf-8")
+            ).hexdigest(),
+            "expected_ingestion_edge_ids_sha256": hashlib.sha256(
+                canonical_json(graph_edge_ids).encode("utf-8")
+            ).hexdigest(),
+            "stored_ingestion_edge_ids_sha256": hashlib.sha256(
+                canonical_json(stored_edge_ids).encode("utf-8")
+            ).hexdigest(),
         },
     )
 
@@ -2368,7 +2462,30 @@ def _graph_builder(owner: Owner, context: CertificationContext) -> ScenarioResul
 def _quality_construction_fixture() -> JsonDict:
     """Build one evidenced graph, ontology, replay, and real SHACL observation."""
 
-    from kg_construction.application.resolved_plan import (
+    from kg_construction.domain.evidence import cell_evidence
+    from kg_construction.domain.graph_objects import RDFGraph
+    from kg_construction.domain.modeling import Cardinality, ColumnRole
+    from kg_construction.evaluation.operational_metrics import (
+        OperationalMetricsRecorder,
+        RetryObservation,
+    )
+    from kg_construction.infrastructure.graph_builders.property_graph import (
+        PropertyGraphBuilder,
+    )
+    from kg_construction.infrastructure.graph_builders.rdf_graph import RDFGraphBuilder
+    from kg_construction.infrastructure.ontology.shacl import (
+        ShaclValidationResult,
+        ShaclValidator,
+    )
+    from kg_construction.infrastructure.ontology.validation import (
+        EvidenceRequiredValidator,
+    )
+    from kg_construction.infrastructure.production.manifests import RunManifest
+    from kg_construction.infrastructure.production.retry import (
+        BatchRetryPolicy,
+        RetryPolicyConfig,
+    )
+    from kg_construction.structured.resolved_plan import (
         ClassKind,
         IdentityRole,
         Materialization,
@@ -2377,19 +2494,6 @@ def _quality_construction_fixture() -> JsonDict:
         ResolvedModelingPlan,
         ResolvedProperty,
         ResolvedRelationship,
-    )
-    from kg_construction.domain.evidence import cell_evidence
-    from kg_construction.domain.modeling import Cardinality, ColumnRole
-    from kg_construction.infrastructure.evaluation.operational_metrics import (
-        OperationalMetricsRecorder,
-    )
-    from kg_construction.infrastructure.graph_builders.property_graph import (
-        PropertyGraphBuilder,
-    )
-    from kg_construction.infrastructure.graph_builders.rdf_graph import RDFGraphBuilder
-    from kg_construction.infrastructure.ontology.shacl import ShaclValidator
-    from kg_construction.infrastructure.ontology.validation import (
-        EvidenceRequiredValidator,
     )
 
     row: JsonDict = {
@@ -2615,25 +2719,75 @@ def _quality_construction_fixture() -> JsonDict:
     recorder = OperationalMetricsRecorder(
         processed_items=len(batch.entities) + len(batch.relations)
     )
-    with recorder:
-        property_graph = PropertyGraphBuilder().build(
+    retry_policy = BatchRetryPolicy(
+        RetryPolicyConfig(max_attempts=2, sleep=False)
+    )
+
+    def execute_construction() -> tuple[
+        PropertyGraph,
+        RDFGraph,
+        ShaclValidationResult,
+    ]:
+        property_result = PropertyGraphBuilder().build(
             batch,
             validation_report=validation_report,
             include_fact_nodes=False,
         )
-        replay_graph = PropertyGraphBuilder().build(
-            batch,
-            validation_report=validation_report,
-            include_fact_nodes=False,
-        )
-        rdf_graph = RDFGraphBuilder().build(
+        rdf_result = RDFGraphBuilder().build(
             batch,
             validation_report=validation_report,
         )
         shacl_result = ShaclValidator().validate_rdf_graph(
-            rdf_graph,
+            rdf_result,
             graph_schema=plan.to_property_graph_schema(),
         )
+        return property_result, rdf_result, shacl_result
+
+    initial_manifest = RunManifest.start(
+        pipeline_name="semantic_quality_construction_fixture",
+        sources=[source],
+        config_payload={"plan": plan.model_dump(mode="json")},
+    )
+    with recorder:
+        initial_outcome = retry_policy.run(
+            execute_construction,
+            operation_name="semantic_quality_initial_construction",
+        )
+        replay_manifest = RunManifest.start(
+            pipeline_name="semantic_quality_construction_fixture",
+            sources=[source],
+            config_payload={"plan": plan.model_dump(mode="json")},
+        )
+        replay_outcome = retry_policy.run(
+            execute_construction,
+            operation_name="semantic_quality_replay_construction",
+        )
+    property_graph, rdf_graph, shacl_result = initial_outcome.value
+    replay_graph, _, _ = replay_outcome.value
+    initial_manifest = initial_manifest.complete(
+        batch=batch,
+        validation_report=validation_report,
+    )
+    replay_manifest = replay_manifest.complete(
+        batch=batch,
+        validation_report=validation_report,
+    )
+    runtime_report = recorder.report.model_copy(
+        update={
+            "retry_observations": (
+                RetryObservation(
+                    operation_id="semantic_quality_initial_construction",
+                    attempt_count=initial_outcome.attempts,
+                    retry_count=initial_outcome.retry_count,
+                ),
+                RetryObservation(
+                    operation_id="semantic_quality_replay_construction",
+                    attempt_count=replay_outcome.attempts,
+                    retry_count=replay_outcome.retry_count,
+                ),
+            )
+        }
+    )
 
     from rdflib import Graph
     from rdflib.namespace import RDF, SH
@@ -2652,7 +2806,9 @@ def _quality_construction_fixture() -> JsonDict:
         "validation_report": validation_report,
         "shacl_result": shacl_result,
         "shacl_violation_count": shacl_violation_count,
-        "runtime_report": recorder.report,
+        "runtime_report": runtime_report,
+        "initial_run_manifest": initial_manifest,
+        "replay_run_manifest": replay_manifest,
         "source_rows": [row],
     }
 
@@ -2661,7 +2817,11 @@ def _quality_evaluator_scenario(
     owner: Owner,
     context: CertificationContext,
 ) -> ScenarioResult:
-    from kg_construction.infrastructure.evaluation.quality_gates import (
+    from kg_construction.evaluation.graph_bound_suite import (
+        property_graph_sha256,
+    )
+    from kg_construction.evaluation.quality_gates import (
+        ConstructionReplayEvidence,
         QualityEvaluationInputs,
     )
 
@@ -2708,8 +2868,13 @@ def _quality_evaluator_scenario(
         vector_relevant={"incident-context": [entity_ids["Service"]]},
         vector_k=1,
         runtime_report=built["runtime_report"],
-        successful_runs=1,
-        total_runs=1,
+        replay_evidence=ConstructionReplayEvidence(
+            initial_run=built["initial_run_manifest"],
+            replay_run=built["replay_run_manifest"],
+            initial_graph_sha256=property_graph_sha256(graph),
+            replay_graph_sha256=property_graph_sha256(built["replay_graph"]),
+        ),
+        operational_run_manifests=(built["initial_run_manifest"],),
     )
     report = instance.evaluate(batch, inputs=inputs)
     metrics: dict[str, float] = {}
@@ -2751,7 +2916,7 @@ def _schema_quality_evaluator_scenario(
     owner: Owner,
     context: CertificationContext,
 ) -> ScenarioResult:
-    from kg_construction.application.resolved_plan import ResolvedModelingPlan
+    from kg_construction.structured.resolved_plan import ResolvedModelingPlan
 
     _ = context
     built = _quality_construction_fixture()
@@ -2848,7 +3013,7 @@ def _intended_use_evaluator_scenario(
     import time
     import tracemalloc
 
-    from kg_construction.infrastructure.evaluation.intended_use_metrics import (
+    from kg_construction.evaluation.intended_use_metrics import (
         GraphRAGCase,
         GraphRAGEvaluationInput,
         IntendedUseEvaluationInputs,
@@ -3130,7 +3295,7 @@ def _evaluation(owner: Owner, context: CertificationContext) -> ScenarioResult:
         )
         gold = json.loads(gold_path.read_text(encoding="utf-8"))
         source = SourceRecord.from_text(gold["text"], source_name="held_out.txt")
-        from kg_construction.application.unstructured_pipeline import UnstructuredPipeline
+        from kg_construction.unstructured.pipeline import UnstructuredPipeline
 
         pipeline_result = UnstructuredPipeline().run(source)
         instance = owner()
@@ -3162,25 +3327,12 @@ def _evaluation(owner: Owner, context: CertificationContext) -> ScenarioResult:
         fixture = batch
         assertion = "construction evaluator executed accuracy and graph-hygiene metrics"
     else:
-        batch = _batch()
-        instance = owner()
-        comparison = instance.compare(
-            {"candidate": lambda: batch},
-            expected=batch,
+        raise ValueError(
+            f"unsupported release evaluation capability: {context.capability}"
         )
-        passed = (
-            len(comparison) == 1
-            and comparison[0].error is None
-            and comparison[0].metrics.get("entity_f1") == 1.0
-            and comparison[0].metrics.get("relation_f1") == 1.0
-        )
-        value = float(passed)
-        output = comparison
-        fixture = batch
-        assertion = "benchmark runner executed and scored a real construction candidate"
     return _result(
         instance,
-        "evaluate" if context.capability != "benchmark_runner" else "compare",
+        "evaluate",
         fixture,
         output,
         metric="evaluation_contract_complete",
@@ -3651,13 +3803,17 @@ def _rdf_graph():
 def _neo4j_driver(*, memgraph: bool = False):
     from neo4j import GraphDatabase
 
+    runtime = LockedServiceRuntime.from_environment()
     if memgraph:
-        uri = os.environ.get("KG_CERT_MEMGRAPH_URI", "bolt://localhost:7688")
+        uri = runtime.memgraph_uri
         return GraphDatabase.driver(uri), uri
-    uri = os.environ.get("KG_CERT_NEO4J_URI", "bolt://localhost:7687")
-    user = os.environ.get("KG_CERT_NEO4J_USER", "neo4j")
-    password = os.environ.get("KG_CERT_NEO4J_PASSWORD", "certification")
-    return GraphDatabase.driver(uri, auth=(user, password)), uri
+    return (
+        GraphDatabase.driver(
+            runtime.neo4j_uri,
+            auth=(runtime.neo4j_user, runtime.neo4j_password),
+        ),
+        runtime.neo4j_uri,
+    )
 
 
 def _execute_exported_cypher(
@@ -3667,8 +3823,10 @@ def _execute_exported_cypher(
     memgraph: bool,
 ) -> tuple[int, str]:
     driver, uri = _neo4j_driver(memgraph=memgraph)
+    runtime = LockedServiceRuntime.from_environment()
+    session_kwargs = {} if memgraph else {"database": runtime.neo4j_database}
     try:
-        with driver.session() as session:
+        with driver.session(**session_kwargs) as session:
             for statement in statements:
                 session.run(statement).consume()
             record = session.run(
@@ -3787,18 +3945,20 @@ def _graph_ingestion(owner: Owner, context: CertificationContext) -> ScenarioRes
         )
 
         driver, uri = _neo4j_driver(memgraph=False)
+        runtime = LockedServiceRuntime.from_environment()
         instance = owner(
             Neo4jIngestionConfig(
                 uri=uri,
-                user=os.environ.get("KG_CERT_NEO4J_USER", "neo4j"),
-                password=os.environ.get("KG_CERT_NEO4J_PASSWORD", "certification"),
+                user=runtime.neo4j_user,
+                password=runtime.neo4j_password,
+                database=runtime.neo4j_database,
                 batch_size=10,
             ),
             driver=driver,
         )
         try:
             report = instance.write_property_graph(graph)
-            with driver.session() as session:
+            with driver.session(database=runtime.neo4j_database) as session:
                 record = session.run(
                     "MATCH (n {certification_run: $run_id}) "
                     "RETURN count(n) AS node_count",
@@ -3873,11 +4033,12 @@ def _neo4j_vector_store(owner: Owner, context: CertificationContext) -> Scenario
     index_name = f"kg_cert_vector_{suffix}"
     node_label = f"KGVectorCert_{suffix}"
     driver, uri = _neo4j_driver(memgraph=False)
+    runtime = LockedServiceRuntime.from_environment()
     config = Neo4jVectorStoreConfig(
         uri=uri,
-        user=os.environ.get("KG_CERT_NEO4J_USER", "neo4j"),
-        password=os.environ.get("KG_CERT_NEO4J_PASSWORD", "certification"),
-        database=os.environ.get("KG_CERT_NEO4J_DATABASE") or None,
+        user=runtime.neo4j_user,
+        password=runtime.neo4j_password,
+        database=runtime.neo4j_database,
         index_name=index_name,
         node_label=node_label,
         dimensions=3,
@@ -4071,7 +4232,6 @@ _GRAPH_BUILDERS = {
 }
 
 _EVALUATORS = {
-    "benchmark_runner",
     "claim_evaluation_suite",
     "construction_metrics_evaluator",
     "intended_use_metrics_evaluator",

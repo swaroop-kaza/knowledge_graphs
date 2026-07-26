@@ -11,6 +11,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.infrastructure.llm.prompts import build_repair_prompt
+from kg_construction.service_runtime import (
+    DEFAULT_OLLAMA_BASE_URL,
+    DEFAULT_OLLAMA_MODEL,
+)
 
 JsonDict = dict[str, Any]
 Transport = Callable[[JsonDict], str | JsonDict]
@@ -28,8 +32,8 @@ class OllamaConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: str = "ollama"
-    base_url: str = "http://localhost:11434"
-    model: str = "qwen3:1.7b-q4_K_M"
+    base_url: str = DEFAULT_OLLAMA_BASE_URL
+    model: str = DEFAULT_OLLAMA_MODEL
     temperature: float = 0.0
     structured_output: bool = True
     evidence_required: bool = True

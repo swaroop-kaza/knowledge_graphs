@@ -2,10 +2,27 @@ from __future__ import annotations
 
 import unittest
 
-from kg_construction import SUPPORT_LEVEL_DEFINITIONS, default_registry, research_registry
+import kg_construction.application.registry as legacy_registry
+import kg_construction.certification.registry as certification_registry
+from kg_construction.certification import (
+    SUPPORT_LEVEL_DEFINITIONS,
+    default_registry,
+    research_registry,
+)
 
 
 class RegistrySupportLevelTests(unittest.TestCase):
+    def test_application_registry_is_an_identity_preserving_compatibility_shim(
+        self,
+    ) -> None:
+        self.assertEqual(legacy_registry.__all__, certification_registry.__all__)
+        for name in certification_registry.__all__:
+            self.assertIs(
+                getattr(legacy_registry, name),
+                getattr(certification_registry, name),
+                name,
+            )
+
     def test_release_registry_contains_only_mandatory_techniques(self) -> None:
         registry = default_registry()
         levels = {technique.public_support_level for technique in registry.techniques}

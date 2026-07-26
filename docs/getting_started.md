@@ -1,8 +1,41 @@
-# Getting started: mandatory, zero-skip runtime
+# Getting started
 
-This repository has one product contract: construct a well-formed graph from structured and unstructured data, evaluate it, and fail when a required provider did not run. There is no reduced “core install”, no model-download-on-first-use, and no successful result containing skipped capabilities.
+[Documentation home](README.md) · [Configuration](configuration.md) · [Evaluation](evaluation_metrics.md) · [Testing](testing_guide.md)
 
-Research and roadmap code remains visible in `research_registry()`, but it is not part of the release registry and is never counted as certified.
+This guide covers both outcomes:
+
+- `convert(...)` and `kg-construction` return **draft graphs plus metrics** for inspection; and
+- the mandatory, zero-skip hard pass establishes whether a release is **publishable**.
+
+The certified runtime treats a missing platform-applicable provider as failure. It uses immutable model/service locks, has no reduced product install, performs no model download on first use, and accepts no skipped capability or device/runtime fallback.
+
+Research comparisons live under `kg_construction.research`. They are not part of the release decision and are never counted as certified product evidence.
+
+## On this page
+
+1. [Supported execution profiles](#1-supported-execution-profiles)
+2. [Install the bootstrap tools](#2-install-the-bootstrap-tools)
+3. [Clone and create immutable locks](#3-clone-and-create-immutable-locks)
+4. [Provision the selected profile](#4-provision-the-selected-profile)
+5. [Construct draft graphs](#5-construct-draft-graphs)
+6. [Evaluate by intended use](#6-evaluate-by-intended-use)
+7. [Run the complete hard pass](#7-run-the-complete-hard-pass)
+8. [Troubleshooting](#8-troubleshooting)
+9. [Next steps](#next-steps)
+
+```mermaid
+flowchart LR
+    H["Host tools"] --> L["Immutable locks"]
+    L --> S["make setup"]
+    S --> D{"Strict doctor"}
+    D -->|pass| G["Draft construction"]
+    D -->|pass| C["Zero-skip hard pass"]
+    D -->|fail| F["Fix profile, artifact, or service"]
+    G --> I["Inspect graphs and observations"]
+    C --> P{"All mandatory gates pass?"}
+    P -->|yes| R["Release evidence"]
+    P -->|no| F
+```
 
 ## 1. Supported execution profiles
 
@@ -85,9 +118,11 @@ make setup
 - **waits** for semantic service probes; and
 - **runs** the strict doctor.
 
+All of those commands consume `src/kg_construction/resources/service-runtime.env`; there is no separate doctor password or certification-only endpoint namespace. The locked local values are Neo4j `bolt://localhost:7687` with database `neo4j`, Memgraph `bolt://localhost:7688`, and Ollama `http://localhost:11434`. The Neo4j `neo4j/certification` credential is deliberately local to the digest-pinned development and certification stack.
+
 The first provisioning run needs network access and significant disk space. The hard pass later disconnects package, model, and container registries; mandatory remote identity and reconciliation endpoint checks still require network access.
 
-On Apple Silicon, the setup must find both `mlx` and `mlx_lm`, and Torch must report MPS as built and available. On CUDA Linux, CUDA must be available. These are hard conditions, not preferences.
+On Apple Silicon, setup must find both `mlx` and `mlx_lm`, and Torch must report MPS as built and available. On CUDA Linux, CUDA must be available. These are hard conditions, not preferences.
 
 Inspect the selected contract:
 
@@ -98,9 +133,9 @@ uv run python -m kg_construction.interfaces.cli.doctor --strict --json
 
 Doctor has only `ok` and `fail` outcomes. Missing models, services, packages, or configuration are failures.
 
-## 5. Construct graphs
+## 5. Construct draft graphs
 
-Structured sources use the semantic source catalog by default:
+Structured draft sources use the semantic source catalog by default:
 
 ```bash
 uv run kg-construction \
@@ -114,7 +149,7 @@ uv run kg-construction \
   --neo4j-output data/processed/sample.neo4j.cypher
 ```
 
-Unstructured sources load the immutable model lock and run every provider required by the host:
+Unstructured draft conversion returns a graph and observations that can be inspected even when a metric family fails:
 
 ```bash
 uv run kg-construction \
@@ -127,36 +162,30 @@ uv run kg-construction \
   --evidence-output data/processed/text.evidence.json
 ```
 
-The unstructured command runs, on every applicable profile:
+This command is not proof that the mandatory model ensemble or every graph store executed. That proof is produced only by the hard pass in section 7. During certification, provider failures are aggregated after all applicable providers have been attempted and then fail the stage.
 
-- **GLiNER**, **Transformers NER**, **spaCy**, **GLiNER RelEx**;
-- **Qwen3** through Transformers and Ollama; and
-- **Qwen3 MLX** additionally on Apple Silicon.
+PII redaction creates a derived source snapshot whenever it changes text or rows. The derived `source_id` is also the new document version; it binds the redacted payload, transformation version, and parent source version. Safe metadata records `_source_lineage`, and the evidence graph materializes a `DERIVED_FROM` edge to a provenance-only parent snapshot node.
 
-A provider failure is aggregated after all providers have been attempted, then fails the run. Output values and qualifiers are accepted only when their end-exclusive offsets quote the immutable source snapshot exactly.
+Consequently, an evaluation suite for redacted text must use the post-redaction source version and offsets. `graph_evaluation_suite.sample_text.yaml` is sealed against that derived snapshot, not the unredacted file identity.
 
-PII redaction creates a derived source snapshot whenever it changes text or rows. The derived `source_id` is also the new document version; it binds the redacted payload, transformation version, and parent source version. The safe metadata records `_source_lineage`, and the evidence graph materializes a `DERIVED_FROM` edge to a provenance-only parent snapshot node. Consequently, an evaluation suite for redacted text must use the post-redaction source/version and offsets. `graph_evaluation_suite.sample_text.yaml` is sealed against that derived snapshot, not the unredacted file identity.
-
-Python uses the same contract:
+Python returns the same draft result:
 
 ```python
-from kg_construction import construct_kg
+from kg_construction import convert
 
-result = construct_kg(
+result = convert(
     "examples/data_to_kg/sample.csv",
-    source_type="csv",
+    "csv",
+    "semantic_table_mapper",
     config="configs/data_to_kg_complete.example.yaml",
-    evaluation_suite_path="configs/graph_evaluation_suite.sample_csv.yaml",
 )
-assert result.validation_report.valid
-assert result.publication_gate.passed
-assert result.publication_contract is not None
-assert result.publication_contract.release_eligible
 print(result.quality_report)
 print(result.intended_use_report)
 ```
 
-The fixture's own SHA-256 detects accidental edits but does not grant release trust. The package-owned `src/kg_construction/resources/publication_contracts_v1.yaml` also binds the fixture file, raw input snapshot, deterministic post-PII runtime snapshot, semantic configuration, `models.lock.yaml`, governed unstructured schema, held-out claim set, graph-builder version, and non-weakenable threshold policy. `construct_kg` checks that allowlist before models, services, graph construction, or output writes. A custom suite can still be loaded with `VersionedGraphEvaluationSuite.from_path` and used in an explicitly non-publishable `ConstructionWorkflow`; it is classified as research-only until maintainers review and commit a new release contract. The CLI persists the accepted binding beside the graph as `*.publication-contract.json` (or at `--publication-contract-output`) so the source/config/artifact/policy digests travel with the release evidence.
+The fixture's SHA-256 detects accidental edits but does not grant release trust. During certification, the package-owned `src/kg_construction/resources/publication_contracts_v1.yaml` binds the fixture file, raw and deterministic post-PII snapshots, semantic configuration, model lock, governed schema, held-out semantic-assertion set, graph-builder version, and non-weakenable threshold policy. Custom suites remain research-only until maintainers review and commit a release contract.
+
+The sample-text release fixture is bound specifically to the complete model-backed configuration. Provider provenance participates in generated graph resource IDs, so the deterministic inspection pipeline is deliberately not authorized against the same workload fixture. Its fast occurrence-gold tests remain useful, but they cannot stand in for the mandatory GLiNER, Transformers, MLX (on Apple Silicon), Ollama, identity, and graph-service run.
 
 For multi-table sources, declare primary keys, foreign keys, composite keys, identity scope, controlled vocabularies, and association-table semantics under `structured.tables` in the configuration. Undeclared structure can be profiled, but confidence is retained and missing foreign-key targets are never fabricated.
 
@@ -164,27 +193,28 @@ For multi-table sources, declare primary keys, foreign keys, composite keys, ide
 
 Construction quality and downstream fitness are different questions. The hard evaluation suite records whether each metric actually executed.
 
-- Universal formation gates: evidence/provenance coverage, duplicate nodes and edges, categorical duplication, dangling edges, SHACL conformance, datatype, domain/range, cardinality, and orphan rates.
-- Structured gold data: key preservation, property/relationship completeness, join accuracy, controlled-vocabulary uniqueness, and round-trip checks.
-- Unstructured gold data: entity/span, relation, event-role, intent, fact, negation, modality, temporal, attribution, evidence, and provenance precision/recall/F1.
-- Entity resolution: pairwise and cluster precision/recall/F1, false-merge and false-split rates, and record-universe coverage.
-- Graph query / SQL-like use: row precision/recall/F1, exact result and aggregation accuracy, and p50/p95 latency.
-- NoSQL traversal: node precision/coverage, exact traversal result, path F1, and p50/p95 latency.
-- GraphRAG: Recall@k, MRR, nDCG, path F1, multi-hop success, citation F1, and answer faithfulness.
-- Vector retrieval: index coverage, Recall@k, MRR, nDCG, filter correctness, p50/p95 latency, and peak memory.
-- Link prediction: filtered MRR and Hits@k, reported separately for head/torso/tail popularity strata.
-- Recommendation: Precision/Recall/nDCG@k, catalog coverage, novelty, and intra-list diversity.
-- Reasoning: competency-question accuracy, inferred-fact F1, and p95 runtime.
+- **Universal formation:** evidence/provenance coverage, duplicate nodes and edges, categorical duplication, dangling edges, SHACL conformance, datatype, domain/range, cardinality, and orphan rates.
+- **Structured gold data:** key preservation, property/relationship completeness, join accuracy, controlled-vocabulary uniqueness, and round-trip checks.
+- **Unstructured gold data:** entity/span, relation, event-role, intent, fact, negation, modality, temporal, attribution, evidence, and provenance precision/recall/F1.
+- **Entity resolution:** pairwise and cluster precision/recall/F1, false-merge and false-split rates, and record-universe coverage.
+- **Graph query / SQL-like use:** row precision/recall/F1, exact result and aggregation accuracy, and p50/p95 latency.
+- **NoSQL traversal:** node precision/coverage, exact traversal result, path F1, and p50/p95 latency.
+- **GraphRAG:** Recall@k, MRR, nDCG, path F1, multi-hop success, citation F1, and answer faithfulness.
+- **Vector retrieval:** index coverage, Recall@k, MRR, nDCG, filter correctness, p50/p95 latency, and peak memory.
+- **Link prediction:** filtered MRR and Hits@k, reported separately for head/torso/tail popularity strata.
+- **Recommendation:** Precision/Recall/nDCG@k, catalog coverage, novelty, and intra-list diversity.
+- **Reasoning:** competency-question accuracy, inferred-fact F1, and p95 runtime.
 
-Run the repository reports:
+Run the core repository reports:
 
 ```bash
 make modelling-correctness
 make schema-quality
-make benchmark-leaderboard
 ```
 
 A missing gold fixture or judgment set is “not executed” and fails a hard gate that requires it; it is never converted into a zero score that looks measured.
+
+Technique leaderboards and synthetic cross-source comparisons are research reports. Generate them separately with `make research-smoke`; they cannot change the product decision.
 
 ## 7. Run the complete hard pass
 
@@ -207,9 +237,9 @@ The script, in order:
 declared = configured = instantiated = executed = evaluated = passed
 ```
 
-Live remote identity/reconciliation certifiers still use their documented endpoints; those calls are not model-artifact downloads. The final certificate requires zero skips and zero fallbacks. See [`../certification/README.md`](../certification/README.md) for the evidence format.
+Live remote identity/reconciliation certifiers still use their documented endpoints; those calls are not model-artifact downloads. The final certificate requires zero skips and zero fallbacks. See the [certification contract](../certification/README.md) for the evidence format.
 
-The OpenRefine-compatible identity check uses the public Wikimedia Cloud Reconciliation API at `https://wikidata-reconciliation.wmcloud.org/en/api`. “OpenRefine-compatible” describes the batch reconciliation protocol; it does not imply that a local OpenRefine desktop server is running. Like the Wikidata and DBpedia linkers, this mandatory certifier requires live network access and upstream availability.
+The OpenRefine-compatible identity check uses the public [Wikimedia Cloud Reconciliation API](https://wikidata-reconciliation.wmcloud.org/en/api). “OpenRefine-compatible” describes the batch reconciliation protocol; it does not imply that a local OpenRefine desktop server is running. Like the Wikidata and DBpedia linkers, this mandatory certifier requires live network access and upstream availability.
 
 ## 8. Troubleshooting
 
@@ -226,3 +256,10 @@ The OpenRefine-compatible identity check uses the public Wikimedia Cloud Reconci
 | SHACL or modelling gate fails | Fix the mapping/schema or quarantine the candidate; do not suppress the gate. |
 
 Research experiments can be run separately, but their outputs do not weaken or replace this release contract.
+
+## Next steps
+
+- Choose draft and certified settings in the [configuration reference](configuration.md).
+- Review the [evaluation contract](evaluation_metrics.md) before authoring gold fixtures or intended-use judgments.
+- Use the [testing guide](testing_guide.md) for focused checks and the complete repository verification flow.
+- Read the [certification contract](../certification/README.md) before treating any output as release evidence.

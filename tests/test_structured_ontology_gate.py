@@ -6,8 +6,6 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.modeling_policy import ColumnPolicy, ModelingPolicy
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
 from kg_construction.domain.graph_objects import RDFGraph, RDFTriple
 from kg_construction.domain.modeling import (
     Cardinality,
@@ -23,6 +21,8 @@ from kg_construction.infrastructure.ontology.structured_ontology import (
     materialize_structured_rdf,
     propose_structured_ontology,
 )
+from kg_construction.structured.modeling_policy import ColumnPolicy, ModelingPolicy
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 _XSD_STRING = "http://www.w3.org/2001/XMLSchema#string"

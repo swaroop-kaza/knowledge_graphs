@@ -83,7 +83,7 @@ class LinkPredictionConfig:
 
 @dataclass(frozen=True, slots=True)
 class GraphSAGEConfig:
-    """Configuration for the optional PyTorch Geometric GraphSAGE adapter."""
+    """Configuration for the research-only PyTorch Geometric GraphSAGE adapter."""
 
     input_dimensions: int = 16
     hidden_dimensions: int = 16
@@ -588,7 +588,7 @@ def _normalizer(values: Iterable[float]) -> float:
 
 
 class LinkPredictionEnricher:
-    """Score plausible missing links using topology and optional embeddings."""
+    """Score plausible missing links using topology and configured embeddings."""
 
     name = "link_prediction_enricher"
     technique = "topology_link_prediction"
@@ -727,7 +727,7 @@ def _node_feature_matrix(graph: PropertyGraph, dimensions: int, seed: int) -> li
 
 
 class PyTorchGeometricGraphSAGEAdapter:
-    """Optional PyTorch Geometric adapter for GraphSAGE message passing embeddings."""
+    """Research-only GraphSAGE adapter backed by mandatory repository dependencies."""
 
     name = "pytorch_geometric_graphsage_adapter"
     technique = "graphsage_pyg_adapter"
@@ -741,7 +741,7 @@ class PyTorchGeometricGraphSAGEAdapter:
             from torch_geometric.nn import SAGEConv
         except ImportError as exc:
             raise AdapterNotConfigured(
-                "GraphSAGE encoding requires optional dependencies: torch and torch-geometric."
+                "The mandatory torch and torch-geometric dependencies are missing."
             ) from exc
 
         if not graph.nodes:

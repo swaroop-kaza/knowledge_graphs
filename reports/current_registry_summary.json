@@ -1,6 +1,6 @@
 {
   "category_counts": {
-    "evaluation": 6,
+    "evaluation": 5,
     "extractor": 17,
     "graph_builder": 3,
     "graph_store": 9,
@@ -16,7 +16,7 @@
   "method_type_counts": {
     "deterministic": 37,
     "embedding": 2,
-    "evaluation": 6,
+    "evaluation": 5,
     "human": 5,
     "hybrid": 5,
     "llm": 6,
@@ -29,17 +29,17 @@
     "resilience": 4,
     "rules": 19
   },
-  "report_date": "2026-07-24",
+  "report_date": "2026-07-26",
   "report_files": [
     "reports/current_repo_capability_summary.md",
     "reports/current_registry_summary.json",
     "reports/current_registry_matrix.csv"
   ],
   "status_counts": {
-    "implemented": 105
+    "implemented": 104
   },
   "support_level_counts": {
-    "mandatory": 105,
+    "mandatory": 104,
     "research": 0,
     "roadmap": 0
   },
@@ -62,23 +62,6 @@
   ],
   "techniques_by_category": {
     "evaluation": [
-      {
-        "adapter": "BenchmarkRunner",
-        "input_types": [],
-        "method_type": "evaluation",
-        "name": "benchmark_runner",
-        "notes": "",
-        "priority": 60,
-        "profiles": [
-          "darwin-arm64",
-          "linux-cpu",
-          "linux-cuda"
-        ],
-        "status": "implemented",
-        "support_label": "Mandatory",
-        "support_level": "mandatory",
-        "tags": []
-      },
       {
         "adapter": "ClaimEvaluationSuite",
         "input_types": [],
@@ -1986,5 +1969,5 @@
       }
     ]
   },
-  "total_registered_techniques": 105
+  "total_registered_techniques": 104
 }

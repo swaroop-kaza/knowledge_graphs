@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from kg_construction.application.registry import (
+from kg_construction.certification.registry import (
     SUPPORT_LEVEL_DEFINITIONS,
     SUPPORT_LEVEL_LABELS,
     SupportLevel,
@@ -147,16 +147,22 @@ def _write_markdown_report(techniques: list[TechniqueDescriptor]) -> None:
     lines = [
         "# Current Repo Capability Summary",
         "",
-        f"Report date: {date.today().isoformat()}",
+        "[Reports index](README.md) · [Architecture](../docs/architecture.md) · [Research guide](../research/README.md)",
         "",
-        "This report is generated from the live `kg_construction.application.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.",
+        "| Metadata | Value |",
+        "| --- | --- |",
+        f"| Report date | {date.today().isoformat()} |",
+        f"| Registered techniques | {len(techniques)} |",
+        "",
+        "This report is generated from the live `kg_construction.certification.registry.default_registry()` implementation registry. It replaces old article-specific and run-specific outputs with a compact source-of-truth view of the current repo capabilities.",
         "",
         "## Registry totals",
         "",
-        f"- Total registered techniques: {len(techniques)}",
+        "| Status | Count |",
+        "| --- | ---: |",
     ]
     for status, count in _counter_payload(status_counts).items():
-        lines.append(f"- {status}: {count}")
+        lines.append(f"| {status} | {count} |")
     lines.extend(
         [
             "",

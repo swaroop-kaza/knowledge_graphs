@@ -1,18 +1,52 @@
 # Knowledge-graph formation and evaluation contract
 
+[Documentation home](README.md) / Formation and evaluation contract
+
+This document is the normative modelling contract for the repository. It explains what a correctly formed graph means, which stage gates protect that meaning, and how the final graph is evaluated. For package ownership and runtime boundaries, start with the [architecture guide](architecture.md); for implementation-level choices, use the [structured](techniques_structured_to_kg.md) and [unstructured](techniques_unstructured_to_kg.md) technique guides.
+
 The repository is deliberately centred on three product pillars:
 
 1. structured data to a correctly identified and related graph;
-2. unstructured data to evidence-grounded entities, claims, and events; and
+2. unstructured data to evidence-grounded entities, semantic assertions, and events; and
 3. evaluation of both intrinsic graph quality and fitness for the intended use.
 
 Graph storage is a projection of that model. Neo4j, Ladybug, RDF, NetworkX, Memgraph, and vector indexes cannot repair a graph whose identities or relationships were formed incorrectly.
+
+> **Normative boundary:** `convert(...)` returns a draft graph and observations for inspection. The invariants below become a publishability decision only when the mandatory, zero-skip certification path executes them all.
+
+The three product namespaces are `kg_construction.structured`, `kg_construction.unstructured`, and `kg_construction.evaluation`; comparison work belongs to `kg_construction.research`.
+
+## Contract at a glance
+
+```mermaid
+flowchart LR
+    subgraph S["Structured formation"]
+        S0["S0 Inventory"] --> S1["S1 Roles"] --> S2["S2 Identity"] --> S3["S3 Concepts"] --> S4["S4 Relations"] --> S5["S5 Schema"] --> S6["S6 Validate"]
+    end
+    subgraph U["Unstructured formation"]
+        U0["U0 Versions"] --> U1["U1 Segments"] --> U2["U2 Mentions"] --> U3["U3 Identity"] --> U4["U4 Assertions"] --> U5["U5 Promote"] --> U6["U6 Materialize"]
+    end
+    S6 --> G["Frozen graph snapshot"]
+    U6 --> G
+    G --> E1["E1 Formation"]
+    G --> E2["E2 Task correctness"]
+    G --> E3["E3 Intended use"]
+    E1 & E2 & E3 --> CERT{"All mandatory gates pass?"}
+```
+
+| Contract area | Read this section for | Detailed guide |
+| --- | --- | --- |
+| [Modelling doctrine](#modelling-doctrine) | Invariants shared by all three pillars | [Architecture](architecture.md) |
+| [Structured formation](#pillar-1-structured-data-to-knowledge-graph) | Stages S0–S6 and their exit gates | [Structured techniques](techniques_structured_to_kg.md) |
+| [Unstructured formation](#pillar-2-unstructured-data-to-knowledge-graph) | Stages U0–U6, evidence, identity, and promotion | [Unstructured techniques](techniques_unstructured_to_kg.md) |
+| [Evaluation](#pillar-3-evaluation-and-metric-gates) | Stages E0–E5 and the conjunctive release policy | [Evaluation metrics](evaluation_metrics.md) |
+| [Mandatory runtime](#mandatory-runtime-stage) | Zero-skip execution and immutable locks | [Certification](../certification/README.md) |
 
 ## Modelling doctrine
 
 The implementation follows these invariants.
 
-- One real-world entity or governed concept has one canonical identity in its declared scope. Source rows, mentions, canonical entities, documents, claims, and events are different resources.
+- One real-world entity or governed concept has one canonical identity in its declared scope. Source rows, mentions, canonical entities, documents, evidence-grounded semantic assertions (`Claim` in the implementation), and events are different resources.
 - A property describes its owner. A relationship connects independently identifiable things. A qualified, temporal, attributed, or n-ary relationship is reified as an association/event resource.
 - A repeated scalar is not automatically an entity. Cardinality is evidence, not semantics.
 - Construction never invents a missing foreign-key target or forces an uncertain mention to an existing canonical entity.
@@ -42,7 +76,7 @@ For each table or tabular source, capture:
 
 `SourceCatalog` accepts explicit `TableDeclaration` objects and resolves all tables together before mapping. Declarations are authoritative. Profiling is a proposal mechanism when declarations are absent; its evidence and confidence are retained.
 
-Exit gate:
+**Exit gate**
 
 - every required declaration is present when `structured.require_declarations=true`;
 - table names are unique;
@@ -73,7 +107,7 @@ Every column receives two independent decisions.
 
 `SemanticColumnProfiler` does not create a node merely because a column has few values. A value such as `status=active` normally stays a scalar property. `department=Engineering` can become a shared `Department` concept because the dimension is independently reusable across employees, projects, costs, and policies.
 
-Exit gate:
+**Exit gate**
 
 - every included column has both decisions;
 - datatypes and null semantics are explicit;
@@ -93,7 +127,7 @@ Identity is resolved before edges.
 
 `ResolvedModelingPlan` makes identity keys and scope part of the schema contract. `ExactKeyEntityResolver` reconciles aliases only after all source mappers have emitted their observations.
 
-Exit gate:
+**Exit gate**
 
 - key uniqueness is checked in its declared scope;
 - collision tests pass for every composite key;
@@ -112,7 +146,7 @@ Canonicalization uses Unicode normalization, trimming, and case folding accordin
 
 `SemanticTableMapper` creates one shared concept candidate and qualifier-aware edges from all owners. Resolution and graph builders deduplicate it.
 
-Exit gate:
+**Exit gate**
 
 - categorical duplication rate is exactly `0`;
 - each concept has one preferred label per language;
@@ -130,7 +164,7 @@ Relationships are formed from evidence, not column-name coincidence.
 - Relationship direction, domain, range, cardinality, source columns, target columns, and missing-target policy are part of the plan.
 - Repeated observations with different qualifiers are not deduplicated as if they were the same assertion.
 
-Exit gate:
+**Exit gate**
 
 - dangling edge rate is `0`;
 - foreign-key join precision/recall meet the gold threshold;
@@ -151,7 +185,7 @@ The resolved plan is the single source for:
 
 `ResolvedModelingPlan.assert_schema_agreement()` parses and compares these projections. This prevents the common failure where mapper code, documentation, database constraints, and evaluation fixtures describe different graphs.
 
-Exit gate:
+**Exit gate**
 
 - all six projections agree on classes, keys, predicates, datatypes, domain/range, and cardinality;
 - OWL and SHACL artifacts parse; and
@@ -169,13 +203,13 @@ SHACL runs against the generated RDF graph. Referential integrity and duplicate 
 
 `DocumentRef` identifies the source name, type, content digest, text length, and document version. Every mention, evidence span, and claim must reference that exact version.
 
-Exit gate: a changed document creates a new version and cannot satisfy evidence from the previous version.
+**Exit gate:** a changed document creates a new version and cannot satisfy evidence from the previous version.
 
 ### Stage U1 — structural segmentation
 
 Documents are split into paragraphs/sentences/sections while retaining absolute character offsets, exact quote, prefix, and suffix. Start is inclusive; end is exclusive.
 
-Exit gate: every segment reproduces `document_text[start:end]` exactly.
+**Exit gate:** every segment reproduces `document_text[start:end]` exactly.
 
 ### Stage U2 — mandatory mention ensemble
 
@@ -189,7 +223,7 @@ Every applicable profile runs:
 
 Provider results are normalized only after offset validation. The union is retained with provider-agreement ratios; a disagreement is information, not a reason to erase a supported mention. Any mandatory provider failure fails the stage after the remaining providers have also been attempted.
 
-Exit gates:
+**Exit gates**
 
 - entity and exact-span precision/recall/F1;
 - label accuracy;
@@ -209,7 +243,7 @@ The graph keeps separate:
 
 Conservative rules resolve exact safe cases. Ambiguous cases remain NIL/unresolved and can be quarantined. They are never forced to the nearest name.
 
-Exit gates: pairwise/cluster F1, false-merge rate, false-split rate, NIL accuracy, and record-universe coverage.
+**Exit gates:** pairwise/cluster F1, false-merge rate, false-split rate, NIL accuracy, and record-universe coverage.
 
 ### Stage U4 — claims, relations, events, facts, and intent
 
@@ -221,9 +255,9 @@ Every platform runs deterministic patterns, GLiNER RelEx, and structured Qwen3 g
 
 The structured response schema covers subject, predicate, object, event roles, evidence, negation, modality, attribution, time, quantity, and confidence. Values and cues require exact spans. Relation/fact/intent claims require an object; events require typed roles.
 
-The intermediate `Claim` is not flattened prematurely. It is an immutable, reified assertion with provenance and review state. The joint GLiNER RelEx provider follows the entity-plus-relation formulation described by [GLiNER-Relex](https://arxiv.org/abs/2605.10108), while the independent Qwen and deterministic providers prevent the release contract from relying on one model family or one decoding path.
+The intermediate `Claim`—an evidence-grounded semantic assertion—is not flattened prematurely. It is immutable and reified, with provenance and review state. The joint GLiNER RelEx provider follows the entity-plus-relation formulation described by [GLiNER-Relex](https://arxiv.org/abs/2605.10108), while the independent Qwen and deterministic providers prevent the release contract from relying on one model family or one decoding path.
 
-Exit gates:
+**Exit gates**
 
 - relation and triple precision/recall/F1;
 - event-role F1;
@@ -260,7 +294,7 @@ Do not tune thresholds on the test split. Report support counts and confidence i
 
 ### Stage E1 — universal formation metrics
 
-These gates apply before any downstream benchmark.
+These gates apply before any downstream intended-use workload.
 
 | Dimension | Metrics |
 | --- | --- |
@@ -338,7 +372,7 @@ Each observation contains:
 
 The release result is the conjunction of mandatory gates. Weighted rankings can help compare research candidates but cannot override a correctness gate. This evidence model is deliberately compatible with the W3C [Data Quality Vocabulary](https://www.w3.org/TR/vocab-dqv/) distinction between quality dimensions, metrics, measurements, policies, and certificates: the versioned threshold contract is the policy, each named observation is a measurement, and the nonce-bound hard-pass report is the certificate.
 
-This separation of intrinsic formation quality from ability/downstream quality follows the practical distinction made in [Steps to Knowledge Graphs Quality Assessment](https://arxiv.org/abs/2208.07779) and [KGrEaT](https://arxiv.org/abs/2308.10537). It also prevents a circular benchmark: expected judgments are versioned inputs, while predictions are computed by workload runners from the frozen graph snapshot and are never accepted from the caller.
+This separation of intrinsic formation quality from ability/downstream quality follows the practical distinction made in [Steps to Knowledge Graphs Quality Assessment](https://arxiv.org/abs/2208.07779) and [KGrEaT](https://arxiv.org/abs/2308.10537). It also prevents circular evaluation: expected judgments are versioned inputs, while predictions are computed by workload runners from the frozen graph snapshot and are never accepted from the caller.
 
 ## Mandatory runtime stage
 
@@ -356,18 +390,20 @@ External reconciliation follows the [Reconciliation Service API protocol](https:
 
 | Contract | Main implementation |
 | --- | --- |
-| structured profiling and role/materialization | `application/semantic_profiler.py` |
-| resolved plan and six projections | `application/resolved_plan.py` |
-| cross-table keys/foreign keys | `application/source_catalog.py` |
-| semantic materialization | `application/semantic_table_mapper.py` |
-| unstructured evidence pipeline | `application/unstructured_pipeline.py` |
-| claim and identity contracts | `domain/claim.py` |
-| mandatory local model ensemble | `infrastructure/extractors/model_backed/` |
-| graph construction | `infrastructure/graph_builders/` |
-| SHACL/ontology | `infrastructure/ontology/` |
-| quality and use-specific metrics | `infrastructure/evaluation/` |
-| trusted release fixture/config/source binding | `application/publication_contract.py`, `resources/publication_contracts_v1.yaml` |
-| immutable hard pass | `certification/`, `scripts/certify.py`, `run_all_approaches.sh` |
+| structured profiling and role/materialization | `kg_construction.structured.profiling` |
+| resolved plan and six projections | `kg_construction.structured.contracts`, `kg_construction.structured.schema_projection` |
+| cross-table keys/foreign keys | `kg_construction.structured.catalog` |
+| semantic materialization | `kg_construction.structured.mapping` |
+| unstructured evidence pipeline | `kg_construction.unstructured.pipeline` |
+| semantic-assertion and identity contracts | `kg_construction.unstructured` |
+| mandatory local model ensemble | `kg_construction.unstructured.runtime`, `kg_construction.infrastructure.extractors.model_backed` |
+| graph construction | `kg_construction.infrastructure.graph_builders` |
+| SHACL/ontology | `kg_construction.infrastructure.ontology` |
+| quality and use-specific metrics | `kg_construction.evaluation` |
+| trusted release fixture/config/source binding | `kg_construction.certification`, `src/kg_construction/resources/publication_contracts_v1.yaml` |
+| immutable hard pass | `kg_construction.certification`, `scripts/certify.py`, `run_all_approaches.sh` |
+
+User-facing ownership is exposed through the canonical structured, unstructured, and evaluation namespaces. The infrastructure packages above are runtime implementations behind those pillars, not additional product pillars.
 
 Regression fixtures live in `tests/fixtures/gold_standards/`. Run:
 
@@ -376,5 +412,18 @@ make modelling-correctness
 make schema-quality
 make test
 make quality
+make product-smoke
 bash run_all_approaches.sh
 ```
+
+Research comparisons run separately with `make research-smoke`; they do not replace any publication gate.
+
+## Continue the learning path
+
+| If you want to… | Continue with |
+| --- | --- |
+| choose a mapper for CSV, SQL, JSON, XML, or a declared standard | [Structured construction techniques](techniques_structured_to_kg.md) |
+| understand mention, assertion, identity, and promotion providers | [Unstructured construction techniques](techniques_unstructured_to_kg.md) |
+| inspect formulas, thresholds, fixtures, and workloads | [Evaluation metrics](evaluation_metrics.md) |
+| configure and execute the complete runtime | [Getting started](getting_started.md) and [Configuration](configuration.md) |
+| understand what the tests prove | [Testing guide](testing_guide.md) |

@@ -1,11 +1,14 @@
 # Modelling Correctness Report
 
-Generated: 2026-07-24
-Thresholds: `kg-quality-v2`
+[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Testing guide](../docs/testing_guide.md)
+
+| Metadata | Value |
+| --- | --- |
+| Generated | 2026-07-26 |
+| Thresholds | `kg-quality-v3` |
+| Overall | **PASS** |
 
 Runs the gold modelling cases through the real pipeline and verifies the output conforms to the expected graph (RML/R2RML conformance style). CI fails on regression.
-
-**Overall: PASS**
 
 ## structured_categorical_and_fk_v1 (structured) - PASS
 
@@ -21,7 +24,14 @@ Runs the gold modelling cases through the real pipeline and verifies the output 
 | no_literal:department | PASS |
 | no_literal:manager_id | PASS |
 
-Metrics: `categorical_duplication_rate=0`, `edges:has_department=8`, `edges:manager=7`, `nodes:Department=3`, `orphan_rate=0`, `record_nodes=8`
+| Metric | Value |
+| --- | ---: |
+| `categorical_duplication_rate` | 0 |
+| `edges:has_department` | 8 |
+| `edges:manager` | 7 |
+| `nodes:Department` | 3 |
+| `orphan_rate` | 0 |
+| `record_nodes` | 8 |
 
 ## unstructured_salient_entities_v1 (unstructured) - PASS
 
@@ -31,6 +41,19 @@ Metrics: `categorical_duplication_rate=0`, `edges:has_department=8`, `edges:mana
 | claims_have_complete_provenance | PASS |
 | intents_evaluated | PASS |
 
-Metrics: `claim_coverage=1`, `entity_coverage=0.8`, `gold_entity_count=5`, `intent_coverage=0`, `matched_entity_count=4`, `minimum_entity_coverage=0.8`, `nil_rate=1`, `promoted_claim_count=0`
+| Metric | Value |
+| --- | ---: |
+| `claim_coverage` | 1 |
+| `entity_coverage` | 0.8 |
+| `gold_entity_count` | 5 |
+| `intent_coverage` | 0 |
+| `matched_entity_count` | 4 |
+| `minimum_entity_coverage` | 0.8 |
+| `nil_rate` | 1 |
+| `promoted_claim_count` | 0 |
 
-Regenerate with `make modelling-correctness`.
+## Reproduce
+
+```bash
+make modelling-correctness
+```

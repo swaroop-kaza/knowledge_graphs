@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from kg_construction.application.graph_ml import (
-    GraphMLWorkflow,
-    graph_ml_workflow_config_from_dict,
-    run_graph_ml_capabilities,
-)
-from kg_construction.application.registry import research_registry
+from kg_construction.certification.registry import research_registry
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
 from kg_construction.infrastructure.enrichment import (
     CommunityDetectionEnricher,
@@ -19,7 +14,11 @@ from kg_construction.infrastructure.enrichment import (
     PageRankEnricher,
     PyTorchGeometricGraphSAGEAdapter,
 )
-from kg_construction.infrastructure.loaders.stubs import AdapterNotConfigured
+from kg_construction.research.graph_ml import (
+    GraphMLWorkflow,
+    graph_ml_workflow_config_from_dict,
+    run_graph_ml_capabilities,
+)
 
 
 def sample_property_graph() -> PropertyGraph:
@@ -112,14 +111,14 @@ class GraphMLEnrichmentTests(unittest.TestCase):
         self.assertEqual(facade_graph.metadata["node_embeddings"]["dimensions"], 5)
         self.assertIn("link_prediction", facade_graph.metadata)
 
-    def test_graphsage_adapter_is_optional_and_explicit(self) -> None:
+    def test_graphsage_research_adapter_uses_mandatory_dependencies(self) -> None:
         adapter = PyTorchGeometricGraphSAGEAdapter()
-        try:
-            embeddings = adapter.encode(sample_property_graph())
-        except AdapterNotConfigured as exc:
-            self.assertIn("torch-geometric", str(exc))
-        else:
-            self.assertEqual(set(embeddings), {node.node_id for node in sample_property_graph().nodes})
+        embeddings = adapter.encode(sample_property_graph())
+
+        self.assertEqual(
+            set(embeddings),
+            {node.node_id for node in sample_property_graph().nodes},
+        )
 
     def test_registry_marks_graph_ml_capabilities_as_implemented(self) -> None:
         registry = research_registry()

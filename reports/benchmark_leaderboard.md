@@ -1,14 +1,23 @@
 # Small Benchmark Leaderboard
 
-Generated: 2026-07-24
+[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Research guide](../research/README.md)
+
+| Metadata | Value |
+| --- | --- |
+| Generated | 2026-07-26 |
+| Scope | Tiny deterministic research fixtures |
+
+> **Research only.** This weighted comparison is non-authoritative; it is neither construction-correctness evidence nor publication authorization.
 
 This committed leaderboard is intentionally small and reproducible. It uses tiny fixtures under `tests/fixtures/golden_benchmarks/`, deterministic runtime settings, and the same scoring path used by `TechniqueEvaluationRunner`. Big multi-dataset experiment outputs remain generated artifacts outside the committed repo.
 
 Runtime/resource columns are deterministic controls for comparability:
 
-- latency: `0.01` seconds
-- memory/resource usage: `0.25` MB
-- throughput: `1000.0` items/second
+| Control | Fixed value |
+| --- | ---: |
+| Latency | `0.01` seconds |
+| Memory/resource usage | `0.25` MB |
+| Throughput | `1000.0` items/second |
 
 Regenerate with:
 
@@ -40,6 +49,7 @@ make benchmark-leaderboard
 - `validation_pass_rate`: `1 - validation_failure_rate` from the validation metrics.
 - `latency` and `memory/resource`: deterministic operational controls, not hardware benchmarks.
 - `final_score`: weighted quality plus runtime score after penalties.
+- No rank or weighted score can replace graph-bound quality gates or certification.
 
 ## Dataset Notes
 

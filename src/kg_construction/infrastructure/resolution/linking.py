@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import math
+import ssl
 import urllib.parse
 import urllib.request
+from collections.abc import Sequence
 from itertools import combinations
 from typing import Any, Protocol
 
+import certifi
 from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.domain.models import ConstructionBatch, EntityCandidate
@@ -21,6 +24,7 @@ from kg_construction.infrastructure.resolution.common import (
 )
 
 JsonDict = dict[str, Any]
+_HTTP_USER_AGENT = "kg-construction/0.1.0 (mandatory external identity linking)"
 
 
 class JsonTransport(Protocol):
@@ -207,7 +211,11 @@ class DBpediaLinker:
     def _search(self, text: str) -> list[JsonDict]:
         payload = self.transport(
             self.config.endpoint_url,
-            params={"query": text, "maxResults": self.config.limit},
+            params={
+                "query": text,
+                "maxResults": self.config.limit,
+                "format": "json",
+            },
             headers={"Accept": "application/json"},
             timeout_seconds=self.config.timeout_seconds,
         )
@@ -258,7 +266,12 @@ class OpenRefineReconciler:
                 "query": current_canonical_name(entity),
                 "limit": self.config.limit,
             }
-            if type_id := self.config.type_map.get(entity.entity_type):
+            semantic_type = (
+                str(entity.properties.get("semantic_entity_type", ""))
+                if entity.entity_type == "CanonicalEntity"
+                else entity.entity_type
+            )
+            if type_id := self.config.type_map.get(semantic_type):
                 query["type"] = type_id
             queries[query_id] = query
 
@@ -455,13 +468,23 @@ def http_json_transport(
     if params:
         separator = "&" if "?" in target else "?"
         target = f"{target}{separator}{urllib.parse.urlencode(params)}"
+    request_headers = {
+        "Accept": "application/json",
+        "User-Agent": _HTTP_USER_AGENT,
+        **(headers or {}),
+    }
     request = urllib.request.Request(
         target,
         data=body,
         method=method,
-        headers=headers or {"Accept": "application/json"},
+        headers=request_headers,
     )
-    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+    tls_context = ssl.create_default_context(cafile=certifi.where())
+    with urllib.request.urlopen(
+        request,
+        timeout=timeout_seconds,
+        context=tls_context,
+    ) as response:
         charset = response.headers.get_content_charset() or "utf-8"
         return json.loads(response.read().decode(charset))
 
@@ -602,7 +625,7 @@ def _candidate_pairs(
 
 def _embedding_pair_scores(
     entities: list[EntityCandidate],
-    vectors: list[list[float]],
+    vectors: Sequence[Sequence[float]],
     *,
     block_by_type: bool,
 ) -> dict[tuple[str, str], float]:
@@ -619,12 +642,15 @@ def _embedding_pair_scores(
     return scores
 
 
-def _cosine(left: list[float], right: list[float]) -> float:
-    if not left or not right or len(left) != len(right):
+def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
+    if len(left) == 0 or len(right) == 0 or len(left) != len(right):
         return 0.0
-    dot = sum(a * b for a, b in zip(left, right, strict=True))
-    left_norm = math.sqrt(sum(a * a for a in left))
-    right_norm = math.sqrt(sum(b * b for b in right))
+    dot = sum(
+        float(a) * float(b)
+        for a, b in zip(left, right, strict=True)
+    )
+    left_norm = math.sqrt(sum(float(value) ** 2 for value in left))
+    right_norm = math.sqrt(sum(float(value) ** 2 for value in right))
     if left_norm == 0 or right_norm == 0:
         return 0.0
     return max(0.0, min(1.0, dot / (left_norm * right_norm)))

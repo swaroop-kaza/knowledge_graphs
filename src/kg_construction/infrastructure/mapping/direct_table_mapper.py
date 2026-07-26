@@ -133,7 +133,7 @@ class DirectTableMapper:
                 self.config.table_name,
                 row_key,
             )
-            name = self._row_name(row, row_index, stable_row_id=stable_row_id)
+            name = self._row_name(row, stable_row_id=stable_row_id)
             properties = self._row_properties(row)
             properties.update(
                 {
@@ -245,7 +245,7 @@ class DirectTableMapper:
             return "source_scoped_redacted_key_fallback"
         return "source_scoped_configured_key"
 
-    def _row_name(self, row: JsonDict, row_index: int, *, stable_row_id: str) -> str:
+    def _row_name(self, row: JsonDict, *, stable_row_id: str) -> str:
         if self.config.name_column and row.get(self.config.name_column):
             return str(row[self.config.name_column])
         if self.config.id_columns and all(

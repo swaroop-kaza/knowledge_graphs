@@ -1,14 +1,20 @@
 # Unstructured data → knowledge graph: techniques explained
 
-Technical reference for **Pillar 2** — converting text (and HTML, PDF, email, chat, scientific papers) into entities, claims, and events.
+[Documentation home](README.md) / Unstructured construction techniques
+
+This guide explains **Pillar 2**: converting text, HTML, PDF, email, chat, and scientific papers into entities, evidence-grounded semantic assertions, and events. Read the [repository architecture](architecture.md) for package boundaries or the [formation contract](knowledge_graph_modelling.md#pillar-2-unstructured-data-to-knowledge-graph) for normative stage gates.
 
 - **Every promoted fact quotes an exact source span.**
 - **Every promoted fact carries complete provenance.**
 
-The governing rule of this pillar:
+The governing rules of this pillar are:
 
 - **Keep four identity layers separate** (below).
 - **Never force an uncertain mention** into an existing entity.
+
+> **Draft versus certified execution:** `convert(data, "text")` returns a draft graph plus computed metrics for inspection. Publishability requires the locked provider bundle and zero-skip hard pass. GLiNER, Transformers, spaCy, GLiNER RelEx, Qwen3 backends, identity models, and graph services are platform-applicable mandatory certification components, never optional release enhancements.
+
+Canonical product namespace: `kg_construction.unstructured`.
 
 ```mermaid
 flowchart LR
@@ -18,24 +24,42 @@ flowchart LR
     CE --> X[External identity<br/>Wikidata / DBpedia QID]
 ```
 
-Contents:
+| Layer | Represents | Must not be confused with |
+| --- | --- | --- |
+| source/document version | one immutable input snapshot | a mutable file name or URL |
+| mention | one exact textual occurrence | the real-world entity |
+| observed identity | a document-local coreference cluster | a global canonical identity |
+| canonical entity | a resolver-created identity | an external knowledge-base identifier |
+| external identity | a governed public-KB link | a forced match for an ambiguous mention |
+
+## Guide map
+
+| Question | Start here |
+| --- | --- |
+| How does text move from source to graph? | [Evidence-first pipeline](#1-the-evidence-first-pipeline) |
+| Why are facts represented as resources before edges? | [Semantic-assertion contract](#2-the-semantic-assertion-contract-why-facts-are-reified) |
+| Which providers execute? | [Mention ensemble](#4-the-mention-ensemble-technique-detail) and [assertion ensemble](#5-the-claim--relation--event-ensemble) |
+| How are uncertain identities handled? | [Identity resolution](#7-identity-resolution-and-external-linking) |
+| What may enter the published graph? | [Promotion gate](#8-ontology-alignment-and-the-shaclprovenance-promotion-gate) |
+
+Detailed contents:
 
 1. [The evidence-first pipeline](#1-the-evidence-first-pipeline)
-2. [The claim contract](#2-the-claim-contract-why-facts-are-reified)
+2. [The semantic-assertion contract](#2-the-semantic-assertion-contract-why-facts-are-reified)
 3. [Stage-by-stage techniques](#3-stage-by-stage-techniques)
 4. [The mention ensemble](#4-the-mention-ensemble-technique-detail)
 5. [The claim / relation / event ensemble](#5-the-claim--relation--event-ensemble)
 6. [Attribute extraction](#6-attribute-extraction-negation-modality-temporal-quantity-attribution)
 7. [Identity resolution and linking](#7-identity-resolution-and-external-linking)
 8. [Ontology alignment and the promotion gate](#8-ontology-alignment-and-the-shaclprovenance-promotion-gate)
-9. [Runtime profiles: deterministic vs model-backed](#9-runtime-profiles-deterministic-vs-model-backed)
-10. [Legacy / comparison extractors](#10-legacy--comparison-extractors)
+9. [Draft and certified runtime boundaries](#9-draft-and-certified-runtime-boundaries)
+10. [Mandatory and research extractors](#10-mandatory-and-research-extractors)
 
 ---
 
 ## 1. The evidence-first pipeline
 
-**File:** `application/unstructured_pipeline.py` · **Registry:** `evidence_first_unstructured_pipeline`, `mandatory_composed_unstructured_runtime`
+**Public modules:** `kg_construction.unstructured.pipeline` and `kg_construction.unstructured.runtime` · **Registry:** `evidence_first_unstructured_pipeline`, `mandatory_composed_unstructured_runtime`
 
 - **Eleven ordered stages** — `UnstructuredPipeline.run()` runs them in sequence.
 - **Observations stay immutable** — nothing is rewritten in place.
@@ -55,19 +79,19 @@ flowchart TD
     U5c -->|fail| Q[Quarantine]
 ```
 
-Each stage has a hard exit gate (detailed in [knowledge_graph_modelling.md](knowledge_graph_modelling.md), Pillar 2). The two that matter most:
+Each stage has a hard exit gate defined by the [unstructured formation contract](knowledge_graph_modelling.md#pillar-2-unstructured-data-to-knowledge-graph). The two that matter most:
 
 - **Segments must reproduce the source exactly** — `document_text[start:end]` (start inclusive, end exclusive).
 - **Coverage must be perfect** — exact-evidence and provenance coverage both `= 1.0` in the release fixture.
 
 ---
 
-## 2. The claim contract (why facts are reified)
+## 2. The semantic-assertion contract (why facts are reified)
 
-**File:** `domain/claim.py`
+**Public contract:** `kg_construction.unstructured.Claim` (implemented by the shared immutable domain contract)
 
 - **Facts are not flattened prematurely** — no bare `(subject, predicate, object)` edge up front.
-- **A `Claim` is immutable and reified** — it preserves the qualifiers a plain edge would lose.
+- **A `Claim` is an immutable, reified semantic assertion** — the implementation name does not represent a business domain; it preserves qualifiers a plain edge would lose.
 
 ```mermaid
 classDiagram
@@ -123,7 +147,7 @@ Standards alignment:
 
 ## 3. Stage-by-stage techniques
 
-| Stage | Deterministic default | Model-backed (certified) | Technique |
+| Stage | Draft contract implementation | Certified execution | Technique |
 | --- | --- | --- | --- |
 | U0 doc version | `DocumentRef.from_source` | same | Content digest + version id; a changed doc = a new version |
 | U1 segmentation | `RuleSegmenter` | same | Split into sentences/paragraphs retaining absolute offsets + quote/prefix/suffix |
@@ -139,7 +163,7 @@ Standards alignment:
 
 ## 4. The mention ensemble (technique detail)
 
-**Files:** `infrastructure/extractors/model_backed/mentions.py`, `infrastructure/extractors/{regex,gazetteer}.py`
+**Runtime implementations:** `kg_construction.infrastructure.extractors.model_backed.mentions`, `kg_construction.infrastructure.extractors.regex`, and `kg_construction.infrastructure.extractors.gazetteer`
 
 - **All providers run** — every applicable profile runs each one; the union is kept with provider-agreement ratios.
 - **Disagreement is information** — not a reason to erase a supported mention.
@@ -170,7 +194,7 @@ flowchart LR
 
 ## 5. The claim / relation / event ensemble
 
-**Files:** `infrastructure/extractors/model_backed/{claims,relations}.py`
+**Runtime implementations:** `kg_construction.infrastructure.extractors.model_backed.claims` and `kg_construction.infrastructure.extractors.model_backed.relations`
 
 Three independent extraction paths run so the contract never depends on one model family or one decoding path:
 
@@ -187,6 +211,7 @@ flowchart LR
 
 - **Rich response schema** — `StructuredClaimResponse` covers subject, predicate, object, event roles, evidence, negation, modality, attribution, time, quantity, and confidence.
 - **Values and cues require exact spans.**
+- **Narrow span repair remains evidence-bound** — an offset is realigned only when an exact source quote has one unambiguous occurrence. The field-shift repair accepts only an exact prompt segment with exact subject, predicate, object, and evidence anchors; absent or ambiguous quotes still fail closed.
 - **Shape rules** — relation/fact/intent claims require an object; events require typed roles.
 
 | Path | Basis | Role |
@@ -203,7 +228,7 @@ flowchart LR
 
 ## 6. Attribute extraction (negation, modality, temporal, quantity, attribution)
 
-**File:** `application/unstructured_pipeline.py` (`RuleAttributeExtractor`)
+**Public module:** `kg_construction.unstructured.pipeline` (`RuleAttributeExtractor`)
 
 Each claim is annotated with qualifier cues, each requiring an exact span:
 
@@ -221,7 +246,7 @@ Each claim is annotated with qualifier cues, each requiring an exact span:
 
 ## 7. Identity resolution and external linking
 
-**Files:** `infrastructure/extractors/model_backed/identity.py`, `infrastructure/resolution/`
+**Runtime implementations:** `kg_construction.infrastructure.extractors.model_backed.identity` and `kg_construction.infrastructure.resolution`
 
 The certified `MandatoryCanonicalIdentityEnsemble` votes across providers and keeps NIL explicit rather than forcing a merge:
 
@@ -252,7 +277,7 @@ flowchart LR
 
 ## 8. Ontology alignment and the SHACL/provenance promotion gate
 
-**Files:** `infrastructure/ontology/unstructured_governance.py`, `infrastructure/ontology/ontology_alignment.py`, `infrastructure/ontology/shacl.py`
+**Runtime implementations:** `kg_construction.infrastructure.ontology.unstructured_governance`, `kg_construction.infrastructure.ontology.ontology_alignment`, and `kg_construction.infrastructure.ontology.shacl`
 
 ```mermaid
 flowchart TD
@@ -267,36 +292,47 @@ flowchart TD
 
 - **SHACL runs on the generated RDF** — via `GovernedClaimShaclGate`.
 - **Four ways to be quarantined** — off-ontology predicate, inexact span, missing provenance, or a SHACL violation; none are silently written.
-- **Schema is declared in config** — e.g. `configs/governed_unstructured_ontology.yaml`.
+- **Audit and publication batches are distinct** — draft extraction retains quarantined resources and diagnostics for review. The mandatory publication boundary removes those resources and every incident relation/fact before external identity resolution, final resource SHACL, and graph projection; exclusion counts and IDs remain in audit metadata.
+- **The release schema is package-owned** — `src/kg_construction/resources/governed_unstructured_ontology.yaml` is bound by the publication contract. The copy under `configs/` is a readable example, not an independent release authority.
 
 ---
 
-## 9. Runtime profiles: deterministic vs model-backed
+## 9. Draft and certified runtime boundaries
 
-`RuntimeProfile` selects which providers run:
+Draft conversion and certification have different evidence claims:
 
-| Profile | Providers | Use |
+| Boundary | Execution | What the result proves |
 | --- | --- | --- |
-| `DETERMINISTIC` (default) | Rule segmenter/mention/coref/claim/attribute + `KeepUnresolvedResolver` | Runs fully offline, no models — the testable contract floor |
-| `MODEL_BACKED` (certified) | GLiNER, Transformers NER, spaCy, GLiNER RelEx, Qwen3 (Transformers + Ollama + MLX on Apple Silicon), embedding/cross-encoder identity, external linking | The release/hard-pass path |
+| Draft `convert` | Contract-level extraction selected for inspection | A graph and observations were produced; failures can be inspected |
+| Certified platform profile | Every platform-applicable rule/model/identity provider and store | The complete locked runtime executed with zero skips/fallbacks |
 
-- **Both profiles satisfy the same protocols** — `Segmenter`, `MentionDetector`, `CoreferenceResolver`, `ClaimExtractor`, `AttributeExtractor`, `IdentityResolver`, `EntityLinkProvider`.
-- **Deterministic proves the contract offline.**
-- **Model-backed fulfils it for real documents.**
+Both boundaries use the same protocols (`Segmenter`, `MentionDetector`, `CoreferenceResolver`, `ClaimExtractor`, `AttributeExtractor`, `IdentityResolver`, and `EntityLinkProvider`), but protocol compatibility is not provider-execution evidence.
+
+The certified provider set cannot be reduced through runtime configuration. Apple Silicon adds mandatory MLX execution; Linux declares MLX inapplicable.
 
 ---
 
-## 10. Legacy / comparison extractors
+## 10. Mandatory and research extractors
 
-Kept in `research_registry()` for side-by-side comparison, not part of the mandatory release surface:
+Implemented product extractors in the release manifest execute in the zero-skip hard pass. Research and roadmap implementations remain separate and are never substituted for a mandatory provider:
 
 | Technique | Basis | Status |
 | --- | --- | --- |
-| `openie_relation_extractor` | Open Information Extraction triples | implemented |
-| `dependency_pattern_relation_extractor` | Dependency-parse patterns | implemented |
-| `ollama_graph_extractor` | Single-shot LLM graph extraction | implemented (optional adapter) |
-| `gliner_ollama_relation_typing_extractor` | GLiNER spans → Ollama relation typing | implemented (hybrid) |
-| `transformer_relation_extractor` | Supervised transformer RE | adapter (de-certified) |
+| `openie_relation_extractor` | Open Information Extraction triples | implemented; mandatory hard-pass execution |
+| `dependency_pattern_relation_extractor` | Dependency-parse patterns | implemented; mandatory hard-pass execution |
+| `ollama_graph_extractor` | Single-shot LLM graph extraction | implemented; mandatory hard-pass execution |
+| `gliner_ollama_relation_typing_extractor` | GLiNER spans → Ollama relation typing | implemented; mandatory hard-pass execution |
+| `transformer_relation_extractor` | Supervised transformer RE | research adapter; never a release fallback |
 | `spacy_entity_ruler_extractor`, `coreference_adapter`, `pos_tagging_adapter` | spaCy components | stub/roadmap |
 
-See runnable commands in the [README run guide](../README.md#running-every-technique) and how to test each in the [testing guide](testing_guide.md).
+## Next steps
+
+| Goal | Continue with |
+| --- | --- |
+| Run a first text conversion | [Getting started](getting_started.md) |
+| Configure models, identity providers, ontology, and promotion thresholds | [Configuration](configuration.md) |
+| Understand extraction, identity, evidence, and intended-use metrics | [Evaluation metrics](evaluation_metrics.md) |
+| Trace the implementation stage by stage | [Stage-by-stage implementation](stage_by_stage_implementation.md) |
+| Verify providers and publication gates | [Testing guide](testing_guide.md) |
+
+Research adapters can be explored through `kg_construction.research` and `make research-smoke`. They do not establish provider participation or publishability. The runnable product commands are also summarized in the [project README](../README.md).

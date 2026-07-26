@@ -1,7 +1,7 @@
 version: kg-graph-evaluation-suite-v1
 construction_profile: unstructured
-fixture_id: sample-text-publication-v2
-fixture_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+fixture_id: sample-text-publication-v3
+fixture_sha256: 9e88e9c79cebdc1a4f933f567d713e50589c1d7113c123a8affec056e1674a6e
 
 # Curated occurrence gold for source_7cbdc1a5851256d53232, the immutable
 # pii-redaction-v1 child of source_4d6ae89675d00a5386ee produced from
@@ -228,6 +228,7 @@ sql_like:
           detected_type: $property.detected_entity_type
           start: $property.start
           end: $property.end
+        aggregations: {mention_count: count}
       expected_rows:
         - {surface: "2026-07-09", detected_type: Date, start: 3, end: 13}
       expected_aggregations: {mention_count: 1}
@@ -237,32 +238,32 @@ nosql:
   cases:
     - case_id: mention-denotation
       query:
-        start: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        start: {node_ids: [entity_00c08e8ef154af1d8339]}
         relationship_types: [DENOTES_OBSERVED_ENTITY]
         max_depth: 1
       expected_node_ids:
-        - entity_e226f7b5a85efcb57d2a
-        - entity_aefe2c0bb8db83c82be5
+        - entity_d1a467f70561ad3f30bb
+        - entity_00c08e8ef154af1d8339
       expected_paths:
-        - [entity_aefe2c0bb8db83c82be5, DENOTES_OBSERVED_ENTITY, entity_e226f7b5a85efcb57d2a]
+        - [entity_00c08e8ef154af1d8339, DENOTES_OBSERVED_ENTITY, entity_d1a467f70561ad3f30bb]
 
 graphrag:
   cases:
     - case_id: evidence-grounded-date-answer
       query:
         query_text: "2026-07-09"
-        candidates: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+        candidates: {node_ids: [entity_d1a467f70561ad3f30bb]}
         k: 1
         path_query: &date_path
-          start: {node_ids: [entity_b7a2fb501ab8e37e859d]}
-          end: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+          start: {node_ids: [entity_81bdc454cff572c856fa]}
+          end: {node_ids: [entity_d1a467f70561ad3f30bb]}
           relationship_types: [HAS_MENTION, DENOTES_OBSERVED_ENTITY]
           max_depth: 2
         answer_query: *date_path
-      context_relevance: {entity_e226f7b5a85efcb57d2a: 3}
+      context_relevance: {entity_d1a467f70561ad3f30bb: 3}
       expected_paths:
-        - [entity_b7a2fb501ab8e37e859d, HAS_MENTION, entity_aefe2c0bb8db83c82be5, DENOTES_OBSERVED_ENTITY, entity_e226f7b5a85efcb57d2a]
-      expected_answer_node_ids: [entity_e226f7b5a85efcb57d2a]
+        - [entity_81bdc454cff572c856fa, HAS_MENTION, entity_00c08e8ef154af1d8339, DENOTES_OBSERVED_ENTITY, entity_d1a467f70561ad3f30bb]
+      expected_answer_node_ids: [entity_d1a467f70561ad3f30bb]
       expected_citation_ids: [source_7cbdc1a5851256d53232]
       requires_multi_hop: true
 
@@ -273,38 +274,38 @@ vector:
     - case_id: date-vector-search
       query:
         query_text: "2026-07-09"
-        candidates: {node_ids: [entity_e226f7b5a85efcb57d2a]}
-        allowed: {node_ids: [entity_e226f7b5a85efcb57d2a]}
+        candidates: {node_ids: [entity_d1a467f70561ad3f30bb]}
+        allowed: {node_ids: [entity_d1a467f70561ad3f30bb]}
         k: 1
-      relevance: {entity_e226f7b5a85efcb57d2a: 3}
+      relevance: {entity_d1a467f70561ad3f30bb: 3}
 
 link_prediction:
   cases:
     - case_id: date-denotation
       query: &date_neighbor
-        source: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        source: {node_ids: [entity_00c08e8ef154af1d8339]}
         relationship_type: DENOTES_OBSERVED_ENTITY
         candidates: &observed_candidates
           node_ids:
-            - entity_e226f7b5a85efcb57d2a
-            - entity_3a11ade39c7e839359f2
-            - entity_e1671bbc38eb3afcfd9d
+            - entity_d1a467f70561ad3f30bb
+            - entity_e0aadde729c61db24cbb
+            - entity_09b93dbe4a2c93c227b9
         k: 3
-      true_entity_id: entity_e226f7b5a85efcb57d2a
+      true_entity_id: entity_d1a467f70561ad3f30bb
     - case_id: incident-denotation
       query: &incident_neighbor
-        source: {node_ids: [entity_2e4a8b9684faf9bf9927]}
+        source: {node_ids: [entity_2ce17d9917f0739117d8]}
         relationship_type: DENOTES_OBSERVED_ENTITY
         candidates: *observed_candidates
         k: 3
-      true_entity_id: entity_3a11ade39c7e839359f2
-    - case_id: recommendation-api-denotation
-      query: &recommendation_api_neighbor
-        source: {node_ids: [entity_43bc8790c56403147ae0]}
+      true_entity_id: entity_e0aadde729c61db24cbb
+    - case_id: version-denotation
+      query: &version_neighbor
+        source: {node_ids: [entity_50d15c30333f1bd9859d]}
         relationship_type: DENOTES_OBSERVED_ENTITY
         candidates: *observed_candidates
         k: 3
-      true_entity_id: entity_e1671bbc38eb3afcfd9d
+      true_entity_id: entity_09b93dbe4a2c93c227b9
 
 recommendation:
   catalog: *observed_candidates
@@ -312,24 +313,24 @@ recommendation:
   cases:
     - case_id: date-neighbor-recommendation
       query: *date_neighbor
-      relevant_item_ids: [entity_e226f7b5a85efcb57d2a]
+      relevant_item_ids: [entity_d1a467f70561ad3f30bb]
     - case_id: incident-neighbor-recommendation
       query: *incident_neighbor
-      relevant_item_ids: [entity_3a11ade39c7e839359f2]
-    - case_id: recommendation-api-neighbor-recommendation
-      query: *recommendation_api_neighbor
-      relevant_item_ids: [entity_e1671bbc38eb3afcfd9d]
+      relevant_item_ids: [entity_e0aadde729c61db24cbb]
+    - case_id: version-neighbor-recommendation
+      query: *version_neighbor
+      relevant_item_ids: [entity_09b93dbe4a2c93c227b9]
 
 reasoning:
   max_p95_runtime_ms: 1000
   cases:
     - case_id: mention-denotes-date
       query:
-        start: {node_ids: [entity_aefe2c0bb8db83c82be5]}
+        start: {node_ids: [entity_00c08e8ef154af1d8339]}
         relationship_type_sequence: [DENOTES_OBSERVED_ENTITY]
         inferred_predicate: denotes_date
-      expected_answers: [entity_e226f7b5a85efcb57d2a]
+      expected_answers: [entity_d1a467f70561ad3f30bb]
       expected_inferred_facts:
-        - subject: entity_aefe2c0bb8db83c82be5
+        - subject: entity_00c08e8ef154af1d8339
           predicate: denotes_date
-          object: entity_e226f7b5a85efcb57d2a
+          object: entity_d1a467f70561ad3f30bb

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kg-construction"
 version = "0.1.0"
-description = "Evidence-grounded multi-source knowledge graph construction with duplicate-resistant identity resolution, provenance, validation, and reproducible benchmarks."
+description = "Evidence-grounded structured and unstructured knowledge graph construction with duplicate-resistant identity, semantic assertions, and graph-quality evaluation."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -41,6 +41,7 @@ dependencies = [
     # Core contract, parsing, and RDF/SHACL
     "pydantic>=2.7",
     "PyYAML>=6.0",
+    "certifi>=2025.1.31",
     "jsonpath-ng>=1.7,<2",
     "openpyxl>=3.1",
     "SQLAlchemy>=2.0",
@@ -106,11 +107,13 @@ all = [
 Homepage = "https://github.com/swaroop-kaza/knowledge_graphs"
 Repository = "https://github.com/swaroop-kaza/knowledge_graphs"
 Documentation = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/docs"
-Benchmarks = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/reports"
+Research = "https://github.com/swaroop-kaza/knowledge_graphs/tree/main/research"
 Issues = "https://github.com/swaroop-kaza/knowledge_graphs/issues"
 
 [project.scripts]
 kg-construction = "kg_construction.interfaces.cli.construct:main"
+kg-construction-research = "kg_construction.interfaces.cli.benchmark:main"
+# Compatibility alias for the former research command name.
 kg-construction-benchmark = "kg_construction.interfaces.cli.benchmark:main"
 kg-construction-replay-deadletters = "kg_construction.interfaces.cli.replay_dead_letters:main"
 
@@ -118,7 +121,12 @@ kg-construction-replay-deadletters = "kg_construction.interfaces.cli.replay_dead
 where = ["src"]
 
 [tool.setuptools.package-data]
-kg_construction = ["py.typed", "resources/*.yaml", "resources/*.json"]
+kg_construction = [
+    "py.typed",
+    "resources/*.yaml",
+    "resources/*.json",
+    "resources/*.env",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -134,8 +142,9 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 ignore_missing_imports = true
+no_site_packages = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 

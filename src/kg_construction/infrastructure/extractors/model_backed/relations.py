@@ -13,10 +13,8 @@ from kg_construction.domain.claim import (
     ClaimKind,
     DocumentRef,
     Evidence,
-    EvidenceKind,
     Mention,
     Provenance,
-    TextSpan,
 )
 from kg_construction.domain.models import stable_id
 from kg_construction.infrastructure.extractors.model_backed.contracts import (
@@ -200,6 +198,7 @@ class GlinerRelExClaimExtractor:
             relation_threshold=relation_threshold,
             flat_ner=flat_ner,
         )
+        self.last_rejections: tuple[dict[str, object], ...] = ()
 
     def extract(
         self,
@@ -217,6 +216,7 @@ class GlinerRelExClaimExtractor:
                 )
 
         best: dict[tuple[object, ...], RelationInference] = {}
+        rejections: list[dict[str, object]] = []
         for output in self.backend.infer(text):
             _require_exact_relation(output, text=text, provider=self.provider_id)
             if output.predicate not in self.allowed_predicates:
@@ -225,6 +225,21 @@ class GlinerRelExClaimExtractor:
                     f"{output.predicate!r}"
                 )
             if output.confidence < self.config.minimum_confidence:
+                continue
+            if _relation_evidence(
+                output,
+                segments=segments,
+            ) is None:
+                rejections.append(
+                    {
+                        "reason": "arguments_do_not_share_one_exact_segment",
+                        "subject_start": output.subject_span.start,
+                        "subject_end": output.subject_span.end,
+                        "predicate": output.predicate,
+                        "object_start": output.object_span.start,
+                        "object_end": output.object_span.end,
+                    }
+                )
                 continue
             key = (
                 output.subject_span.start,
@@ -238,6 +253,7 @@ class GlinerRelExClaimExtractor:
             previous = best.get(key)
             if previous is None or output.confidence > previous.confidence:
                 best[key] = output
+        self.last_rejections = tuple(rejections)
 
         claims = [
             self._to_claim(
@@ -269,10 +285,12 @@ class GlinerRelExClaimExtractor:
     ) -> Claim:
         evidence = _relation_evidence(
             output,
-            document=document,
-            text=text,
             segments=segments,
         )
+        if evidence is None:
+            raise ProviderOutputError(
+                "gliner_relex relation arguments do not share one exact segment"
+            )
         subject_mention = _matching_mention(output.subject_span, mentions)
         object_mention = _matching_mention(output.object_span, mentions)
         claim = Claim(
@@ -343,10 +361,8 @@ def _mapping_to_exact_span(raw: object, *, argument: str) -> ExactSpanOutput:
 def _relation_evidence(
     output: RelationInference,
     *,
-    document: DocumentRef,
-    text: str,
     segments: tuple[Evidence, ...],
-) -> Evidence:
+) -> Evidence | None:
     start = min(output.subject_span.start, output.object_span.start)
     end = max(output.subject_span.end, output.object_span.end)
     containing_segments = [
@@ -361,8 +377,7 @@ def _relation_evidence(
                 item.evidence_id,
             ),
         )
-    span = TextSpan(start=start, end=end, text=text[start:end])
-    return Evidence.build(document, span=span, kind=EvidenceKind.PASSAGE)
+    return None
 
 
 def _matching_mention(

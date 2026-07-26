@@ -1,30 +1,37 @@
-# Evaluation: metrics, weighting, and thresholds
+# Evaluation: formation, correctness, intended use, and publication policy
 
-This is the technical reference for **Pillar 3**. It answers four questions for every metric the repo computes:
+[Documentation home](README.md) · [Modelling rules](knowledge_graph_modelling.md) · [Configuration](configuration.md) · [Testing](testing_guide.md)
+
+This is the technical reference for **Pillar 3**. It answers four questions for every metric the repository computes:
 
 - **What** it measures
 - **Why** that evaluation is required
 - **How** it is calculated (the exact formula)
 - **What threshold** decides pass/fail, and **how** metrics combine into a final decision
 
-The single most important design rule:
+> **Draft and publication are different outcomes.** `convert(...)` returns draft graphs with every computed observation so failures can be inspected. A publishability claim exists only after the locked, conjunctive, zero-skip certification path executes every required provider, store, gold task, and intended-use workload. Throughout this page, “pass/fail” describes an observation or certified decision; a returned draft graph is not a certificate.
+
+The single most important design rule (for the certification pass):
 
 - **A weighted score ranks; it never overrides** — it can compare research candidates but cannot override a correctness gate.
-- **The release result is the conjunction of mandatory gates.**
-- **"Not measured" is a gate failure** — never a passing zero.
+- **The certification result is the conjunction of mandatory gates.**
+- **"Not measured" is a certification-gate failure** — never a passing zero.
 
-Contents:
+Implementation ownership is equally strict: product evaluators live in `kg_construction.evaluation`. The old `kg_construction.infrastructure.evaluation.*` modules are explicit, identity-preserving compatibility shims, not alternate implementations, and no wildcard façade connects the namespaces. Simple benchmark execution and weighted technique scoring live in `kg_construction.research`.
+
+## On this page
 
 1. [The three evaluation tiers](#1-the-three-evaluation-tiers)
 2. [Why separate intrinsic quality from fitness-for-use](#2-why-separate-intrinsic-quality-from-fitness-for-use)
 3. [Tier E1 — universal formation metrics](#3-tier-e1--universal-formation-metrics)
 4. [Tier E2 — task metrics](#4-tier-e2--task-metrics)
 5. [Tier E3 — intended-use metrics](#5-tier-e3--intended-use-metrics)
-6. [The unstructured claim evaluation suite](#6-the-unstructured-claim-evaluation-suite)
+6. [The unstructured semantic-assertion evaluation suite](#6-the-unstructured-semantic-assertion-evaluation-suite)
 7. [The schema-quality evaluator](#7-the-schema-quality-evaluator)
-8. [The weighted scoring engine (research ranking)](#8-the-weighted-scoring-engine-research-ranking)
+8. [Research boundary: weighted technique ranking](#8-research-boundary-weighted-technique-ranking)
 9. [The complete threshold table](#9-the-complete-threshold-table)
 10. [How a release decision is assembled](#10-how-a-release-decision-is-assembled)
+11. [Related guides](#related-guides)
 
 ---
 
@@ -59,11 +66,11 @@ flowchart TB
     GATE --> R[Executable report + certificate]
 ```
 
-| Tier | Applies when | Owning modules | Nature |
+| Tier | Applies when | Public boundary | Nature |
 | --- | --- | --- | --- |
-| E1 Formation | always | `metrics.py`, `validation_metrics.py`, `coverage_metrics.py`, `quality_gates.py` | Intrinsic hard gates |
-| E2 Task | a gold fixture is declared | `accuracy_metrics.py`, `entity_resolution_metrics.py`, `claim_evaluations.py`, `schema_quality.py` | Supervised P/R/F1 |
-| E3 Intended use | a consumer is declared | `intended_use_metrics.py`, `graph_bound_suite.py`, `retrieval_metrics.py` | Downstream fitness |
+| E1 Formation | always | `kg_construction.evaluation` | Intrinsic hard gates |
+| E2 Task | a gold fixture is declared | `kg_construction.evaluation` | Supervised P/R/F1 |
+| E3 Intended use | a consumer is declared | `kg_construction.evaluation` | Downstream fitness |
 
 ---
 
@@ -71,7 +78,7 @@ flowchart TB
 
 - **Intrinsic ≠ useful** — a graph can be internally perfect (no dangling edges, full evidence) yet useless for its consumer, or answer queries while silently duplicating entities.
 - **Evaluate both, substitute neither** — following [Steps to KG Quality Assessment](https://arxiv.org/abs/2208.07779) and [KGrEaT](https://arxiv.org/abs/2308.10537).
-- **No circular benchmark** — expected judgments are versioned **inputs**; predictions are computed by workload runners from the frozen graph and are **never accepted from the caller** (`construct_kg` refuses caller-supplied predictions).
+- **No circular evaluation** — expected judgments are versioned **inputs**; predictions are computed by workload runners from the frozen graph and are **never accepted from the caller**.
 
 The evidence model mirrors the [W3C Data Quality Vocabulary](https://www.w3.org/TR/vocab-dqv/):
 
@@ -83,7 +90,7 @@ The evidence model mirrors the [W3C Data Quality Vocabulary](https://www.w3.org/
 
 ## 3. Tier E1 — universal formation metrics
 
-These apply before any downstream benchmark. Computed by `ConstructionMetricsEvaluator` (`metrics.py`) and `ValidationMetrics` (`validation_metrics.py`).
+These apply before any downstream workload. They are owned by `kg_construction.evaluation`.
 
 | Dimension | Metric | How it is calculated | Ideal threshold |
 | --- | --- | --- | ---: |
@@ -104,10 +111,10 @@ These apply before any downstream benchmark. Computed by `ConstructionMetricsEva
 
 **Why each matters**
 
-- *Conciseness* is the whole point of Pillar 1 — a duplicated categorical literal is the failure the semantic mapper exists to prevent.
+- *Conciseness* is the point of Pillar 1: a duplicated categorical literal is the failure the semantic mapper exists to prevent.
 - *Integrity* — a dangling or duplicate edge silently corrupts every traversal and aggregation downstream.
-- *Evidence/trust* — an unsupported promoted claim is indistinguishable from a hallucination; requiring exact spans + provenance makes every fact auditable.
-- *`shacl_executed` as its own gate* — this closes the "passing zero" hole: a schema-quality report is not allowed to pass unless SHACL actually ran (a null violation count can no longer masquerade as conformance).
+- *Evidence/trust* — an unsupported promoted claim is indistinguishable from a hallucination; requiring exact spans and provenance makes every fact auditable.
+- *`shacl_executed` as its own gate* — this closes the “passing zero” hole. A schema-quality report cannot pass unless SHACL ran; a null violation count cannot masquerade as conformance.
 
 The base precision/recall/F1 helper is zero-safe:
 
@@ -151,7 +158,7 @@ Ideal thresholds (`quality_gates.py`, `ner`/`relation` families):
 | `false_split_rate` | `|gold − predicted| / |gold|` | `→ 0` |
 | `er_record_id_overlap_rate` | `|overlap| / |gold ids|` | records must be comparable |
 
-- **Disjoint universes fail loudly** — if predicted and gold record-ID universes don't overlap, the evaluator raises; a benchmark you cannot compare must not score 0.
+- **Disjoint universes fail loudly** — if predicted and gold record-ID universes do not overlap, the evaluator raises; an evaluation that cannot compare records must not score 0.
 
 ### 4.3 Schema & integration
 
@@ -167,11 +174,11 @@ All of these are `= 1.0` gold gates (see the `structured` family below):
 
 ## 5. Tier E3 — intended-use metrics
 
-**File:** `intended_use_metrics.py`.
+**Public boundary:** `kg_construction.evaluation` (intended-use and graph-bound workload types).
 
 - **Same frozen graph, every consumer** — each declared use is evaluated against the identical snapshot.
-- **Reports are graph-bound** — an executed benchmark must carry graph + fixture hashes, one query hash and one observed latency per case, and per-family workload support.
-- **Honesty is enforced** — an unexecuted benchmark cannot publish cases, metrics, or a pass (`_execution_state_is_honest`).
+- **Reports are graph-bound** — an executed workload carries graph + fixture hashes, one query hash and one observed latency per case, and per-family support.
+- **Honesty is enforced** — an unexecuted workload cannot publish cases, metrics, or a pass (`_execution_state_is_honest`).
 
 | Intended use (`IntendedUse`) | Required metrics | Notes / ideal |
 | --- | --- | --- |
@@ -187,12 +194,12 @@ All of these are `= 1.0` gold gates (see the `structured` family below):
 
 ---
 
-## 6. The unstructured claim evaluation suite
+## 6. The unstructured semantic-assertion evaluation suite
 
-**File:** `claim_evaluations.py` · **Registry:** `claim_evaluation_suite`
+The implementation retains the name `ClaimEvaluationSuite`; here, a `Claim` is an evidence-grounded semantic assertion, not a business domain.
 
 - **Every metric runs every time** — there is no "not evaluated" success state.
-- **Full result per metric** — each returns an `EvalScore` (precision, recall, F1, gold / predicted / matched counts).
+- **Full result per metric** — each returns an `EvalScore`: precision, recall, F1, and gold/predicted/matched counts.
 
 ```mermaid
 flowchart LR
@@ -212,7 +219,7 @@ flowchart LR
 | `evidence` | claims quoting the source exactly | `has_exact_evidence(text)` ÷ claims |
 | `provenance` | claims with complete provider/model provenance | `has_complete_provenance(text)` ÷ claims |
 
-**Ideal thresholds** (`HardCoverageThresholds`) — the release fixture demands a perfect result:
+`HardCoverageThresholds` has a strict perfect-score default for focused regression tests:
 
 | Threshold | Default |
 | --- | ---: |
@@ -221,15 +228,16 @@ flowchart LR
 | `maximum_unsupported_claim_rate` ((predicted − matched) ÷ predicted) | `≤ 0.0` |
 
 - **A missing required metric is itself a gate failure** — not a skipped check.
+- **The release authority is the versioned publication policy** in `src/kg_construction/resources/publication_contracts_v1.yaml`. Documentation does not copy a second set of release floors; the certificate records the exact policy digest and threshold used.
 
 ---
 
 ## 7. The schema-quality evaluator
 
-**File:** `schema_quality.py` · **Registry:** `schema_quality_evaluator` · version `schema-quality-v2`
+**Public boundary:** `kg_construction.evaluation` · **Registry:** `schema_quality_evaluator` · version `schema-quality-v2`
 
 - **Four dimensions, one release gate** — the graph is profiled and gated.
-- **Categorical duplication is policy-aware** — only columns the policy promotes to nodes are checked, so a value kept as a property by the supernode guard is not wrongly flagged.
+- **Categorical duplication is policy-aware** — only columns the policy promotes to nodes are checked. A value retained as a property by the supernode guard is not wrongly flagged.
 
 | Dimension | Metrics | Gate (default) |
 | --- | --- | --- |
@@ -242,12 +250,13 @@ flowchart LR
 
 ---
 
-## 8. The weighted scoring engine (research ranking)
+## 8. Research boundary: weighted technique ranking
 
-**File:** `application/scoring.py`.
+Simple candidate benchmarking and weighted ranking belong to `kg_construction.research`, not to the publication decision. The small `BenchmarkRunner`/`TechniqueRunner` surface is owned by `kg_construction.research.simple_benchmark`; weighted evaluation and scoring are owned by the research benchmark/scoring modules.
 
-- **Produces `final_score`** — used to **rank techniques** in benchmarks and the leaderboard.
+- **Produces `final_score`** — used to compare techniques in research reports.
 - **Not a release gate** — it compares candidates; it never overrides a correctness gate.
+- **Not product evidence** — deterministic leaderboards, synthetic cross-source comparisons, and mocked provider runs cannot establish publishability.
 
 ### The formula
 
@@ -300,9 +309,9 @@ flowchart LR
 | latency | 0.10 | `latency_penalty` |
 | human_review | 0.05 | `human_review_rate` |
 
-### Production decision thresholds (`ProductionThresholds`)
+### Research screening thresholds (`ResearchScreeningThresholds`)
 
-Separate from the ranking score, these are the safe-to-ship cutoffs:
+These values screen research candidates. They are not the repository-owned publication policy; `ProductionThresholds` remains only as a compatibility class name:
 
 | Threshold | Value |
 | --- | ---: |
@@ -354,8 +363,8 @@ Separate from the ranking score, these are the safe-to-ship cutoffs:
 
 Interpretation of the two threshold bands:
 
-- **`= 1.0` / `= 0.0` gates** are *correctness invariants* — formation, structured integrity, categorical conciseness, idempotence, SHACL. These must be exact; there is no partial credit.
-- **`≥ 0.80` / `≥ 0.70` gates** are *supervised-quality floors* — NER, relation, coreference, linking, query, vector. These acknowledge that learned components are imperfect but must clear a meaningful bar, and every one requires `gold_support ≥ 1` so a "pass" can never be computed over an empty fixture.
+- **`= 1.0` / `= 0.0` gates** are *correctness invariants*: formation, structured integrity, categorical conciseness, idempotence, and SHACL. These must be exact; there is no partial credit.
+- **`≥ 0.80` / `≥ 0.70` gates** are *supervised-quality floors*: NER, relation, coreference, linking, query, and vector. Learned components are imperfect but must clear a meaningful bar. Every gate requires `gold_support ≥ 1`, so a pass cannot be computed over an empty fixture.
 
 ---
 
@@ -376,17 +385,23 @@ flowchart TD
     CONJ -->|no| REJECT[Release fails —<br/>even if weighted score rose]
 ```
 
-- **Each observation is fully recorded** — metric + purpose, value + support count, threshold + operator, `executed`, pass/fail, fixture and output hashes, and a failure reason.
+- **Each observation is fully recorded** — metric and purpose, value and support, threshold and operator, `executed`, pass/fail, fixture and output hashes, and a failure reason.
 - **The release result is the conjunction of mandatory gates.**
 - **Regression policy** (`statistical_confidence.py`, Stage E4) — a release fails on a hard-gate regression **even when the weighted aggregate rises**.
 - **Comparisons report deltas** — paired examples, not only ranks.
 
-### Reproduce the reports
+### Reproduce core evaluation reports
 
 ```bash
 make modelling-correctness   # gold-fixture correctness, CI-enforced
 make schema-quality          # 4-dimension schema quality + gates
-make benchmark-leaderboard   # weighted technique ranking
 ```
 
-Outputs land in `reports/` (`modelling_correctness.md`, `schema_quality.md`, `benchmark_leaderboard.md`). See the [testing guide](testing_guide.md) for the test that pins each gate.
+Core outputs land in `reports/` as `modelling_correctness.*` and `schema_quality.*`. Research comparison reports are generated separately with `make research-smoke` and are explicitly non-authoritative. See the [testing guide](testing_guide.md) for the test that pins each gate.
+
+## Related guides
+
+- [Knowledge-graph modelling](knowledge_graph_modelling.md) defines the construction invariants these metrics evaluate.
+- [Configuration](configuration.md) separates draft observations from immutable publication policy.
+- [Stage-by-stage implementation](stage_by_stage_implementation.md) places evaluation after graph formation and before certification.
+- [Testing](testing_guide.md) maps metric families to fixtures, reports, and test files.

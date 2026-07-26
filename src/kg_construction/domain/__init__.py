@@ -42,6 +42,12 @@ from kg_construction.domain.schema import (
     SchemaRegistry,
     diff_graph_schemas,
 )
+from kg_construction.domain.validation import (
+    ValidationFinding,
+    ValidationPolicy,
+    ValidationReport,
+    ValidationSeverity,
+)
 
 __all__ = [
     "Cardinality",
@@ -71,6 +77,10 @@ __all__ = [
     "SchemaLifecycleStatus",
     "SchemaRegistry",
     "SourceRecord",
+    "ValidationFinding",
+    "ValidationPolicy",
+    "ValidationReport",
+    "ValidationSeverity",
     "canonical_json",
     "content_hash",
     "diff_graph_schemas",

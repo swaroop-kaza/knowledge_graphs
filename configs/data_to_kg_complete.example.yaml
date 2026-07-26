@@ -87,6 +87,12 @@ unstructured:
   require_embedding_cross_encoder: true
   require_external_linkers: true
   nil_policy: retain_observed
+
+# This is the executable switch for unstructured construction. The complete
+# profile always builds every platform-applicable provider from models.lock.yaml;
+# one provider failure fails the run and never changes it to deterministic.
+extraction:
+  runtime_profile: model_backed
   entity_labels:
     - Person
     - Organization

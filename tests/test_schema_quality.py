@@ -6,16 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from kg_construction.application.benchmark_runner import (
-    BenchmarkHardGateSettings,
-    GoldEvaluationSummary,
-    TechniqueEvaluationConfig,
-    TechniqueEvaluationRunner,
-)
-from kg_construction.application.plan_resolution import resolve_modeling_plan
-from kg_construction.application.semantic_profiler import SemanticColumnProfiler
-from kg_construction.application.semantic_table_mapper import SemanticTableMapper
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.graph_objects import PropertyEdge, PropertyGraph, PropertyNode
 from kg_construction.domain.modeling import (
     Cardinality,
@@ -24,11 +15,22 @@ from kg_construction.domain.modeling import (
     OntologySchema,
 )
 from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.evaluation.schema_quality import (
+from kg_construction.evaluation.schema_quality import (
     SchemaQualityEvaluator,
+    SchemaQualityGate,
     SchemaQualityGateSettings,
+    SchemaQualityReport,
 )
 from kg_construction.infrastructure.ontology.structured_ontology import propose_structured_ontology
+from kg_construction.research.benchmark_runner import (
+    BenchmarkHardGateSettings,
+    GoldEvaluationSummary,
+    TechniqueEvaluationConfig,
+    TechniqueEvaluationRunner,
+)
+from kg_construction.structured.plan_resolution import resolve_modeling_plan
+from kg_construction.structured.semantic_profiler import SemanticColumnProfiler
+from kg_construction.structured.semantic_table_mapper import SemanticTableMapper
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 
@@ -45,7 +47,9 @@ def _semantic_graph_policy_ontology():
     policy = modeling_plan.to_modeling_policy()
     resolved = resolve_modeling_plan(modeling_plan, source_name="employees.csv")
     ontology = propose_structured_ontology(policy).ontology
-    graph = ConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run([source]).property_graph
+    graph = DraftConstructionWorkflow(mappers=[SemanticTableMapper(resolved)]).run(
+        [source]
+    ).property_graph
     return graph, policy, records, ontology
 
 
@@ -156,6 +160,30 @@ class BenchmarkGateWiringTests(unittest.TestCase):
 
 
 class ReportPayloadTests(unittest.TestCase):
+    def test_gate_and_report_pass_states_cannot_be_forged(self) -> None:
+        with self.assertRaisesRegex(ValueError, "gate pass state"):
+            SchemaQualityGate(
+                gate="connectivity",
+                metric="orphan_rate",
+                operator="<=",
+                threshold=0.05,
+                actual=0.0,
+                passed=False,
+            )
+
+        passing_gate = SchemaQualityGate(
+            gate="connectivity",
+            metric="orphan_rate",
+            operator="<=",
+            threshold=0.05,
+            actual=0.0,
+            passed=True,
+        )
+        with self.assertRaisesRegex(ValueError, "conjunction"):
+            SchemaQualityReport(gates=[passing_gate], passed=False)
+        with self.assertRaisesRegex(ValueError, "without evaluated gates"):
+            SchemaQualityReport(passed=True)
+
     def test_structural_metrics_payload_for_runner(self) -> None:
         graph, _, _, _ = _semantic_graph_policy_ontology()
         payload = SchemaQualityEvaluator().structural_metrics(graph)

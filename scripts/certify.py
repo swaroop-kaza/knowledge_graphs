@@ -9,6 +9,7 @@ from pathlib import Path
 from kg_construction.certification.execution import validate_execution_report
 from kg_construction.certification.preflight import CertCheck, check_profile_contract, run_preflight
 from kg_construction.certification.runner import dispatch_capabilities
+from kg_construction.service_runtime import LockedServiceRuntime
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +39,21 @@ def main(argv: list[str] | None = None) -> int:
         execution_plan=plan_path,
         phase="preflight",
     )
+    try:
+        service_runtime = LockedServiceRuntime.from_environment()
+    except ValueError as exc:
+        checks.append(CertCheck("locked_service_runtime", False, str(exc)))
+    else:
+        checks.append(
+            CertCheck(
+                "locked_service_runtime",
+                True,
+                (
+                    f"{service_runtime.version} "
+                    f"sha256={service_runtime.contract_sha256}"
+                ),
+            )
+        )
     if args.phase == "final" and all(check.passed for check in checks):
         profile_check, profile = check_profile_contract(
             args.root / "models.manifest.yaml",

@@ -9,17 +9,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from kg_construction.application.unstructured_pipeline import (
-    EntityLink,
-    PatternClaimExtractor,
-    ProviderContractError,
-    ProviderIdentityResolver,
-    RuleMentionDetector,
-    RuntimeProfile,
-    UnstructuredPipeline,
-    UnstructuredPipelineConfig,
-)
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.claim import (
     Claim,
     ClaimKind,
@@ -34,9 +24,22 @@ from kg_construction.domain.claim import (
     TextSpan,
 )
 from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.evaluation.claim_evaluations import (
+from kg_construction.evaluation.claim_evaluations import (
     ClaimEvaluationSuite,
     HardCoverageThresholds,
+)
+from kg_construction.infrastructure.ontology.unstructured_governance import (
+    GovernedUnstructuredSchema,
+)
+from kg_construction.unstructured.pipeline import (
+    EntityLink,
+    PatternClaimExtractor,
+    ProviderContractError,
+    ProviderIdentityResolver,
+    RuleMentionDetector,
+    RuntimeProfile,
+    UnstructuredPipeline,
+    UnstructuredPipelineConfig,
 )
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "unstructured_claims.json"
@@ -199,6 +202,54 @@ class IdentityResolutionDoctrineTests(unittest.TestCase):
         self.assertTrue(all(mention.unresolved for mention in result.mentions))
         self.assertTrue(all(mention.entity_id is None for mention in result.mentions))
 
+    def test_claim_arguments_use_resolved_coreference_anchors(self) -> None:
+        class SurfaceClaimProvider:
+            def extract(self, document, text, segments, mentions):
+                del text
+                turing = next(
+                    mention for mention in mentions if mention.surface == "Turing"
+                )
+                bombe = next(
+                    mention for mention in mentions if mention.surface == "Bombe"
+                )
+                evidence = next(
+                    segment
+                    for segment in segments
+                    if "Turing designed the Bombe" in segment.span.text
+                )
+                return (
+                    Claim(
+                        document=document,
+                        kind=ClaimKind.RELATION,
+                        subject=turing.surface,
+                        predicate="designed",
+                        object=bombe.surface,
+                        subject_mention_id=turing.mention_id,
+                        object_mention_id=bombe.mention_id,
+                        evidence=(evidence,),
+                        provenance=Provenance(
+                            extractor="surface_claim_provider",
+                            provider="test",
+                            model_version="1",
+                            configuration_id="coreference-anchor",
+                            confidence=1.0,
+                        ),
+                    ),
+                )
+
+        gold = _gold()
+        source = SourceRecord.from_text(
+            gold["text"],
+            source_name="coreference-claim.txt",
+        )
+        result = UnstructuredPipeline(
+            claim_extractor=SurfaceClaimProvider(),
+        ).run(source)
+
+        self.assertEqual(len(result.promoted), 1)
+        self.assertEqual(result.promoted[0].subject, "Alan Turing")
+        self.assertEqual(result.promoted[0].object, "Bombe")
+
     def test_partial_tokens_never_merge(self) -> None:
         source = SourceRecord.from_text(
             "Ann met Anna. York contacted Yorkshire.", source_name="partial.txt"
@@ -267,6 +318,210 @@ class IdentityResolutionDoctrineTests(unittest.TestCase):
 
 
 class SemanticPreservationTests(unittest.TestCase):
+    def test_provider_duplicate_claims_merge_evidence_and_provenance_once(
+        self,
+    ) -> None:
+        class DuplicateEvidenceProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self
+                base = next(
+                    claim
+                    for claim in PatternClaimExtractor().extract(
+                        document,
+                        text,
+                        segments,
+                        mentions,
+                    )
+                    if claim.kind == ClaimKind.RELATION
+                    and claim.predicate == "works_with"
+                )
+                passage = Evidence.build(
+                    document,
+                    span=base.evidence[0].span,
+                    kind=EvidenceKind.PASSAGE,
+                )
+                model_duplicate = base.model_copy(
+                    update={
+                        "evidence": (passage,),
+                        "provenance": Provenance(
+                            extractor="model_claim_provider",
+                            provider="model_provider",
+                            model_version="model-v1",
+                            configuration_id="grounded-passages-v1",
+                            confidence=0.9,
+                        ),
+                    }
+                )
+                return base, model_duplicate
+
+        source = SourceRecord.from_text(
+            "Alan Turing worked with Charles Babbage.",
+            source_name="semantic-claim-duplicates.txt",
+        )
+        pipeline = UnstructuredPipeline(
+            claim_extractor=DuplicateEvidenceProvider(),
+            governed_schema=GovernedUnstructuredSchema.from_package_resource(),
+        )
+        batch = pipeline.extract(source)
+        result = pipeline.pipeline_results[-1]
+
+        self.assertEqual(len(result.promoted), 1)
+        self.assertFalse(result.quarantined)
+        merged = result.promoted[0]
+        self.assertEqual(merged.predicate, "works_with")
+        self.assertEqual(
+            {item.kind for item in merged.evidence},
+            {EvidenceKind.SENTENCE, EvidenceKind.PASSAGE},
+        )
+        self.assertEqual(
+            set(merged.provenance.provider.split("+")),
+            {"local_rules", "model_provider"},
+        )
+        self.assertEqual(len(result.semantic_claim_merge_results), 1)
+        merge = result.semantic_claim_merge_results[0]
+        self.assertEqual(merge["merged_claim_count"], 2)
+        self.assertEqual(merge["output_claim_id"], merged.claim_id)
+        self.assertEqual(
+            sum(
+                relation.relation_type == "WORKS_WITH"
+                and relation.properties.get("claim_kind") == "relation"
+                for relation in batch.relations
+            ),
+            1,
+        )
+
+    def test_ineligible_duplicate_cannot_poison_publishable_claim(
+        self,
+    ) -> None:
+        class MixedConfidenceProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self
+                base = next(
+                    claim
+                    for claim in PatternClaimExtractor().extract(
+                        document,
+                        text,
+                        segments,
+                        mentions,
+                    )
+                    if claim.kind == ClaimKind.RELATION
+                    and claim.predicate == "works_with"
+                )
+                below_threshold = base.model_copy(
+                    update={
+                        "provenance": Provenance(
+                            extractor="below_threshold_provider",
+                            provider="low_confidence_model",
+                            model_version="model-v1",
+                            configuration_id="below-publication-threshold",
+                            confidence=0.1,
+                        )
+                    }
+                )
+                return base, below_threshold
+
+        source = SourceRecord.from_text(
+            "Alan Turing worked with Charles Babbage.",
+            source_name="semantic-claim-confidence.txt",
+        )
+        pipeline = UnstructuredPipeline(
+            config=UnstructuredPipelineConfig(
+                minimum_claim_confidence=0.5,
+            ),
+            claim_extractor=MixedConfidenceProvider(),
+        )
+        pipeline.extract(source)
+        result = pipeline.pipeline_results[-1]
+
+        self.assertEqual(len(result.promoted), 1)
+        self.assertEqual(
+            result.promoted[0].provenance.provider,
+            "local_rules",
+        )
+        self.assertEqual(len(result.quarantined), 1)
+        self.assertEqual(
+            result.quarantined[0].provenance.provider,
+            "low_confidence_model",
+        )
+        self.assertFalse(result.semantic_claim_merge_results)
+
+    def test_semantic_claim_consolidation_retains_distinct_occurrences(
+        self,
+    ) -> None:
+        source = SourceRecord.from_text(
+            "Ada worked with Bob. Ada worked with Bob.",
+            source_name="repeated-claim-occurrences.txt",
+        )
+        pipeline = UnstructuredPipeline()
+        pipeline.extract(source)
+        result = pipeline.pipeline_results[-1]
+        repeated = [
+            claim
+            for claim in result.promoted
+            if claim.kind == ClaimKind.RELATION
+            and claim.predicate == "works_with"
+        ]
+
+        self.assertEqual(len(repeated), 2)
+        self.assertNotEqual(
+            repeated[0].subject_mention_id,
+            repeated[1].subject_mention_id,
+        )
+        self.assertFalse(result.semantic_claim_merge_results)
+
+    def test_semantic_claim_consolidation_retains_qualifier_differences(
+        self,
+    ) -> None:
+        class QualifiedDuplicateProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self
+                asserted = next(
+                    claim
+                    for claim in PatternClaimExtractor().extract(
+                        document,
+                        text,
+                        segments,
+                        mentions,
+                    )
+                    if claim.kind == ClaimKind.RELATION
+                    and claim.predicate == "works_with"
+                )
+                possible = asserted.model_copy(
+                    update={
+                        "modality": Modality.POSSIBLE,
+                        "provenance": Provenance(
+                            extractor="possible_claim_provider",
+                            provider="possible_model",
+                            model_version="model-v1",
+                            configuration_id="qualifier-preservation-v1",
+                            confidence=0.9,
+                        ),
+                    }
+                )
+                return asserted, possible
+
+        class PreserveProviderAttributes:
+            def annotate(self, text, claims):
+                del text
+                return claims
+
+        source = SourceRecord.from_text(
+            "Ada worked with Bob.",
+            source_name="semantic-claim-qualifiers.txt",
+        )
+        pipeline = UnstructuredPipeline(
+            claim_extractor=QualifiedDuplicateProvider(),
+            attribute_extractor=PreserveProviderAttributes(),
+        )
+        pipeline.extract(source)
+        result = pipeline.pipeline_results[-1]
+
+        self.assertEqual(
+            {claim.modality for claim in result.promoted},
+            {Modality.ASSERTED, Modality.POSSIBLE},
+        )
+        self.assertFalse(result.semantic_claim_merge_results)
+
     def test_relations_events_intents_and_facts_are_all_extracted(self) -> None:
         result, _ = _run()
         kinds = {claim.kind for claim in result.promoted}
@@ -365,6 +620,237 @@ class ProviderAndPromotionGateTests(unittest.TestCase):
             )
         )
 
+    def test_wrong_kind_does_not_quarantine_valid_same_predicate_claim(
+        self,
+    ) -> None:
+        class MixedKindClaimProvider:
+            def extract(self, document, text, segments, mentions):
+                claims = PatternClaimExtractor().extract(
+                    document,
+                    text,
+                    segments,
+                    mentions,
+                )
+                event = next(
+                    claim for claim in claims if claim.kind == ClaimKind.EVENT
+                )
+                relation = next(
+                    claim for claim in claims if claim.kind == ClaimKind.RELATION
+                )
+                invalid_fact = event.model_copy(
+                    update={
+                        "kind": ClaimKind.FACT,
+                        "event_roles": (),
+                    }
+                )
+                return relation, event, invalid_fact
+
+        source = SourceRecord.from_text(
+            "Ada Lovelace created the Analytical Engine in 1843.",
+            source_name="same-predicate-wrong-kind.txt",
+        )
+        result = UnstructuredPipeline(
+            claim_extractor=MixedKindClaimProvider(),
+            governed_schema=GovernedUnstructuredSchema.from_package_resource(),
+        ).run(source)
+
+        self.assertEqual(
+            [(claim.kind, claim.predicate) for claim in result.promoted],
+            [
+                (ClaimKind.RELATION, "created"),
+                (ClaimKind.EVENT, "created"),
+            ],
+        )
+        self.assertEqual(
+            [(claim.kind, claim.predicate) for claim in result.quarantined],
+            [(ClaimKind.FACT, "created")],
+        )
+        self.assertTrue(result.shacl_conforms)
+        self.assertEqual(
+            [
+                (
+                    item["claim_kind"],
+                    item["provider_predicate"],
+                    item["status"],
+                )
+                for item in result.claim_ontology_alignment_results
+            ],
+            [
+                ("relation", "created", "aligned"),
+                ("event", "created", "aligned"),
+                ("fact", "created", "quarantined"),
+            ],
+        )
+
+
+class ClaimArgumentResolutionTests(unittest.TestCase):
+    @staticmethod
+    def _provenance() -> Provenance:
+        return Provenance(
+            extractor="argument_test_provider",
+            provider="test",
+            model_version="1",
+            configuration_id="exact-anchor-tests",
+            confidence=1.0,
+        )
+
+    def test_duplicate_surface_arguments_without_occurrence_ids_quarantine_entire_claim(
+        self,
+    ) -> None:
+        class AmbiguousProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self, mentions
+                return (
+                    Claim(
+                        document=document,
+                        kind=ClaimKind.RELATION,
+                        subject="Ada",
+                        predicate="met",
+                        object="Ada",
+                        evidence=(segments[0],),
+                        provenance=self._provenance(),
+                    ),
+                )
+
+        source = SourceRecord.from_text("Ada met Ada.", source_name="duplicates.txt")
+        pipeline = UnstructuredPipeline(claim_extractor=AmbiguousProvider())
+        batch = pipeline.extract(source)
+        result = pipeline.pipeline_results[-1]
+
+        self.assertFalse(result.promoted)
+        self.assertEqual(len(result.quarantined), 1)
+        # The quarantined claim is materialized in the graph flagged, not dropped:
+        # conversion always returns every extracted claim with its status.
+        quarantined_claim_nodes = [
+            entity
+            for entity in batch.entities
+            if entity.entity_type == "Claim"
+            and entity.properties.get("promotion_status") == "quarantined"
+        ]
+        self.assertEqual(len(quarantined_claim_nodes), 1)
+        statuses = {
+            item["status"]
+            for item in result.claim_argument_resolution_results[0]["arguments"]
+        }
+        self.assertEqual(statuses, {"ambiguous_evidence_anchor"})
+
+    def test_stable_occurrence_ids_disambiguate_duplicate_surface_arguments(
+        self,
+    ) -> None:
+        class AnchoredProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self, text
+                ada_mentions = sorted(
+                    (mention for mention in mentions if mention.surface == "Ada"),
+                    key=lambda mention: mention.span.start,
+                )
+                return (
+                    Claim(
+                        document=document,
+                        kind=ClaimKind.RELATION,
+                        subject="Ada",
+                        predicate="met",
+                        object="Ada",
+                        subject_mention_id=ada_mentions[0].mention_id,
+                        object_mention_id=ada_mentions[1].mention_id,
+                        evidence=(segments[0],),
+                        provenance=self._provenance(),
+                    ),
+                )
+
+        source = SourceRecord.from_text("Ada met Ada.", source_name="anchored.txt")
+        result = UnstructuredPipeline(claim_extractor=AnchoredProvider()).run(source)
+
+        self.assertEqual(len(result.promoted), 1)
+        promoted = result.promoted[0]
+        self.assertNotEqual(
+            promoted.subject_mention_id,
+            promoted.object_mention_id,
+        )
+        statuses = {
+            item["status"]
+            for item in result.claim_argument_resolution_results[0]["arguments"]
+        }
+        self.assertEqual(statuses, {"provided_id"})
+
+    def test_exact_evidence_span_can_recover_one_repeated_quote_occurrence(
+        self,
+    ) -> None:
+        class FirstOccurrenceProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self, text, mentions
+                return (
+                    Claim(
+                        document=document,
+                        kind=ClaimKind.RELATION,
+                        subject="Ada",
+                        predicate="met",
+                        object="Bob",
+                        evidence=(segments[0],),
+                        provenance=self._provenance(),
+                    ),
+                )
+
+        source = SourceRecord.from_text(
+            "Ada met Bob. Ada met Bob.",
+            source_name="repeated-quote.txt",
+        )
+        result = UnstructuredPipeline(
+            claim_extractor=FirstOccurrenceProvider()
+        ).run(source)
+
+        self.assertEqual(len(result.promoted), 1)
+        self.assertIsNotNone(result.promoted[0].subject_mention_id)
+        self.assertIsNotNone(result.promoted[0].object_mention_id)
+        statuses = {
+            item["status"]
+            for item in result.claim_argument_resolution_results[0]["arguments"]
+        }
+        self.assertEqual(statuses, {"unique_evidence_anchor"})
+
+    def test_repeated_evidence_and_unknown_ids_never_fall_back_first_wins(
+        self,
+    ) -> None:
+        class AdversarialProvider:
+            def extract(inner_self, document, text, segments, mentions):
+                del inner_self, text, mentions
+                return (
+                    Claim(
+                        document=document,
+                        kind=ClaimKind.INTENT,
+                        subject="Ada",
+                        predicate="meet",
+                        object="Bob",
+                        subject_mention_id="mention_unknown",
+                        evidence=segments,
+                        provenance=self._provenance(),
+                    ),
+                )
+
+        source = SourceRecord.from_text(
+            "Ada met Bob. Ada met Bob.",
+            source_name="unknown-anchor.txt",
+        )
+        result = UnstructuredPipeline(claim_extractor=AdversarialProvider()).run(
+            source
+        )
+
+        self.assertFalse(result.promoted)
+        self.assertEqual(len(result.quarantined), 1)
+        quarantined = result.quarantined[0]
+        self.assertEqual(quarantined.kind, ClaimKind.INTENT)
+        self.assertEqual(quarantined.provenance, self._provenance())
+        self.assertEqual(
+            tuple(item.evidence_id for item in quarantined.evidence),
+            tuple(item.evidence_id for item in result.segments),
+        )
+        statuses = {
+            item["argument"]: item["status"]
+            for item in result.claim_argument_resolution_results[0]["arguments"]
+        }
+        self.assertEqual(statuses["subject"], "unknown_mention_id")
+        self.assertEqual(statuses["object"], "ambiguous_evidence_anchor")
+
 
 class ConstructionWorkflowContractTests(unittest.TestCase):
     def test_extract_materializes_all_resource_layers_with_evidence(self) -> None:
@@ -396,7 +882,7 @@ class ConstructionWorkflowContractTests(unittest.TestCase):
     def test_workflow_can_use_pipeline_directly_and_passes_validation(self) -> None:
         gold = _gold()
         source = SourceRecord.from_text(gold["text"], source_name="held_out.txt")
-        result = ConstructionWorkflow(
+        result = DraftConstructionWorkflow(
             extractors=[UnstructuredPipeline()]
         ).run([source])
 

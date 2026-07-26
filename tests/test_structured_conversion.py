@@ -15,20 +15,23 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from kg_construction import default_workflow_for_source_type
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.resolved_plan import ClassKind, IdentityScope
-from kg_construction.application.semantic_table_mapper import SemanticTableMapper
-from kg_construction.application.source_catalog import (
+from kg_construction.construction import convert
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.construction.workflow import DraftConstructionWorkflow
+from kg_construction.domain.modeling import ControlledVocabulary
+from kg_construction.domain.models import SourceRecord
+from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
+from kg_construction.research.workflow import (
+    draft_workflow_for_source_type,
+)
+from kg_construction.structured.resolved_plan import ClassKind, IdentityScope
+from kg_construction.structured.semantic_table_mapper import SemanticTableMapper
+from kg_construction.structured.source_catalog import (
     CatalogTableMapper,
     DeclaredForeignKey,
     SourceCatalog,
     TableDeclaration,
 )
-from kg_construction.application.workflow import ConstructionWorkflow
-from kg_construction.domain.modeling import ControlledVocabulary
-from kg_construction.domain.models import SourceRecord
-from kg_construction.infrastructure.resolution.exact import ExactKeyEntityResolver
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gold_standards" / "column_roles.json"
 
@@ -46,7 +49,7 @@ def _draft_result(
     source: SourceRecord,
     config: DataToKGConfig | None = None,
 ):
-    return default_workflow_for_source_type("csv", config).run([source])
+    return draft_workflow_for_source_type("csv", config).run([source])
 
 
 class ExitGateTests(unittest.TestCase):
@@ -71,9 +74,11 @@ class ExitGateTests(unittest.TestCase):
         self.assertTrue(all("business_key" in node.properties for node in employees))
 
     def test_direct_baseline_is_available_but_not_the_default(self) -> None:
-        config = DataToKGConfig()
-        config.pipeline.structured_mapping = "direct"
-        baseline = _draft_result(_employee_source(), config=config).property_graph
+        baseline = convert(
+            [_employee_source()],
+            "csv",
+            technique="direct_table_mapper",
+        ).property_graph
         # The baseline duplicates the categorical literal; the default does not.
         baseline_employees = [n for n in baseline.nodes if "department" in n.properties]
         self.assertTrue(baseline_employees)
@@ -127,7 +132,9 @@ class CrossFileIdentityScopeTests(unittest.TestCase):
         names = ("file_a.csv", "file_b.csv")
         by_name = {name: SemanticTableMapper(self._plan(name, scope)) for name in names}
         # One mapper per source, matched by source name at run time.
-        graph = ConstructionWorkflow(mappers=[_ByNameMapper(by_name)]).run(sources).property_graph
+        graph = DraftConstructionWorkflow(mappers=[_ByNameMapper(by_name)]).run(
+            sources
+        ).property_graph
         return sum(1 for node in graph.nodes if "Employee" in node.labels)
 
     def test_global_scope_merges_equal_business_keys_across_files(self) -> None:
@@ -235,7 +242,7 @@ class SourceCatalogTests(unittest.TestCase):
                 )
             )
         )
-        result = ConstructionWorkflow(
+        result = DraftConstructionWorkflow(
             mappers=[CatalogTableMapper(catalog)],
             resolvers=[ExactKeyEntityResolver()],
         ).run([customers, orders])
@@ -296,7 +303,7 @@ class SourceCatalogTests(unittest.TestCase):
                 )
             )
         )
-        graph = ConstructionWorkflow(
+        graph = DraftConstructionWorkflow(
             mappers=[CatalogTableMapper(catalog)],
             resolvers=[ExactKeyEntityResolver()],
         ).run([accounts, transactions]).property_graph
@@ -360,7 +367,7 @@ class SourceCatalogTests(unittest.TestCase):
                 )
             )
         )
-        graph = ConstructionWorkflow(
+        graph = DraftConstructionWorkflow(
             mappers=[CatalogTableMapper(catalog)],
             resolvers=[ExactKeyEntityResolver()],
         ).run([people, projects, memberships]).property_graph

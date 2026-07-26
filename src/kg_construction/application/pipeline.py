@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.infrastructure.extractors.regex import RegexEntityExtractor
 from kg_construction.infrastructure.mapping.direct_table_mapper import DirectTableMapper
 from kg_construction.infrastructure.ontology.validation import EvidenceRequiredValidator
@@ -23,7 +23,7 @@ class DataToKGPipeline:
     """Build a default local pipeline from YAML configuration."""
 
     @classmethod
-    def from_config(cls, config: DataToKGConfig) -> ConstructionWorkflow:
+    def from_config(cls, config: DataToKGConfig) -> DraftConstructionWorkflow:
         mappers: list[object] = []
         extractors: list[object] = []
         resolvers: list[object] = []
@@ -44,7 +44,7 @@ class DataToKGPipeline:
             params = _parameters(config.resolution, "rapidfuzz", "fuzzy", "rapidfuzz_resolver", "fuzzy_string_resolver")
             resolvers.append(RapidFuzzResolver(RapidFuzzResolverConfig.model_validate(params)))
 
-        return ConstructionWorkflow(
+        return DraftConstructionWorkflow(
             mappers=mappers,
             extractors=extractors,
             resolvers=resolvers,

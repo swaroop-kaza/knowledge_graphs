@@ -21,13 +21,8 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from kg_construction.application.benchmark_runner import (  # noqa: E402
-    EvaluationSettings,
-    TechniqueEvaluationConfig,
-    TechniqueEvaluationRunner,
-)
-from kg_construction.application.dataset_profiler import DatasetProfiler  # noqa: E402
-from kg_construction.application.workflow import (  # noqa: E402
+from kg_construction.construction.profiling import DatasetProfiler  # noqa: E402
+from kg_construction.construction.workflow import (  # noqa: E402
     ConstructionResult,
     ConstructionWorkflow,
 )
@@ -81,6 +76,11 @@ from kg_construction.infrastructure.resolution.entity_resolution import (  # noq
     NormalizedStringResolver,
     RapidFuzzResolver,
     SplinkProbabilisticResolver,
+)
+from kg_construction.research.benchmark_runner import (  # noqa: E402
+    EvaluationSettings,
+    TechniqueEvaluationConfig,
+    TechniqueEvaluationRunner,
 )
 
 DATA_DIR = ROOT / "data" / "external" / "experiment_datasets"
@@ -728,7 +728,8 @@ def run_gliner_label_pipeline() -> dict[str, Any]:
                 "notes": (
                     "Label proposal used the same OllamaLabelProposalExtractor review logic with "
                     "an offline static provider. GLiNER extraction used the implemented model protocol "
-                    "with WikiANN gold spans because the gliner package/model weights are optional."
+                    "with WikiANN gold spans to keep this dataset experiment deterministic; the "
+                    "mandatory release hard pass executes the locked GLiNER package and weights."
                 ),
             }
         )
@@ -784,7 +785,7 @@ def run_resolution_adapter_checks() -> list[dict[str, Any]]:
             status = "ok"
             error = None
         except AdapterNotConfigured as exc:
-            status = "requires_optional_configuration"
+            status = "requires_research_configuration"
             error = str(exc)
         except Exception as exc:
             status = "failed"
@@ -1226,9 +1227,9 @@ def write_markdown_report(
         "",
         "## GLiNER plus LLM-label workflow",
         "",
-        "The current environment does not have the optional `gliner` package/model weights installed. "
-        "The report therefore exercises the implemented GLiNER model protocol with WikiANN gold spans "
-        "and the implemented Ollama label proposal review logic with an offline static provider.",
+        "This deterministic dataset report exercises the GLiNER model protocol with WikiANN gold "
+        "spans and the Ollama label-proposal review logic with a static provider. The mandatory "
+        "release hard pass separately executes the locked GLiNER and Ollama runtimes.",
         "",
         "```json",
         json.dumps(model_dump(gliner_summary), indent=2, sort_keys=True),

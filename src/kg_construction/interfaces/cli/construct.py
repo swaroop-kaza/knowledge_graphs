@@ -7,12 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.public_api import construct_kg, load_sources
-from kg_construction.application.publication_contract import (
-    UntrustedPublicationContractError,
-)
-from kg_construction.application.workflow import PublicationGateError
+from kg_construction.construction import construct_kg, load_sources
+from kg_construction.construction.config import DataToKGConfig
 from kg_construction.infrastructure.graph_stores.exporters import Neo4jExporter, RDFExporter
 
 
@@ -47,14 +43,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--config",
-        help="YAML config path; the mandatory product defaults are used when omitted.",
+        help="YAML config path; the product defaults are used when omitted.",
+    )
+    parser.add_argument(
+        "--technique",
+        help=(
+            "Conversion technique (for example semantic_table_mapper, "
+            "direct_table_mapper, jsonpath_mapper, evidence_first_unstructured_pipeline). "
+            "The default technique for the source type is used when omitted."
+        ),
     )
     parser.add_argument(
         "--evaluation-suite",
-        required=True,
         help=(
-            "Sealed versioned YAML/JSON gold suite. Predictions are computed "
-            "from the frozen graph and cannot be supplied in this file."
+            "Sealed versioned YAML/JSON gold suite to execute against the draft "
+            "graph. Its formation, extraction, and intended-use results are "
+            "reported; only the separate certification command authorizes release."
         ),
     )
     parser.add_argument("--output", required=True, help="Property graph JSON output path.")
@@ -103,44 +107,13 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(raw_args)
     config = DataToKGConfig.from_yaml(args.config) if args.config else DataToKGConfig()
     sources = load_sources(args.input, source_type=args.source_type)
-    try:
-        result = construct_kg(
-            sources,
-            source_type=args.source_type,
-            config=config,
-            evaluation_suite_path=args.evaluation_suite,
-        )
-    except UntrustedPublicationContractError as exc:
-        print(
-            json.dumps(
-                {
-                    "error": "untrusted_publication_contract",
-                    "research_only": True,
-                    "reasons": exc.assessment.reasons,
-                    "graph_outputs_written": False,
-                },
-                indent=2,
-                sort_keys=True,
-            ),
-            file=sys.stderr,
-        )
-        return 2
-    except PublicationGateError as exc:
-        print(
-            json.dumps(
-                {
-                    "error": "publication_gates_failed",
-                    "failed_gates": exc.result.publication_gate.failed_gates,
-                    "quality_passed": exc.result.quality_report.passed,
-                    "intended_use_passed": exc.result.intended_use_report.passed,
-                    "graph_outputs_written": False,
-                },
-                indent=2,
-                sort_keys=True,
-            ),
-            file=sys.stderr,
-        )
-        return 2
+    result = construct_kg(
+        sources,
+        source_type=args.source_type,
+        config=config,
+        technique=args.technique,
+        evaluation_suite_path=args.evaluation_suite,
+    )
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -200,12 +173,13 @@ def main(argv: list[str] | None = None) -> int:
         result.intended_use_report.model_dump_json(indent=2),
         encoding="utf-8",
     )
-    if result.publication_contract is None:
-        raise RuntimeError("public CLI result is missing publication-contract evidence")
-    publication_contract_path.write_text(
-        result.publication_contract.model_dump_json(indent=2),
-        encoding="utf-8",
-    )
+    # Draft conversion has no release authorization. This branch is retained for
+    # callers that supply a workflow result already bound by certification.
+    if result.publication_contract is not None:
+        publication_contract_path.write_text(
+            result.publication_contract.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
 
     summary = {
         "sources": len(sources),
@@ -225,7 +199,11 @@ def main(argv: list[str] | None = None) -> int:
             if result.publication_contract is not None
             else None
         ),
-        "publication_contract_output": str(publication_contract_path),
+        "publication_contract_output": (
+            str(publication_contract_path)
+            if result.publication_contract is not None
+            else None
+        ),
         "output": str(output_path),
         "rdf_output": str(rdf_path),
         "evidence_output": str(evidence_path),

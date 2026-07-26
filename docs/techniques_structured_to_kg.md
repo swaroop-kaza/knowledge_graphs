@@ -1,18 +1,34 @@
 # Structured data → knowledge graph: techniques explained
 
-Technical reference for **Pillar 1** — converting tables (CSV, Excel, SQL) and semi-structured payloads (JSON, XML, JSON-LD) into a graph.
+[Documentation home](README.md) / Structured construction techniques
+
+This guide explains **Pillar 1**: converting tables (CSV, Excel, SQL) and semi-structured payloads (JSON, XML, JSON-LD) into a correctly identified and related graph. Read the [repository architecture](architecture.md) for package boundaries or the [formation contract](knowledge_graph_modelling.md#pillar-1-structured-data-to-knowledge-graph) for normative stage gates.
 
 - **Each real thing is identified once.**
-- **Categorical values are shared**, not repeated as literals.
+- **Reusable governed categories become shared concept nodes; scalar enumerations remain properties.**
 - **Foreign keys become typed edges.**
 
-The governing rule of this pillar:
+The governing rules of this pillar are:
 
 - **Cardinality is evidence, not semantics** — a value that repeats 10,000 times is not automatically an entity.
 - **Two independent decisions per column** — its *semantic role* and its *physical materialization*.
 - **Only their combination decides** node vs. edge vs. property.
 
-Contents:
+> **Running a technique:** `convert(data, source_format, technique)` returns a draft graph plus every computed metric. Draft return is deliberately total; it is not a publication certificate. Certified construction applies all mandatory gates through the zero-skip hard pass.
+
+Canonical product namespace: `kg_construction.structured`.
+
+## Guide map
+
+| Question | Start here |
+| --- | --- |
+| What happens by default? | [The semantic pipeline](#1-the-default-path-the-semantic-pipeline) |
+| How does a column become an identity, node, edge, or property? | [Semantic column profiling](#2-technique-1--semantic-column-profiling) |
+| How are identity and schema kept consistent? | [Resolved modelling plan](#3-technique-2--the-resolved-modelling-plan-and-six-projections) |
+| How do foreign keys work across tables or files? | [Source catalog](#4-technique-3--the-source-catalog-and-cross-table-foreign-keys) |
+| Which mapper should I select? | [Technique decision guide](#10-choosing-a-technique) |
+
+Detailed contents:
 
 1. [The default path: the semantic pipeline](#1-the-default-path-the-semantic-pipeline)
 2. [Technique 1 — semantic column profiling](#2-technique-1--semantic-column-profiling)
@@ -29,9 +45,9 @@ Contents:
 
 ## 1. The default path: the semantic pipeline
 
-- **Default is semantic** — `construct_kg(..., source_type="csv")` uses config default `pipeline.structured_mapping="semantic"`.
+- **Default is semantic** — `convert(..., "csv")` uses the governed semantic mapper unless a different draft technique is named explicitly.
 - **Four-module chain** — profiler → resolved plan → source catalog → mapper.
-- **`direct` opts out** — selects the legacy baseline instead.
+- **`direct` is a baseline** — it is retained for explicit comparison and standards-level direct mapping, not as the semantic product default.
 
 ```mermaid
 flowchart LR
@@ -43,18 +59,18 @@ flowchart LR
     F --> G[ConstructionBatch<br/>shared concept nodes · FK edges · literal properties]
 ```
 
-| Module | File | Produces |
+| Module | Canonical package | Produces |
 | --- | --- | --- |
-| `SemanticColumnProfiler` | `application/semantic_profiler.py` | `ColumnRoleAssignment` per column + a proposed `ModelingPolicy` |
-| `resolve_modeling_plan` | `application/plan_resolution.py` | `ResolvedModelingPlan` (the only construction-ready contract) |
-| `SourceCatalog` / `CatalogTableMapper` | `application/source_catalog.py` | Cross-table FK resolution, governed vocabularies, coverage |
-| `SemanticTableMapper` | `application/semantic_table_mapper.py` | The materialized `ConstructionBatch` |
+| `SemanticColumnProfiler` | `kg_construction.structured.profiling` | `ColumnRoleAssignment` per column + a proposed `ModelingPolicy` |
+| `resolve_modeling_plan` | `kg_construction.structured.planning` | `ResolvedModelingPlan` (the only construction-ready contract) |
+| `SourceCatalog` / `CatalogTableMapper` | `kg_construction.structured.catalog` | Cross-table FK resolution, governed vocabularies, coverage |
+| `SemanticTableMapper` | `kg_construction.structured.mapping` | The materialized `ConstructionBatch` |
 
 ---
 
 ## 2. Technique 1 — semantic column profiling
 
-**File:** `application/semantic_profiler.py` · **Registry:** `semantic_column_profiler`
+**Public module:** `kg_construction.structured.profiling` · **Registry:** `semantic_column_profiler`
 
 ### What it does technically
 
@@ -88,7 +104,7 @@ flowchart TB
 
 ### The promotion rule (why `status` stays a property but `department` becomes a node)
 
-Low cardinality **never** promotes a column on its own. `PromotionThresholds` (`application/modeling_policy.py`) encodes the guardrails:
+Low cardinality **never** promotes a column on its own. `kg_construction.structured.PromotionThresholds` encodes the guardrails:
 
 | Threshold | Default | Effect |
 | --- | ---: | --- |
@@ -109,12 +125,12 @@ Low cardinality **never** promotes a column on its own. `PromotionThresholds` (`
 
 ## 3. Technique 2 — the resolved modelling plan and six projections
 
-**Files:** `application/resolved_plan.py`, `application/plan_resolution.py`, `application/schema_projections.py`
+**Public modules:** `kg_construction.structured.contracts`, `kg_construction.structured.planning`, and `kg_construction.structured.schema_projection`
 
 ### What it does technically
 
 - **The policy is only a proposal** — `resolve_modeling_plan` lowers it into a `ResolvedModelingPlan`, the single construction-ready contract.
-- **It carries every resolved facet** — keys, identity scope, entity-vs-concept + `concept_scheme`, datatypes/nullability, cardinality, canonicalization rules, FK `on_missing=SKIP` policy, provenance, confidence, and review state.
+- **It carries every resolved facet** — keys, identity scope, entity-vs-concept + `concept_scheme`, datatypes/nullability, cardinality, canonicalization rules, missing-FK policy, provenance, confidence, and review state. A missing-FK `SKIP` means “emit no fabricated edge”; it is unrelated to certification skips.
 - **Standards are pinned** — RDF `rdf-1.1`, SHACL `1.0`, OWL `owl2-rl`.
 
 ### The six-projection agreement gate
@@ -153,13 +169,13 @@ Identity is resolved *before* edges are formed:
 
 ## 4. Technique 3 — the source catalog and cross-table foreign keys
 
-**File:** `application/source_catalog.py` · **Registry:** `source_catalog`, `semantic_table_mapper` (as `CatalogTableMapper`)
+**Public module:** `kg_construction.structured.catalog` · **Registry:** `source_catalog`, `semantic_table_mapper` (as `CatalogTableMapper`)
 
 ### What it does technically
 
 - **Resolves all tables together** — `SourceCatalog` accepts *declared* structure before mapping, so a foreign key can point at a row in another file.
-- **Declarations are authoritative** — profiling is only a fallback.
-- **Fallback confidence is retained** — a profiled key/FK never masquerades as a declared one.
+- **Declarations are authoritative** — profiling supplies an evidence-bearing proposal where a declaration is absent.
+- **Proposal confidence is retained** — a profiled key/FK never masquerades as a declared one.
 
 ```python
 catalog = SourceCatalog().declare(
@@ -171,7 +187,7 @@ catalog = SourceCatalog().declare(
 )
 ```
 
-Declared structure can come from four sources, with a profiler fallback:
+Declared structure can come from four sources; profiling can propose unresolved facets:
 
 | Declaration source | Standard alignment |
 | --- | --- |
@@ -190,7 +206,7 @@ Declared structure can come from four sources, with a profiler fallback:
 
 ## 5. Technique 4 — semantic table materialization
 
-**File:** `application/semantic_table_mapper.py` · **Registry:** `semantic_table_mapper`
+**Public module:** `kg_construction.structured.mapping` · **Registry:** `semantic_table_mapper`
 
 ### What it does technically
 
@@ -223,7 +239,7 @@ flowchart LR
 
 **3. Canonicalization.**
 
-- **Surfaces are normalized** — Unicode NFKC, trim, collapse whitespace, optional casefold, alias table (`CanonicalizationRule`), while `raw_value` is retained.
+- **Surfaces are normalized** — Unicode NFKC, trim, collapse whitespace, policy-controlled case folding, and an alias table (`CanonicalizationRule`), while `raw_value` is retained.
 - **Spellings collapse** — two forms of the same value become one node.
 - **Closed vocabularies are enforced** — an unknown code is rejected or quarantined.
 
@@ -260,7 +276,7 @@ The employee gold fixture builds, with no duplicated literals:
 
 ## 6. Technique 5 — the direct table mapper (baseline)
 
-**File:** `infrastructure/mapping/direct_table_mapper.py` · **Registry:** `direct_table_mapper` (+ the `table_to_node_mapping`, `row_to_entity_mapping`, `primary_key_to_id_mapping`, `foreign_key_to_edge_mapping`, `column_to_property_mapping`, `schema_profiling`, `column_type_inference` aliases)
+**Runtime implementation:** `kg_construction.infrastructure.mapping.direct_table_mapper` · **Registry:** `direct_table_mapper` (plus the `table_to_node_mapping`, `row_to_entity_mapping`, `primary_key_to_id_mapping`, `foreign_key_to_edge_mapping`, `column_to_property_mapping`, `schema_profiling`, and `column_type_inference` aliases)
 
 ### What it does technically
 
@@ -275,13 +291,13 @@ Why it is kept:
 
 - **A named baseline** — select with `pipeline.structured_mapping="direct"`.
 - **Documents the sub-steps** — registry aliases cover row→entity, PK→id, FK→edge, column→property, and type inference.
-- **Proves the default's value** — the leaderboard ranks `semantic_table_mapper` first for CSV precisely because the direct mapper repeats literals.
+- **Characterizes the baseline defect** — formation metrics expose duplicated categorical literals even when a research ranking happens to reward other dimensions.
 
 ---
 
 ## 7. Technique 6 — standards-based mapping (R2RML / RML / CSVW / JSON-LD / OBDA)
 
-**File:** `infrastructure/mapping/standards.py` · **Registry:** `r2rml_mapper`, `rml_mapper`, `csvw_mapper`, `jsonld_mapper`, `obda_virtual_graph_mapper`
+**Runtime implementation:** `kg_construction.infrastructure.mapping.standards` · **Registry:** `r2rml_mapper`, `rml_mapper`, `csvw_mapper`, `jsonld_mapper`, `obda_virtual_graph_mapper`
 
 When you already have a W3C mapping document, these executable mappers apply it directly rather than re-inferring semantics.
 
@@ -301,12 +317,12 @@ When you already have a W3C mapping document, these executable mappers apply it 
 
 ## 8. Technique 7 — semi-structured mapping (JSONPath / dotted-path / XPath)
 
-**File:** `infrastructure/mapping/semi_structured.py` · **Registry:** `jsonpath_mapper`, `dotted_path_json_mapper`, `xmlpath_mapper`, `api_response_mapper`
+**Runtime implementation:** `kg_construction.infrastructure.mapping.semi_structured` · **Registry:** `jsonpath_mapper`, `dotted_path_json_mapper`, `xmlpath_mapper`, `api_response_mapper`
 
 | Mapper | Technique |
 | --- | --- |
 | `JsonPathMapper` | Uses `jsonpath_ng` selectors: a `root_path` locates entity objects, `JsonPropertyMapping` selectors pull properties, and `JsonArrayEdgeMapping` turns object-array matches into child entities + edges. Each value carries **path evidence** (the JSONPath that produced it). |
-| `DottedPathJsonMapper` | Lightweight fallback: flattens nested JSON into dotted-key properties (`owner.team`, `deps[0].name`) on one node. |
+| `DottedPathJsonMapper` | Minimal flattening mapper: writes nested JSON as dotted-key properties (`owner.team`, `deps[0].name`) on one node. |
 | `XMLPathMapper` | XPath-selector equivalent for XML documents. |
 | `APIResponseMapper` | Maps a structured API response envelope to entities/edges. |
 
@@ -317,7 +333,7 @@ When you already have a W3C mapping document, these executable mappers apply it 
 
 ## 9. Technique 8 — event / log mapping
 
-**File:** `infrastructure/mapping/` · **Registry:** `event_graph_mapper`, `log_event_mapper`, `html_metadata_mapper`
+**Runtime package:** `kg_construction.infrastructure.mapping` · **Registry:** `event_graph_mapper`, `log_event_mapper`, `html_metadata_mapper`
 
 | Mapper | Technique |
 | --- | --- |
@@ -355,4 +371,14 @@ flowchart TD
 | **Events** | `event_graph_mapper` | Time-stamped, multi-role occurrences |
 | **Baseline only** | `direct_table_mapper` | Comparison / demonstrating literal duplication |
 
-See the runnable commands for each in the [README run guide](../README.md#running-every-technique) and how to test them in the [testing guide](testing_guide.md).
+## Next steps
+
+| Goal | Continue with |
+| --- | --- |
+| Run a first structured conversion | [Getting started](getting_started.md) |
+| Configure declarations, identity, vocabularies, and stores | [Configuration](configuration.md) |
+| Understand structured formation and intended-use metrics | [Evaluation metrics](evaluation_metrics.md) |
+| Trace the implementation stage by stage | [Stage-by-stage implementation](stage_by_stage_implementation.md) |
+| Verify the behaviour with focused and full test suites | [Testing guide](testing_guide.md) |
+
+The runnable product commands are also summarized in the [project README](../README.md). Technique comparison belongs to `kg_construction.research` and cannot establish publishability.

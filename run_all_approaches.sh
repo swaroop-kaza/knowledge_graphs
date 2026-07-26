@@ -19,6 +19,12 @@ mkdir -p "$output_dir"
 export UV_OFFLINE=1
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+# One explicit local-service contract is inherited unchanged by readiness,
+# doctor, public construction, and every per-capability certification process.
+set -a
+# shellcheck disable=SC1091
+source src/kg_construction/resources/service-runtime.env
+set +a
 profile_name="${KG_CERT_PROFILE:-}"
 
 # Locked images and model artifacts must already be local. These commands are

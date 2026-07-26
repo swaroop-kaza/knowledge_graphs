@@ -22,6 +22,7 @@ from typing import Any
 import yaml
 
 from kg_construction.certification.preflight import check_model_manifest
+from kg_construction.service_runtime import DEFAULT_OLLAMA_BASE_URL
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MANIFEST = _ROOT / "models.manifest.yaml"
@@ -33,12 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--ollama-url",
-        default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        default=os.getenv("OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL),
     )
     return parser
 
 
-def build_lock(*, ollama_url: str = "http://localhost:11434") -> dict[str, Any]:
+def build_lock(*, ollama_url: str = DEFAULT_OLLAMA_BASE_URL) -> dict[str, Any]:
     manifest_check = check_model_manifest(_MANIFEST)
     if not manifest_check.passed:
         raise SystemExit(f"invalid models.manifest.yaml: {manifest_check.detail}")

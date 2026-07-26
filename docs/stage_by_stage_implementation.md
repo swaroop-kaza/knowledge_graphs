@@ -1,6 +1,33 @@
 # Stage-by-stage implementation and release gates
 
+[Documentation home](README.md) · [Architecture](architecture.md) · [Modelling rules](knowledge_graph_modelling.md) · [Testing](testing_guide.md)
+
 This is the execution order for the repository. A later stage cannot compensate for a failed earlier stage: retrieval tuning cannot repair duplicate identities, and a graph database constraint cannot recover a relation whose source evidence was discarded.
+
+`convert(...)` may return a draft graph after any stage so failures can be inspected. The hard gates below describe the **publishability/certification decision**, not whether a draft object can be returned.
+
+Canonical ownership is `kg_construction.structured`, `kg_construction.unstructured`, and `kg_construction.evaluation`. Research comparison is isolated under `kg_construction.research`.
+
+## Stage map
+
+```mermaid
+flowchart LR
+    S0["0 · Freeze contract"] --> S1["1–4 · Structured formation"]
+    S0 --> S5["5–7 · Unstructured formation"]
+    S1 --> S8["8 · Formation evaluation"]
+    S5 --> S8
+    S8 --> S9["9 · Intended-use evaluation"]
+    S9 --> S10["10 · Stores and certification"]
+    S10 -. after product gates .-> R["Research comparisons"]
+```
+
+| Stages | Outcome | Failure means |
+| --- | --- | --- |
+| [0](#stage-0--freeze-the-execution-contract) | Immutable execution contract | No trustworthy run can start |
+| [1](#stage-1--inventory-structured-sources)–[4](#stage-4--generate-and-validate-schema-projections) | Structured identity, relationships, and schema | Fix construction before evaluating |
+| [5](#stage-5--preserve-immutable-unstructured-evidence)–[7](#stage-7--construct-semantic-assertions-without-losing-intent) | Evidence-grounded unstructured assertions | Quarantine or fix extraction |
+| [8](#stage-8--evaluate-formation-quality)–[9](#stage-9--evaluate-the-declared-graph-usage) | Formation and declared-use observations | Draft remains inspectable but not publishable |
+| [10](#stage-10--materialize-and-certify-stores) | Store execution and certification evidence | No release certificate |
 
 ## Stage 0 — freeze the execution contract
 
@@ -11,6 +38,7 @@ Inputs:
 - `certification/services.yaml`
 - `capability_manifest.yaml`
 - `src/kg_construction/resources/publication_contracts_v1.yaml`
+- `src/kg_construction/resources/service-runtime.env`
 
 Actions:
 
@@ -18,8 +46,9 @@ Actions:
 2. Resolve Python distributions, service images, model revisions, model files, and the Ollama model content digest.
 3. Hydrate those artifacts once.
 4. Reject a requested accelerator profile when the host cannot execute it.
-5. At the public boundary, match the exact evaluation-suite bytes, raw and deterministic post-PII source snapshots, semantic configuration, model lock, governed schema, held-out gold, graph-builder contract, and policy digest to a reviewed release contract.
+5. At the certification boundary, match the exact evaluation-suite bytes, raw and deterministic post-PII source snapshots, semantic configuration, model lock, governed schema, held-out gold, graph-builder contract, and policy digest to a reviewed release contract.
 6. Enforce repository-owned metric floors and latency/resource ceilings before construction; a caller cannot weaken policy by editing and re-sealing a fixture.
+7. Export one locked Neo4j/Memgraph/Ollama environment into setup, readiness, doctor, public workloads, and every certification subprocess; reject empty values and conflicting legacy aliases.
 
 Artifacts:
 
@@ -34,9 +63,9 @@ Gate: every applicable capability has one executable semantic certifier. MLX is 
 
 Implementation:
 
-- `application/source_catalog.py`
-- `application/semantic_profiler.py`
-- `application/resolved_plan.py`
+- `kg_construction.structured.catalog`
+- `kg_construction.structured.profiling`
+- `kg_construction.structured.contracts`
 
 Actions:
 
@@ -46,15 +75,15 @@ Actions:
 4. Resolve one modelling plan and derive all schema projections from it.
 5. Build a uniqueness-checked index for every declared primary or candidate key; a foreign key targets that exact index and resolves to the target entity's canonical primary identity.
 
-Gate: every included column has a semantic role and materialization decision; declared keys have valid arity and scope, and every raw and post-normalization key is unique. A duplicate candidate key is an error, never an arbitrary "first row wins" choice.
+Gate: every included column has a semantic role and materialization decision; declared keys have valid arity and scope, and every raw and post-normalization key is unique. A duplicate candidate key is an error, never an arbitrary “first row wins” choice.
 
 ## Stage 2 — resolve structured identity and categories
 
 Implementation:
 
-- `application/semantic_table_mapper.py`
-- `infrastructure/resolution/exact.py`
-- `domain/modeling.py`
+- `kg_construction.structured.mapping`
+- `kg_construction.structured.identity`
+- `kg_construction.structured.contracts`
 
 Actions:
 
@@ -78,9 +107,9 @@ Hard gates:
 
 Implementation:
 
-- `application/source_catalog.py`
-- `application/semantic_table_mapper.py`
-- `infrastructure/ontology/validation.py`
+- `kg_construction.structured.catalog`
+- `kg_construction.structured.mapping`
+- `kg_construction.infrastructure.ontology.validation`
 
 Actions:
 
@@ -101,9 +130,10 @@ Hard gates:
 
 Implementation:
 
-- `application/resolved_plan.py`
-- `infrastructure/ontology/`
-- `infrastructure/graph_builders/`
+- `kg_construction.structured.contracts`
+- `kg_construction.structured.schema_projection`
+- `kg_construction.infrastructure.ontology`
+- `kg_construction.infrastructure.graph_builders`
 
 Actions:
 
@@ -119,15 +149,15 @@ Gate: SHACL must have executed and `sh:conforms` must be true; an absent SHACL r
 
 Implementation:
 
-- `domain/claim.py`
-- `application/unstructured_pipeline.py`
+- `kg_construction.unstructured.Claim`
+- `kg_construction.unstructured.pipeline`
 
 Actions:
 
 1. Create a versioned document identity from the immutable content.
 2. Segment while retaining absolute, end-exclusive offsets.
 3. Validate `text[start:end] == quote` for every segment and provider output.
-4. Keep Document, Mention, ObservedEntity, CanonicalEntity, Claim, and Event as separate resource layers.
+4. Keep Document, Mention, ObservedEntity, CanonicalEntity, semantic assertion (`Claim` in the implementation), and Event as separate resource layers.
 
 Hard gates:
 
@@ -140,10 +170,10 @@ Hard gates:
 
 Implementation:
 
-- `infrastructure/extractors/model_backed/mentions.py`
-- `infrastructure/extractors/model_backed/relations.py`
-- `infrastructure/extractors/model_backed/claims.py`
-- `infrastructure/extractors/model_backed/factory.py`
+- `kg_construction.infrastructure.extractors.model_backed.mentions`
+- `kg_construction.infrastructure.extractors.model_backed.relations`
+- `kg_construction.infrastructure.extractors.model_backed.claims`
+- `kg_construction.infrastructure.extractors.model_backed.factory`
 
 Every profile runs one composed bundle containing:
 
@@ -161,16 +191,16 @@ Apple Silicon additionally runs Qwen3 through MLX. Providers load only the hydra
 
 Gate: required provider IDs = executed provider IDs, with exact offsets and complete model revision/configuration provenance. The doctor recomputes every selected artifact size and SHA-256 from `models.lock.yaml`; importing a package or finding a directory is not sufficient.
 
-## Stage 7 — construct claims without losing intent
+## Stage 7 — construct semantic assertions without losing intent
 
 Implementation:
 
-- `application/unstructured_pipeline.py`
-- `domain/claim.py`
+- `kg_construction.unstructured.pipeline`
+- `kg_construction.unstructured.Claim`
 
 Actions:
 
-1. Extract relations, facts, events, and intents into a reified claim model.
+1. Extract relations, facts, events, and intents into a reified semantic-assertion model (`Claim` in the implementation).
 2. Preserve negation, modality, attribution, temporal/quantity qualifiers, and typed event roles.
 3. Resolve document-local coreference conservatively.
 4. Run the mandatory identity ensemble and retain NIL when no candidate reaches its governed threshold.
@@ -185,8 +215,10 @@ Gate: unsupported promoted claim rate = `0`. Entity, span, relation, event-role,
 
 Implementation:
 
-- `infrastructure/evaluation/`
+- `kg_construction.evaluation`
 - `tests/fixtures/gold_standards/`
+
+The old `kg_construction.infrastructure.evaluation.*` paths are explicit compatibility shims only. Product metrics and gates are implemented in the canonical evaluation package; no wildcard façade is used.
 
 Required metric families:
 
@@ -205,7 +237,7 @@ Each observation records purpose, value, support, threshold, comparator, executi
 
 ## Stage 9 — evaluate the declared graph usage
 
-The frozen graph is evaluated separately for every declared consumer. Benchmark files contain workload definitions and gold judgments, not caller-computed predictions. A runner executes each workload against the frozen graph/store snapshot and records the graph hash and fixture hash:
+The frozen graph is evaluated separately for every declared consumer. Evaluation fixtures contain workload definitions and gold judgments, not caller-computed predictions. A runner executes each workload against the frozen graph/store snapshot and records the graph hash and fixture hash:
 
 - SQL-like/property-graph query correctness and aggregation accuracy;
 - NoSQL traversal/path correctness;
@@ -215,15 +247,15 @@ The frozen graph is evaluated separately for every declared consumer. Benchmark 
 - recommendation accuracy, coverage, novelty, and diversity;
 - competency-question and inference accuracy.
 
-Gate: formation gates remain conjunctive. A strong downstream score cannot override duplicate identities, unsupported claims, dangling edges, or SHACL violations. Validation, every quality family, and every intended-use family must pass before any graph output is published; a failed report makes the product API and CLI fail.
+Gate: formation gates remain conjunctive. A strong downstream score cannot override duplicate identities, unsupported claims, dangling edges, or SHACL violations. Validation, every required quality family, and every declared intended-use family must pass before certification can authorize publication. Draft API and CLI conversion still returns the graph and failed observations for diagnosis; it does not turn that draft into a release.
 
 ## Stage 10 — materialize and certify stores
 
 Implementation:
 
-- `infrastructure/graph_stores/`
+- `kg_construction.infrastructure.graph_stores`
 - `scripts/certify_capability.py`
-- `src/kg_construction/certification/`
+- `kg_construction.certification`
 
 Actions:
 
@@ -246,3 +278,20 @@ Run the final condition with:
 ```bash
 bash run_all_approaches.sh
 ```
+
+## Research after the product gates
+
+Simple benchmarks, weighted technique leaderboards, synthetic cross-source resolver comparisons, Graph ML experiments, and mocked provider demonstrations run only after and outside the product stages:
+
+```bash
+make research-smoke
+```
+
+They may explain trade-offs, but never change a product metric, provider requirement, or publication decision.
+
+## Related guides
+
+- [Architecture](architecture.md) explains package ownership and end-to-end data flow.
+- [Getting started](getting_started.md) turns the stages into runnable setup and hard-pass commands.
+- [Evaluation metrics](evaluation_metrics.md) defines the gates used in stages 8 and 9.
+- [Testing](testing_guide.md) maps each stage to focused tests and reports.

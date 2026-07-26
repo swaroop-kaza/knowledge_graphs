@@ -6,14 +6,6 @@ import unittest
 
 from pydantic import ValidationError
 
-from kg_construction.application.modeling_policy import (
-    CanonicalizationRule,
-    ColumnPolicy,
-    ModelingPolicy,
-    PromotionThresholds,
-    RelationshipDeclaration,
-    default_modeling_policy,
-)
 from kg_construction.domain.modeling import (
     Cardinality,
     ColumnRole,
@@ -22,6 +14,14 @@ from kg_construction.domain.modeling import (
     OntologyPredicate,
     OntologySchema,
     ReferenceNode,
+)
+from kg_construction.structured.modeling_policy import (
+    CanonicalizationRule,
+    ColumnPolicy,
+    ModelingPolicy,
+    PromotionThresholds,
+    RelationshipDeclaration,
+    default_modeling_policy,
 )
 
 

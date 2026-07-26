@@ -36,7 +36,6 @@ class JSONLDMappingConfig:
     base_iri: str | None = None
     schema_version: str = "v1"
     named_graph: str | None = None
-    use_pyld_expansion: bool = True
 
 
 class JSONLDMapper:
@@ -49,16 +48,15 @@ class JSONLDMapper:
         self.config = config or JSONLDMappingConfig()
 
     def expand(self, payload: JsonDict | list[JsonDict]) -> Any:
-        """Return JSON-LD expansion using pyld when installed, else a lightweight fallback."""
+        """Return standards-compliant JSON-LD expansion using mandatory PyLD."""
 
-        if self.config.use_pyld_expansion:
-            try:
-                from pyld import jsonld
-
-                return jsonld.expand(payload)
-            except ImportError:
-                pass
-        return _lightweight_jsonld_expand(payload)
+        try:
+            from pyld import jsonld
+        except ImportError as exc:
+            raise AdapterNotConfigured(
+                "JSON-LD expansion requires the mandatory pyld runtime dependency."
+            ) from exc
+        return jsonld.expand(payload)
 
     def map_source(self, source: SourceRecord) -> ConstructionBatch:
         payload = _payload_from_source(source)
@@ -247,26 +245,6 @@ def _payload_from_source(source: SourceRecord) -> JsonDict | list[JsonDict]:
     if isinstance(payload, dict | list):
         return payload
     return {"value": payload}
-
-
-def _lightweight_jsonld_expand(payload: JsonDict | list[JsonDict]) -> Any:
-    def expand_item(item: JsonDict) -> JsonDict:
-        context = item.get("@context", {})
-        if not isinstance(context, dict):
-            context = {}
-        expanded: JsonDict = {}
-        for key, value in item.items():
-            if key == "@context":
-                continue
-            expanded_key = context.get(key, key)
-            if isinstance(expanded_key, dict):
-                expanded_key = expanded_key.get("@id", key)
-            expanded[str(expanded_key)] = value
-        return expanded
-
-    if isinstance(payload, list):
-        return [expand_item(item) if isinstance(item, dict) else item for item in payload]
-    return [expand_item(payload)]
 
 
 _SPARQL_TRIPLE_RE = re.compile(

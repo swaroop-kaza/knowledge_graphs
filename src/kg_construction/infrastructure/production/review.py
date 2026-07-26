@@ -9,7 +9,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from kg_construction.domain.models import ConstructionBatch, stable_id, utc_now
-from kg_construction.infrastructure.ontology.validation import ValidationFinding
+from kg_construction.domain.validation import ValidationFinding
 
 JsonDict = dict[str, Any]
 ReviewStatus = Literal["pending_review", "approved", "rejected"]

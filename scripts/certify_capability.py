@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from kg_construction.certification.capabilities import certify_capability
+from kg_construction.service_runtime import LockedServiceRuntime
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +34,7 @@ def _required_environment(name: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        LockedServiceRuntime.from_environment()
         capability = _required_environment("KG_CERT_CAPABILITY")
         profile = _required_environment("KG_CERT_PROFILE")
         run_id = _required_environment("KG_CERT_RUN_ID")

@@ -18,20 +18,21 @@ from typing import Any, Literal
 
 import yaml
 
-from kg_construction.application import __all__ as application_exports
-from kg_construction.application.benchmark_runner import TechniqueEvaluationConfig
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.graph_ml import graph_ml_workflow_config_from_dict
-from kg_construction.application.hybrid_gliner import HybridGlinerPipelineConfig
+from kg_construction import __all__ as public_exports
 from kg_construction.certification.preflight import (
     check_model_lock,
     check_model_manifest,
     check_models_present,
 )
+from kg_construction.construction.config import DataToKGConfig
 from kg_construction.infrastructure.extractors.model_backed.factory import (
     detect_mandatory_profile,
 )
 from kg_construction.infrastructure.extractors.relations import RelationTypingConfig
+from kg_construction.research.benchmark_runner import TechniqueEvaluationConfig
+from kg_construction.research.graph_ml import graph_ml_workflow_config_from_dict
+from kg_construction.research.hybrid_gliner import HybridGlinerPipelineConfig
+from kg_construction.service_runtime import LockedServiceRuntime
 
 DoctorStatus = Literal["ok", "fail"]
 JsonDict = dict[str, Any]
@@ -39,7 +40,7 @@ JsonDict = dict[str, Any]
 
 @dataclass(frozen=True, slots=True)
 class DependencyProbe:
-    """One distribution/module pair used to infer extra availability."""
+    """One distribution/module pair in a mandatory dependency group."""
 
     distribution: str
     module: str
@@ -90,7 +91,7 @@ CORE_IMPORTS: tuple[DependencyProbe, ...] = (
     DependencyProbe("pyarrow", "pyarrow"),
 )
 
-EXTRA_IMPORTS: dict[str, tuple[DependencyProbe, ...]] = {
+MANDATORY_IMPORT_GROUPS: dict[str, tuple[DependencyProbe, ...]] = {
     "notebook": (
         DependencyProbe("jupyter", "jupyter"),
         DependencyProbe("ipykernel", "ipykernel"),
@@ -159,18 +160,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retained for CLI compatibility; doctor is always strict.",
     )
     parser.add_argument("--timeout", type=float, default=2.0, help="Service timeout in seconds.")
-    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    parser.add_argument(
+        "--ollama-url",
+        default=None,
+        help="Must match the locked OLLAMA_BASE_URL environment contract.",
+    )
     parser.add_argument(
         "--ollama-model",
-        default=os.getenv("OLLAMA_MODEL", "qwen3:1.7b-q4_K_M"),
+        default=None,
+        help="Must match the locked OLLAMA_MODEL environment contract.",
     )
-    parser.add_argument("--neo4j-uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7687"))
+    parser.add_argument(
+        "--neo4j-uri",
+        default=None,
+        help="Must match the locked NEO4J_URI environment contract.",
+    )
     parser.add_argument(
         "--neo4j-user",
-        default=os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME") or "neo4j",
+        default=None,
+        help="Must match the locked NEO4J_USER environment contract.",
     )
-    parser.add_argument("--neo4j-password-env", default="NEO4J_PASSWORD")
-    parser.add_argument("--memgraph-uri", default=os.getenv("MEMGRAPH_URI", "bolt://localhost:7688"))
+    parser.add_argument(
+        "--neo4j-database",
+        default=None,
+        help="Must match the locked NEO4J_DATABASE environment contract.",
+    )
+    parser.add_argument(
+        "--memgraph-uri",
+        default=None,
+        help="Must match the locked MEMGRAPH_URI environment contract.",
+    )
     parser.add_argument("--config-dir", default="configs", help="Directory containing public YAML configs.")
     parser.add_argument("--models-manifest", default="models.manifest.yaml")
     parser.add_argument("--models-lock", default="models.lock.yaml")
@@ -187,17 +206,41 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run doctor checks and print a report."""
 
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        service_runtime = LockedServiceRuntime.from_environment()
+    except ValueError as exc:
+        parser.error(str(exc))
+    assertions = {
+        "--ollama-url": (
+            args.ollama_url.rstrip("/") if args.ollama_url else None,
+            service_runtime.ollama_base_url,
+        ),
+        "--ollama-model": (args.ollama_model, service_runtime.ollama_model),
+        "--neo4j-uri": (args.neo4j_uri, service_runtime.neo4j_uri),
+        "--neo4j-user": (args.neo4j_user, service_runtime.neo4j_user),
+        "--neo4j-database": (
+            args.neo4j_database,
+            service_runtime.neo4j_database,
+        ),
+        "--memgraph-uri": (args.memgraph_uri, service_runtime.memgraph_uri),
+    }
+    conflicts = [
+        flag
+        for flag, (asserted, expected) in assertions.items()
+        if asserted is not None and asserted != expected
+    ]
+    if conflicts:
+        parser.error(
+            "service CLI assertions conflict with the locked environment: "
+            + ", ".join(conflicts)
+        )
     report = run_doctor(
         config_dir=Path(args.config_dir),
         config_paths=[Path(path) for path in args.config],
         timeout=max(0.1, args.timeout),
-        ollama_url=args.ollama_url,
-        ollama_model=args.ollama_model,
-        neo4j_uri=args.neo4j_uri,
-        neo4j_user=args.neo4j_user,
-        neo4j_password_env=args.neo4j_password_env,
-        memgraph_uri=args.memgraph_uri,
+        service_runtime=service_runtime,
         models_manifest_path=Path(args.models_manifest),
         models_lock_path=Path(args.models_lock),
         model_cache_root=(
@@ -216,18 +259,14 @@ def run_doctor(
     config_dir: Path = Path("configs"),
     config_paths: list[Path] | None = None,
     timeout: float = 2.0,
-    ollama_url: str = "http://localhost:11434",
-    ollama_model: str = "qwen3:1.7b-q4_K_M",
-    neo4j_uri: str | None = None,
-    neo4j_user: str | None = None,
-    neo4j_password_env: str = "NEO4J_PASSWORD",
-    memgraph_uri: str = "bolt://localhost:7688",
+    service_runtime: LockedServiceRuntime | None = None,
     models_manifest_path: Path = Path("models.manifest.yaml"),
     models_lock_path: Path = Path("models.lock.yaml"),
     model_cache_root: Path | None = None,
 ) -> DoctorReport:
     """Run all doctor checks and return a structured report."""
 
+    runtime = service_runtime or LockedServiceRuntime.from_environment()
     locked_models = _check_locked_model_artifacts(
         models_manifest_path,
         models_lock_path,
@@ -244,25 +283,26 @@ def run_doctor(
         _check_distribution(),
         _check_core_imports(),
         _check_public_api_exports(),
-        _check_installed_extras(),
+        _check_mandatory_dependency_groups(),
         _check_platform_runtime(),
         _check_rdf_shacl(),
         _check_notebook_dependencies(),
         _check_config_validity(config_dir, config_paths or []),
         locked_models,
         _check_ollama(
-            ollama_url,
-            model=ollama_model,
+            runtime.ollama_base_url,
+            model=runtime.ollama_model,
             expected_digest=expected_ollama_digest,
             timeout=timeout,
         ),
         _check_neo4j(
-            neo4j_uri,
-            neo4j_user=neo4j_user,
-            password_env=neo4j_password_env,
+            runtime.neo4j_uri,
+            neo4j_user=runtime.neo4j_user,
+            neo4j_password=runtime.neo4j_password,
+            database=runtime.neo4j_database,
             timeout=timeout,
         ),
-        _check_memgraph(memgraph_uri, timeout=timeout),
+        _check_memgraph(runtime.memgraph_uri, timeout=timeout),
         _check_ladybug(),
     ]
 
@@ -338,14 +378,15 @@ def _check_core_imports() -> DoctorCheck:
 
 def _check_public_api_exports() -> DoctorCheck:
     required = {
-        "DataToKGConfig",
-        "ConstructionWorkflow",
         "ConstructionResult",
-        "TechniqueEvaluationConfig",
-        "TechniqueEvaluationReport",
-        "default_registry",
+        "ConstructionWorkflow",
+        "DataToKGConfig",
+        "VersionedGraphEvaluationSuite",
+        "construct_kg",
+        "convert",
+        "load_sources",
     }
-    missing = sorted(required - set(application_exports))
+    missing = sorted(required - set(public_exports))
     if missing:
         return DoctorCheck(
             "public_api_exports",
@@ -357,29 +398,29 @@ def _check_public_api_exports() -> DoctorCheck:
         "public_api_exports",
         "package",
         "ok",
-        "Public application API exports are present.",
+        "Public construction and evaluation API exports are present.",
         metadata={"checked": sorted(required)},
     )
 
 
-def _check_installed_extras() -> DoctorCheck:
+def _check_mandatory_dependency_groups() -> DoctorCheck:
     payload: dict[str, JsonDict] = {}
     installed: list[str] = []
     partial: list[str] = []
     missing: list[str] = []
-    for extra_name, probes in EXTRA_IMPORTS.items():
+    for group_name, probes in MANDATORY_IMPORT_GROUPS.items():
         results = [_probe_dependency(item) for item in probes]
         available = sum(1 for item in results if item["available"])
         if available == len(results):
-            installed.append(extra_name)
+            installed.append(group_name)
             status = "installed"
         elif available == 0:
-            missing.append(extra_name)
+            missing.append(group_name)
             status = "not_installed"
         else:
-            partial.append(extra_name)
+            partial.append(group_name)
             status = "partial"
-        payload[extra_name] = {"status": status, "dependencies": results}
+        payload[group_name] = {"status": status, "dependencies": results}
 
     message = f"Mandatory dependency groups installed: {installed or ['none']}."
     if partial:
@@ -391,7 +432,12 @@ def _check_installed_extras() -> DoctorCheck:
         "dependencies",
         "fail" if partial or missing else "ok",
         message,
-        metadata={"extras": payload, "installed": installed, "partial": partial, "missing": missing},
+        metadata={
+            "groups": payload,
+            "installed": installed,
+            "partial": partial,
+            "missing": missing,
+        },
     )
 
 
@@ -483,7 +529,7 @@ def _check_rdf_shacl() -> DoctorCheck:
             "standards",
             "fail",
             f"RDF/SHACL validation failed: {type(exc).__name__}: {exc}",
-            hint="Install the RDF dependencies with `python -m pip install -e .` or `.[rdf]`.",
+            hint="Run `uv sync --frozen --all-groups`.",
         )
     if not conforms:
         return DoctorCheck("rdf_shacl", "standards", "fail", "pySHACL returned a non-conforming smoke graph.")
@@ -491,7 +537,7 @@ def _check_rdf_shacl() -> DoctorCheck:
 
 
 def _check_notebook_dependencies() -> DoctorCheck:
-    probes = EXTRA_IMPORTS["notebook"]
+    probes = MANDATORY_IMPORT_GROUPS["notebook"]
     results = [_probe_dependency(item) for item in probes]
     missing = [item["distribution"] for item in results if not item["available"]]
     if missing:
@@ -745,7 +791,8 @@ def _check_neo4j(
     uri: str | None,
     *,
     neo4j_user: str | None,
-    password_env: str,
+    neo4j_password: str | None,
+    database: str,
     timeout: float,
 ) -> DoctorCheck:
     if not _module_available("neo4j"):
@@ -764,43 +811,52 @@ def _check_neo4j(
             "NEO4J_URI is not set.",
             hint="Set NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD to verify live connectivity.",
         )
-    password = os.getenv(password_env)
-    if neo4j_user and not password:
+    if neo4j_user and not neo4j_password:
         return DoctorCheck(
             "neo4j",
             "service",
             "fail",
-            f"Neo4j URI/user are configured, but {password_env} is not set.",
-            hint=f"Export {password_env} before running doctor.",
-            metadata={"uri": uri, "user": neo4j_user, "password_env": password_env},
+            "Neo4j URI/user are configured, but the locked password is empty.",
+            hint="Set NEO4J_PASSWORD in the shared locked-service environment.",
+            metadata={"uri": uri, "user": neo4j_user, "database": database},
         )
     try:
         from neo4j import GraphDatabase
 
-        auth = (neo4j_user, password) if neo4j_user and password else None
+        auth = (
+            (neo4j_user, neo4j_password)
+            if neo4j_user and neo4j_password
+            else None
+        )
         try:
             driver = GraphDatabase.driver(uri, auth=auth, connection_timeout=timeout)
         except TypeError:
             driver = GraphDatabase.driver(uri, auth=auth)
         try:
             driver.verify_connectivity()
+            with driver.session(database=database) as session:
+                record = session.run("RETURN 1 AS ok").single()
+                if record is None or record["ok"] != 1:
+                    raise RuntimeError(
+                        "Neo4j semantic query returned the wrong value"
+                    )
         finally:
             driver.close()
-    except Exception as exc:  # noqa: BLE001 - doctor reports optional service failures.
+    except Exception as exc:  # noqa: BLE001 - doctor reports service failures.
         return DoctorCheck(
             "neo4j",
             "service",
             "fail",
             f"Neo4j driver is installed, but connectivity failed: {type(exc).__name__}: {exc}",
             hint="Check NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, and whether the database is running.",
-            metadata={"uri": uri, "user": neo4j_user},
+            metadata={"uri": uri, "user": neo4j_user, "database": database},
         )
     return DoctorCheck(
         "neo4j",
         "service",
         "ok",
-        "Neo4j connectivity verified with the Python driver.",
-        metadata={"uri": uri, "user": neo4j_user},
+        "Neo4j authenticated database query passed.",
+        metadata={"uri": uri, "user": neo4j_user, "database": database},
     )
 
 
@@ -868,7 +924,7 @@ def _check_ladybug() -> DoctorCheck:
             value = row.get("ok") if isinstance(row, dict) else row[0]
             if value != 1:
                 raise RuntimeError("semantic query returned the wrong result")
-    except Exception as exc:  # noqa: BLE001 - doctor reports optional backend failures.
+    except Exception as exc:  # noqa: BLE001 - every service error is a hard diagnostic failure.
         return DoctorCheck(
             "ladybug",
             "service",

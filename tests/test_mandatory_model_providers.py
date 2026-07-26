@@ -10,10 +10,6 @@ from unittest.mock import patch
 
 import yaml
 
-from kg_construction.application.unstructured_pipeline import (
-    ConservativeCoreferenceResolver,
-    RuleSegmenter,
-)
 from kg_construction.domain.claim import DocumentRef
 from kg_construction.domain.models import SourceRecord
 from kg_construction.infrastructure.extractors.model_backed import (
@@ -46,12 +42,19 @@ from kg_construction.infrastructure.extractors.model_backed.claims import (
     ClaimProviderConfig,
     LocalMlxQwenBackend,
     LocalOllamaQwenBackend,
+    LocalTransformersQwenBackend,
+    _align_quoted_claim_response,
+    _strict_claim_json_schema,
 )
 from kg_construction.infrastructure.extractors.model_backed.mentions import (
     LocalGlinerBackend,
 )
 from kg_construction.infrastructure.extractors.model_backed.relations import (
     LocalGlinerRelExBackend,
+)
+from kg_construction.unstructured.pipeline import (
+    ConservativeCoreferenceResolver,
+    RuleSegmenter,
 )
 
 
@@ -781,6 +784,803 @@ class StructuredClaimProviderTests(unittest.TestCase):
         self.assertTrue(claim.negated)
         self.assertEqual(claim.modality.value, "possible")
 
+    def test_grounded_argument_gap_completes_semantic_predicate(self) -> None:
+        text = "Ada worked at Acme."
+        document, segments = _document(text)
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 0, "end": 3, "text": "Ada"},
+                    "predicate": "worked",
+                    "predicate_span": {
+                        "start": 4,
+                        "end": 10,
+                        "text": "worked",
+                    },
+                    "object_span": {
+                        "start": 14,
+                        "end": 18,
+                        "text": "Acme",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        extractor = ModelClaimExtractor(
+            ClaimProviderConfig(
+                extractor="claims",
+                provider="qwen3",
+                model_version="qwen3@abc",
+                configuration_id="schema-v1",
+            ),
+            FakeStructuredBackend(payload),
+        )
+
+        claim = extractor.extract(document, text, segments, ())[0]
+
+        self.assertEqual(claim.predicate, "worked_at")
+
+    def test_exact_argument_bridge_repairs_overwide_predicate_cue(self) -> None:
+        text = "Alan Turing worked at Bletchley Park."
+        document, segments = _document(text)
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {
+                        "start": 0,
+                        "end": 11,
+                        "text": "Alan Turing",
+                    },
+                    "predicate": "worked",
+                    "predicate_span": {
+                        "start": 19,
+                        "end": 36,
+                        "text": "at Bletchley Park",
+                    },
+                    "object_span": {
+                        "start": 22,
+                        "end": 36,
+                        "text": "Bletchley Park",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 1.0,
+                }
+            ]
+        }
+        extractor = ModelClaimExtractor(
+            ClaimProviderConfig(
+                extractor="claims",
+                provider="qwen3",
+                model_version="qwen3@abc",
+                configuration_id="schema-v1",
+            ),
+            FakeStructuredBackend(payload),
+        )
+
+        claim = extractor.extract(document, text, segments, ())[0]
+
+        self.assertEqual(claim.predicate, "worked_at")
+
+    def test_ungrounded_model_predicate_fails_closed(self) -> None:
+        text = "Ada worked at Acme."
+        document, segments = _document(text)
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 0, "end": 3, "text": "Ada"},
+                    "predicate": "founded",
+                    "predicate_span": {
+                        "start": 4,
+                        "end": 10,
+                        "text": "worked",
+                    },
+                    "object_span": {
+                        "start": 14,
+                        "end": 18,
+                        "text": "Acme",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        extractor = ModelClaimExtractor(
+            ClaimProviderConfig(
+                extractor="claims",
+                provider="qwen3",
+                model_version="qwen3@abc",
+                configuration_id="schema-v1",
+            ),
+            FakeStructuredBackend(payload),
+        )
+
+        with self.assertRaisesRegex(ProviderOutputError, "not lexically grounded"):
+            extractor.extract(document, text, segments, ())
+
+    def test_strict_json_schema_uses_kind_discriminated_semantics(self) -> None:
+        schema = _strict_claim_json_schema()
+        items = schema["properties"]["claims"]["items"]
+        variants = {
+            variant["properties"]["kind"]["const"]: variant
+            for variant in items["oneOf"]
+        }
+
+        self.assertEqual(set(variants), {"relation", "fact", "intent", "event"})
+        for kind in ("relation", "fact", "intent"):
+            self.assertIn("object_span", variants[kind]["required"])
+            self.assertEqual(
+                variants[kind]["properties"]["object_span"]["$ref"],
+                "#/$defs/ExactSpanOutput",
+            )
+        self.assertNotIn("object_span", variants["event"]["required"])
+        self.assertIn("event_roles", variants["event"]["required"])
+        self.assertEqual(
+            variants["event"]["properties"]["event_roles"]["minItems"],
+            1,
+        )
+        for kind, variant in variants.items():
+            self.assertEqual(
+                variant["properties"]["kind"],
+                {"const": kind, "type": "string"},
+            )
+            self.assertFalse(variant["additionalProperties"])
+
+    def test_full_document_sentinel_field_shift_uses_only_exact_prompt_anchors(
+        self,
+    ) -> None:
+        text = (
+            "On 2026-07-09, Platform Team reviewed INCIDENT-1042.\n"
+            "Contact [REDACTED] and see https://example.com/runbook.\n"
+            "The service version is v2.4.1.\n"
+            "INCIDENT-1042 affected Recommendation API.\n"
+        )
+        self.assertEqual(len(text), 183)
+        input_payload = {
+            "document": {"text": text},
+            "segments": [
+                {"start": 0, "end": 52, "text": text[0:52]},
+            ],
+            "mentions": [
+                {"start": 3, "end": 13, "text": "2026-07-09", "entity_type": "Date"},
+                {
+                    "start": 15,
+                    "end": 28,
+                    "text": "Platform Team",
+                    "entity_type": "Organization",
+                },
+                {
+                    "start": 38,
+                    "end": 51,
+                    "text": "INCIDENT-1042",
+                    "entity_type": "Incident",
+                },
+                {
+                    "start": 140,
+                    "end": 153,
+                    "text": "INCIDENT-1042",
+                    "entity_type": "Incident",
+                },
+                {
+                    "start": 163,
+                    "end": 181,
+                    "text": "Recommendation API",
+                    "entity_type": "Service",
+                },
+            ],
+        }
+        prompt = "Extract grounded claims.\nINPUT=" + json.dumps(
+            input_payload,
+            sort_keys=True,
+        )
+        shifted = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {
+                        "start": 0,
+                        "end": 12,
+                        "text": text[0:52],
+                    },
+                    "predicate": "reviewed",
+                    "predicate_span": {
+                        "start": 13,
+                        "end": 28,
+                        "text": "reviewed",
+                    },
+                    "object_span": {
+                        "start": 29,
+                        "end": 36,
+                        "text": "INCIDENT-1042",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": "document"}
+                    ],
+                }
+            ]
+        }
+
+        aligned, alignment_count = _align_quoted_claim_response(
+            shifted,
+            prompt=prompt,
+        )
+        claim = aligned.claims[0]
+
+        self.assertEqual(
+            (
+                claim.subject_span.start,
+                claim.subject_span.end,
+                claim.subject_span.text,
+            ),
+            (15, 28, "Platform Team"),
+        )
+        self.assertEqual(
+            (
+                claim.predicate_span.start,
+                claim.predicate_span.end,
+                claim.predicate_span.text,
+            ),
+            (29, 37, "reviewed"),
+        )
+        self.assertEqual(
+            (
+                claim.object_span.start if claim.object_span else None,
+                claim.object_span.end if claim.object_span else None,
+                claim.object_span.text if claim.object_span else None,
+            ),
+            (38, 51, "INCIDENT-1042"),
+        )
+        self.assertEqual(
+            (
+                claim.evidence_spans[0].start,
+                claim.evidence_spans[0].end,
+                claim.evidence_spans[0].text,
+            ),
+            (0, 52, text[0:52]),
+        )
+        self.assertEqual(claim.confidence, 0.75)
+        self.assertEqual(alignment_count, 4)
+
+        shifted_claim = shifted["claims"][0]
+        shifted_claim["predicate_span"] = {
+            "start": 13,
+            "end": 25,
+            "text": "INCIDENT-1042",
+        }
+        shifted_claim["object_span"] = {
+            "start": 51,
+            "end": 60,
+            "text": "INCIDENT-1042",
+        }
+        shifted_claim["evidence_spans"][0]["end"] = len(text.rstrip("\r\n"))
+        second_variant, second_alignment_count = _align_quoted_claim_response(
+            shifted,
+            prompt=prompt,
+        )
+        self.assertEqual(second_variant.claims[0].subject_span.text, "Platform Team")
+        self.assertEqual(second_variant.claims[0].predicate_span.text, "reviewed")
+        self.assertEqual(second_variant.claims[0].object_span.text, "INCIDENT-1042")
+        self.assertEqual(second_alignment_count, 4)
+
+        shifted_claim["evidence_spans"][0]["end"] = len(text) - 2
+        with self.assertRaisesRegex(
+            ProviderOutputError,
+            "sentinel must select the immutable document",
+        ):
+            _align_quoted_claim_response(shifted, prompt=prompt)
+
+    def test_overlapping_claim_arguments_are_a_hard_failure(self) -> None:
+        text = "Ada reviewed Acme."
+        document, segments = _document(text)
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {
+                        "start": 0,
+                        "end": len(text),
+                        "text": text,
+                    },
+                    "predicate": "reviewed",
+                    "predicate_span": {
+                        "start": 4,
+                        "end": 12,
+                        "text": "reviewed",
+                    },
+                    "object_span": {
+                        "start": 13,
+                        "end": 17,
+                        "text": "Acme",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        extractor = ModelClaimExtractor(
+            ClaimProviderConfig(
+                extractor="claims",
+                provider="qwen3",
+                model_version="qwen3@abc",
+                configuration_id="schema-v1",
+            ),
+            FakeStructuredBackend(payload),
+        )
+
+        with self.assertRaisesRegex(ProviderOutputError, "argument spans overlap"):
+            extractor.extract(document, text, segments, ())
+
+    def test_all_qwen_backends_align_only_uniquely_grounded_quotes(self) -> None:
+        text = "Ada worked at Acme."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps({"document": {"text": text}}, sort_keys=True)
+        )
+        miscounted = json.dumps(
+            {
+                "claims": [
+                    {
+                        "kind": "relation",
+                        "subject_span": {"start": 1, "end": 4, "text": "Ada"},
+                        "predicate": "worked",
+                        "predicate_span": {
+                            "start": 0,
+                            "end": 6,
+                            "text": "worked",
+                        },
+                        "object_span": {
+                            "start": 0,
+                            "end": 4,
+                            "text": "Acme",
+                        },
+                        "evidence_spans": [
+                            {"start": 1, "end": 20, "text": text}
+                        ],
+                    }
+                ]
+            }
+        )
+
+        class Tokenizer:
+            def apply_chat_template(self, messages, **kwargs):
+                del messages, kwargs
+                return "rendered"
+
+        def generate(model, tokenizer, **kwargs):
+            del model, tokenizer, kwargs
+            return miscounted
+
+        with tempfile.TemporaryDirectory() as temp:
+            transformers_artifact = _artifact(
+                Path(temp),
+                "transformers",
+                repo_id="Qwen/Qwen3-1.7B",
+                backend="transformers",
+                task="text-generation",
+            )
+            transformers = LocalTransformersQwenBackend(
+                transformers_artifact,
+                max_retries=0,
+            )
+            transformers._complete = lambda _messages: miscounted  # type: ignore[method-assign]
+            transformers_output = transformers.generate_json(
+                prompt=prompt,
+                json_schema={"type": "object"},
+            )
+            artifact = _artifact(
+                Path(temp),
+                "mlx",
+                repo_id="mlx-community/Qwen3-1.7B-4bit",
+                backend="mlx",
+                task="text-generation",
+            )
+            mlx = LocalMlxQwenBackend(artifact, max_retries=0)
+            mlx._load = lambda: (object(), Tokenizer(), generate)  # type: ignore[method-assign]
+            mlx_output = mlx.generate_json(
+                prompt=prompt,
+                json_schema={"type": "object"},
+            )
+
+        model = HydratedServiceModel(
+            name="ollama_structured_extractor",
+            service="ollama",
+            model="qwen3:test",
+            digest=f"sha256:{'a' * 64}",
+        )
+        transport = FakeOllamaTransport(
+            {"qwen3:test": f"sha256:{'a' * 64}"},
+            {"message": {"content": miscounted}},
+        )
+        ollama = LocalOllamaQwenBackend(
+            model,
+            transport=transport,
+            max_retries=0,
+        )
+        ollama_output = ollama.generate_json(
+            prompt=prompt,
+            json_schema={"type": "object"},
+        )
+
+        for output in (transformers_output, mlx_output, ollama_output):
+            claim = output.claims[0]
+            self.assertEqual(
+                (
+                    claim.subject_span.start,
+                    claim.predicate_span.start,
+                    claim.object_span.start if claim.object_span else None,
+                    claim.evidence_spans[0].start,
+                ),
+                (0, 4, 14, 0),
+            )
+            self.assertEqual(claim.confidence, 0.75)
+        self.assertEqual(transformers.last_quote_alignment_count, 4)
+        self.assertEqual(mlx.last_quote_alignment_count, 4)
+        self.assertEqual(ollama.last_quote_alignment_count, 4)
+
+    def test_repeated_quote_without_exact_occurrence_anchor_is_hard_failure(
+        self,
+    ) -> None:
+        text = "Ada met Ada."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps({"document": {"text": text}}, sort_keys=True)
+        )
+        ambiguous = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 1, "end": 4, "text": "Ada"},
+                    "predicate": "met",
+                    "predicate_span": {"start": 4, "end": 7, "text": "met"},
+                    "object_span": {"start": 8, "end": 11, "text": "Ada"},
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+
+        with self.assertRaisesRegex(
+            ProviderOutputError,
+            "ambiguous without an exact occurrence or unique evidence anchor",
+        ):
+            _align_quoted_claim_response(ambiguous, prompt=prompt)
+
+    def test_repeated_quote_uses_one_unique_claim_evidence_anchor(self) -> None:
+        text = "Ada met Bob. Bob met Ada."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps({"document": {"text": text}}, sort_keys=True)
+        )
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 2, "end": 5, "text": "Ada"},
+                    "predicate": "met",
+                    "predicate_span": {"start": 0, "end": 3, "text": "met"},
+                    "object_span": {"start": 0, "end": 3, "text": "Bob"},
+                    "evidence_spans": [
+                        {
+                            "start": 1,
+                            "end": 13,
+                            "text": "Ada met Bob.",
+                        }
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+
+        aligned, _ = _align_quoted_claim_response(payload, prompt=prompt)
+        claim = aligned.claims[0]
+
+        self.assertEqual(claim.subject_span.start, 0)
+        self.assertEqual(claim.predicate_span.start, 4)
+        self.assertEqual(claim.object_span.start if claim.object_span else None, 8)
+        self.assertEqual(claim.evidence_spans[0].start, 0)
+
+    def test_globally_valid_repeated_offset_cannot_escape_claim_evidence(
+        self,
+    ) -> None:
+        text = "Alan met Charles. Charles met Ada."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps({"document": {"text": text}}, sort_keys=True)
+        )
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    # Offset 9 is a real Charles occurrence, but it is outside
+                    # the model's exact evidence for this claim.
+                    "subject_span": {
+                        "start": 9,
+                        "end": 16,
+                        "text": "Charles",
+                    },
+                    "predicate": "met",
+                    "predicate_span": {
+                        "start": 26,
+                        "end": 29,
+                        "text": "met",
+                    },
+                    "object_span": {
+                        "start": 30,
+                        "end": 33,
+                        "text": "Ada",
+                    },
+                    "evidence_spans": [
+                        {
+                            "start": 18,
+                            "end": 34,
+                            "text": "Charles met Ada.",
+                        }
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+
+        aligned, _ = _align_quoted_claim_response(payload, prompt=prompt)
+
+        self.assertEqual(aligned.claims[0].subject_span.start, 18)
+        self.assertEqual(aligned.claims[0].evidence_spans[0].start, 18)
+
+    def test_field_shift_repairs_only_exact_displaced_mention_and_negation(
+        self,
+    ) -> None:
+        text = "Ada Lovelace never worked with Charles Babbage."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps(
+                {
+                    "document": {"text": text},
+                    "mentions": [
+                        {
+                            "start": 0,
+                            "end": 12,
+                            "text": "Ada Lovelace",
+                        },
+                        {
+                            "start": 31,
+                            "end": 46,
+                            "text": "Charles Babbage",
+                        },
+                        {"start": 31, "end": 32, "text": "C"},
+                        {
+                            "start": 32,
+                            "end": 46,
+                            "text": "harles Babbage",
+                        },
+                    ],
+                },
+                sort_keys=True,
+            )
+        )
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {
+                        "start": 1,
+                        "end": 4,
+                        "text": "Ada Lovelace",
+                    },
+                    "predicate": "never worked with",
+                    # The exact object quote was shifted into predicate_span.
+                    "predicate_span": {
+                        "start": 5,
+                        "end": 8,
+                        "text": "Charles Babbage",
+                    },
+                    # The subject was shifted into object_span.
+                    "object_span": {
+                        "start": 9,
+                        "end": 12,
+                        "text": "Ada Lovelace",
+                    },
+                    "evidence_spans": [
+                        {"start": 1, "end": 10, "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+
+        aligned, _ = _align_quoted_claim_response(payload, prompt=prompt)
+        claim = aligned.claims[0]
+
+        self.assertEqual(claim.predicate, "worked_with")
+        self.assertEqual(claim.predicate_span.text, "worked with")
+        self.assertEqual(claim.object_span.text if claim.object_span else None, "Charles Babbage")
+        self.assertTrue(claim.negated)
+        self.assertEqual(claim.negation_span.text if claim.negation_span else None, "never")
+
+    def test_displaced_object_with_multiple_exact_mentions_is_rejected(
+        self,
+    ) -> None:
+        text = "Ada worked with Bob and Carol."
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps(
+                {
+                    "document": {"text": text},
+                    "mentions": [
+                        {"start": 0, "end": 3, "text": "Ada"},
+                        {"start": 16, "end": 19, "text": "Bob"},
+                        {"start": 24, "end": 29, "text": "Carol"},
+                    ],
+                },
+                sort_keys=True,
+            )
+        )
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 0, "end": 3, "text": "Ada"},
+                    "predicate": "worked_with",
+                    "predicate_span": {
+                        "start": 16,
+                        "end": 29,
+                        "text": "Bob and Carol",
+                    },
+                    "object_span": {
+                        "start": 4,
+                        "end": 10,
+                        "text": "worked",
+                    },
+                    "evidence_spans": [
+                        {"start": 0, "end": len(text), "text": text}
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+        }
+
+        with self.assertRaisesRegex(
+            ProviderOutputError,
+            "displaced ambiguously",
+        ):
+            _align_quoted_claim_response(payload, prompt=prompt)
+
+    def test_normalized_predicate_quote_recovers_from_exact_argument_window(
+        self,
+    ) -> None:
+        text = (
+            "Alan Turing worked with Charles Babbage. "
+            "Charles Babbage worked with Ada Lovelace."
+        )
+        prompt = (
+            "Extract grounded claims.\nINPUT="
+            + json.dumps({"document": {"text": text}}, sort_keys=True)
+        )
+        payload = {
+            "claims": [
+                {
+                    "kind": "relation",
+                    "subject_span": {
+                        "start": 2,
+                        "end": 13,
+                        "text": "Alan Turing",
+                    },
+                    "predicate": "worked_with",
+                    "predicate_span": {
+                        "start": 14,
+                        "end": 25,
+                        "text": "worked_with",
+                    },
+                    "object_span": {
+                        "start": 28,
+                        "end": 43,
+                        "text": "Charles Babbage",
+                    },
+                    "evidence_spans": [
+                        {
+                            "start": 1,
+                            "end": 82,
+                            "text": "Alan Turing worked with Charles Babbage.",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        aligned, _ = _align_quoted_claim_response(payload, prompt=prompt)
+        claim = aligned.claims[0]
+
+        self.assertEqual(claim.predicate_span.text, "worked with")
+        self.assertEqual(claim.predicate_span.start, 12)
+        self.assertEqual(claim.object_span.start if claim.object_span else None, 24)
+        self.assertEqual(claim.confidence, 0.75)
+
+    def test_reviewed_predicate_aliases_ground_exact_source_cues(self) -> None:
+        cases = (
+            (
+                "Alan worked at Acme.",
+                {
+                    "kind": "relation",
+                    "subject_span": {"start": 0, "end": 4, "text": "Alan"},
+                    "predicate": "works_at",
+                    "predicate_span": {
+                        "start": 5,
+                        "end": 14,
+                        "text": "worked at",
+                    },
+                    "object_span": {
+                        "start": 15,
+                        "end": 19,
+                        "text": "Acme",
+                    },
+                    "evidence_spans": [
+                        {
+                            "start": 0,
+                            "end": 20,
+                            "text": "Alan worked at Acme.",
+                        }
+                    ],
+                    "confidence": 0.9,
+                },
+                "works_at",
+            ),
+            (
+                "Bombe was a Machine.",
+                {
+                    "kind": "fact",
+                    "subject_span": {"start": 0, "end": 5, "text": "Bombe"},
+                    "predicate": "is_a",
+                    "predicate_span": {
+                        "start": 6,
+                        "end": 9,
+                        "text": "was",
+                    },
+                    "object_span": {
+                        "start": 12,
+                        "end": 19,
+                        "text": "Machine",
+                    },
+                    "evidence_spans": [
+                        {
+                            "start": 0,
+                            "end": 20,
+                            "text": "Bombe was a Machine.",
+                        }
+                    ],
+                    "confidence": 0.9,
+                },
+                "is_a",
+            ),
+        )
+        for text, output, expected in cases:
+            with self.subTest(predicate=expected):
+                document, segments = _document(text)
+                extractor = ModelClaimExtractor(
+                    ClaimProviderConfig(
+                        extractor="qwen",
+                        provider="qwen3",
+                        model_version="qwen3@abc",
+                        configuration_id="schema-v1",
+                    ),
+                    FakeStructuredBackend({"claims": [output]}),
+                )
+
+                claims = extractor.extract(document, text, segments, ())
+
+                self.assertEqual(claims[0].predicate, expected)
+
     def test_transformers_and_ollama_extractors_keep_locked_model_identity(self) -> None:
         text = "Ada founded Acme in 2020."
         document, segments = _document(text)
@@ -868,7 +1668,8 @@ class StructuredClaimProviderTests(unittest.TestCase):
         self.assertEqual(backend.last_attempt_count, 2)
         self.assertEqual(len(prompts), 2)
         self.assertIn("REPAIR REQUIRED", prompts[1])
-        self.assertIn("not-json", prompts[1])
+        self.assertNotIn("not-json", prompts[1])
+        self.assertTrue(prompts[1].endswith("extract"))
 
 
 class MandatoryEnsembleTests(unittest.TestCase):
@@ -1015,6 +1816,393 @@ class MandatoryEnsembleTests(unittest.TestCase):
         )
         self.assertEqual(agreement.ratio, 0.5)
 
+    def test_mention_ensemble_suppresses_only_unique_maximal_fragments(self) -> None:
+        text = "Alan Turing met Ada at Bletchley Park."
+        document, segments = _document(text)
+
+        def inference(
+            surface: str,
+            entity_type: str,
+            confidence: float,
+        ) -> MentionInference:
+            start = text.index(surface)
+            return MentionInference(
+                start=start,
+                end=start + len(surface),
+                text=surface,
+                entity_type=entity_type,
+                confidence=confidence,
+            )
+
+        calls: list[str] = []
+        ensemble = MandatoryMentionEnsemble(
+            (
+                self._mention_provider(
+                    "one",
+                    FakeMentionBackend(
+                        (
+                            inference("Alan Turing", "Person", 0.9),
+                            inference("Ada", "Person", 0.9),
+                            inference("Bletchley Park", "Place", 0.9),
+                        ),
+                        calls=calls,
+                        name="one",
+                    ),
+                ),
+                self._mention_provider(
+                    "two",
+                    FakeMentionBackend(
+                        (
+                            inference("Turing", "Person", 0.8),
+                            inference("Ada", "Person", 0.8),
+                            inference("Park", "Place", 0.8),
+                        ),
+                        calls=calls,
+                        name="two",
+                    ),
+                ),
+                self._mention_provider(
+                    "three",
+                    FakeMentionBackend(
+                        (
+                            inference("Alan Turing", "Person", 0.7),
+                            inference("Bletchley Park", "Place", 0.7),
+                        ),
+                        calls=calls,
+                        name="three",
+                    ),
+                ),
+            )
+        )
+
+        mentions = ensemble.detect(document, text, segments)
+
+        self.assertEqual(calls, ["one", "two", "three"])
+        self.assertEqual(
+            [mention.surface for mention in mentions],
+            ["Alan Turing", "Ada", "Bletchley Park"],
+        )
+        self.assertEqual(len(ensemble.last_agreements), 5)
+        agreement_keys = {
+            agreement.item_key for agreement in ensemble.last_agreements
+        }
+        suppressions = {
+            (item.fragment_surface, item.containing_surface)
+            for item in ensemble.last_suppressions
+        }
+        self.assertEqual(
+            suppressions,
+            {
+                ("Turing", "Alan Turing"),
+                ("Park", "Bletchley Park"),
+            },
+        )
+        for suppression in ensemble.last_suppressions:
+            self.assertIn(suppression.fragment_item_key, agreement_keys)
+            self.assertIn(suppression.containing_item_key, agreement_keys)
+
+    def test_mention_ensemble_keeps_ambiguous_overlapping_alternatives(self) -> None:
+        text = "New York City"
+        document, segments = _document(text)
+        new_york = MentionInference(
+            start=0,
+            end=8,
+            text="New York",
+            entity_type="Place",
+            confidence=0.9,
+        )
+        york = MentionInference(
+            start=4,
+            end=8,
+            text="York",
+            entity_type="Place",
+            confidence=0.8,
+        )
+        york_city = MentionInference(
+            start=4,
+            end=13,
+            text="York City",
+            entity_type="Place",
+            confidence=0.9,
+        )
+        ensemble = MandatoryMentionEnsemble(
+            (
+                self._mention_provider(
+                    "one",
+                    FakeMentionBackend((new_york, york)),
+                ),
+                self._mention_provider(
+                    "two",
+                    FakeMentionBackend((york_city,)),
+                ),
+            )
+        )
+
+        mentions = ensemble.detect(document, text, segments)
+
+        self.assertEqual(
+            [mention.surface for mention in mentions],
+            ["New York", "York", "York City"],
+        )
+        self.assertEqual(ensemble.last_suppressions, ())
+
+    def test_mention_ensemble_uses_source_suffix_for_exact_span_type_ties(
+        self,
+    ) -> None:
+        cases = (
+            ("Bletchley Park", "Location", "Place"),
+            ("Acme Corp", "Person", "Organization"),
+            ("Recommendation API", "System", "Artifact"),
+            ("Analytical Engine", "Organization", "Artifact"),
+            ("Bombe", "Organization", "Artifact"),
+            ("Machine", "Organization", "Artifact"),
+        )
+        for surface, high_confidence_type, expected_type in cases:
+            with self.subTest(surface=surface):
+                document, segments = _document(surface)
+                high_confidence = MentionInference(
+                    start=0,
+                    end=len(surface),
+                    text=surface,
+                    entity_type=high_confidence_type,
+                    confidence=0.99,
+                )
+                suffix_supported = MentionInference(
+                    start=0,
+                    end=len(surface),
+                    text=surface,
+                    entity_type=expected_type,
+                    confidence=0.1,
+                )
+                ensemble = MandatoryMentionEnsemble(
+                    (
+                        self._mention_provider(
+                            "high-confidence",
+                            FakeMentionBackend((high_confidence,)),
+                        ),
+                        self._mention_provider(
+                            "suffix-supported",
+                            FakeMentionBackend((suffix_supported,)),
+                        ),
+                    )
+                )
+
+                mentions = ensemble.detect(document, surface, segments)
+
+                self.assertEqual(len(mentions), 1)
+                self.assertEqual(mentions[0].entity_type, expected_type)
+                self.assertEqual(mentions[0].provenance.confidence, 0.1)
+                self.assertIn(
+                    "source_suffix>reject_unresolved_tie",
+                    mentions[0].provenance.configuration_id,
+                )
+                agreement = ensemble.last_agreements[0]
+                self.assertEqual(agreement.selected_type, expected_type)
+                self.assertEqual(
+                    agreement.agreeing_providers,
+                    ("suffix-supported",),
+                )
+                self.assertEqual(
+                    agreement.provider_confidences,
+                    {
+                        "high-confidence": 0.99,
+                        "suffix-supported": 0.1,
+                    },
+                )
+
+    def test_mention_ensemble_uses_observed_identifier_lexical_form_for_tie(
+        self,
+    ) -> None:
+        text = "INCIDENT-1042"
+        document, segments = _document(text)
+        votes = (
+            ("identifier-provider", "Identifier", 0.1),
+            ("incident-provider", "Incident", 0.99),
+            ("organization-provider", "Organization", 0.8),
+        )
+        ensemble = MandatoryMentionEnsemble(
+            tuple(
+                self._mention_provider(
+                    provider,
+                    FakeMentionBackend(
+                        (
+                            MentionInference(
+                                start=0,
+                                end=len(text),
+                                text=text,
+                                entity_type=entity_type,
+                                confidence=confidence,
+                            ),
+                        )
+                    ),
+                )
+                for provider, entity_type, confidence in votes
+            )
+        )
+
+        mentions = ensemble.detect(document, text, segments)
+
+        self.assertEqual(len(mentions), 1)
+        self.assertEqual(mentions[0].entity_type, "Identifier")
+        self.assertEqual(mentions[0].provenance.confidence, 0.1)
+        self.assertIn(
+            "source_lexical_form>source_suffix",
+            mentions[0].provenance.configuration_id,
+        )
+        agreement = ensemble.last_agreements[0]
+        self.assertEqual(
+            agreement.agreeing_providers,
+            ("identifier-provider",),
+        )
+        self.assertEqual(
+            agreement.participating_providers,
+            (
+                "identifier-provider",
+                "incident-provider",
+                "organization-provider",
+            ),
+        )
+        self.assertEqual(
+            agreement.provider_types,
+            {
+                "identifier-provider": "Identifier",
+                "incident-provider": "Incident",
+                "organization-provider": "Organization",
+            },
+        )
+
+    def test_mention_ensemble_uses_other_observed_exact_lexical_forms(
+        self,
+    ) -> None:
+        cases = (
+            ("2026-07-09", "Date", "Location"),
+            ("ops@example.com", "EmailAddress", "Organization"),
+            ("v2.4.1", "Version", "Location"),
+        )
+        for surface, expected_type, conflicting_type in cases:
+            with self.subTest(surface=surface):
+                document, segments = _document(surface)
+                ensemble = MandatoryMentionEnsemble(
+                    (
+                        self._mention_provider(
+                            "lexical-form-provider",
+                            FakeMentionBackend(
+                                (
+                                    MentionInference(
+                                        start=0,
+                                        end=len(surface),
+                                        text=surface,
+                                        entity_type=expected_type,
+                                        confidence=0.1,
+                                    ),
+                                )
+                            ),
+                        ),
+                        self._mention_provider(
+                            "conflicting-provider",
+                            FakeMentionBackend(
+                                (
+                                    MentionInference(
+                                        start=0,
+                                        end=len(surface),
+                                        text=surface,
+                                        entity_type=conflicting_type,
+                                        confidence=0.99,
+                                    ),
+                                )
+                            ),
+                        ),
+                    )
+                )
+
+                mentions = ensemble.detect(document, surface, segments)
+
+                self.assertEqual(len(mentions), 1)
+                self.assertEqual(mentions[0].entity_type, expected_type)
+                self.assertEqual(
+                    ensemble.last_agreements[0].agreeing_providers,
+                    ("lexical-form-provider",),
+                )
+
+    def test_identifier_form_cannot_invent_an_unobserved_tied_type(self) -> None:
+        text = "INCIDENT-1042"
+        document, segments = _document(text)
+        ensemble = MandatoryMentionEnsemble(
+            tuple(
+                self._mention_provider(
+                    provider,
+                    FakeMentionBackend(
+                        (
+                            MentionInference(
+                                start=0,
+                                end=len(text),
+                                text=text,
+                                entity_type=entity_type,
+                                confidence=confidence,
+                            ),
+                        )
+                    ),
+                )
+                for provider, entity_type, confidence in (
+                    ("incident-provider", "Incident", 0.99),
+                    ("organization-provider", "Organization", 0.1),
+                )
+            )
+        )
+
+        with self.assertRaisesRegex(
+            ProviderOutputError,
+            "unresolved exact-span type vote tie",
+        ):
+            ensemble.detect(document, text, segments)
+
+    def test_mention_ensemble_rejects_unresolved_exact_span_type_tie(self) -> None:
+        text = "Ada"
+        document, segments = _document(text)
+        calls: list[str] = []
+        organization = MentionInference(
+            start=0,
+            end=3,
+            text="Ada",
+            entity_type="Organization",
+            confidence=0.99,
+        )
+        person = MentionInference(
+            start=0,
+            end=3,
+            text="Ada",
+            entity_type="Person",
+            confidence=0.1,
+        )
+        ensemble = MandatoryMentionEnsemble(
+            (
+                self._mention_provider(
+                    "high-confidence",
+                    FakeMentionBackend(
+                        (organization,),
+                        calls=calls,
+                        name="high-confidence",
+                    ),
+                ),
+                self._mention_provider(
+                    "low-confidence",
+                    FakeMentionBackend(
+                        (person,),
+                        calls=calls,
+                        name="low-confidence",
+                    ),
+                ),
+            )
+        )
+
+        with self.assertRaisesRegex(
+            ProviderOutputError,
+            "unresolved exact-span type vote tie",
+        ):
+            ensemble.detect(document, text, segments)
+
+        self.assertEqual(calls, ["high-confidence", "low-confidence"])
+
     def test_all_mention_providers_run_even_when_one_fails(self) -> None:
         text = "Ada founded Acme."
         document, segments = _document(text)
@@ -1117,6 +2305,12 @@ class PlatformFactoryTests(unittest.TestCase):
         )
         self.assertEqual(len(bundle.mention_detector.providers), 4)
         self.assertEqual(len(bundle.claim_extractor.providers), 5)
+        openrefine = next(
+            resolver
+            for resolver in bundle.resolution_ensemble.resolvers
+            if resolver.name == "openrefine_reconciler"
+        )
+        self.assertEqual(openrefine.config.type_map, {"Person": "Q5"})
 
     def test_linux_factory_includes_transformers_gliner_spacy_and_ollama(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -23,7 +23,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from kg_construction.application.modeling_policy import ModelingPolicy
 from kg_construction.domain.graph_objects import RDFGraph, RDFTriple
 from kg_construction.domain.modeling import (
     ColumnRole,
@@ -34,6 +33,7 @@ from kg_construction.domain.modeling import (
 from kg_construction.domain.models import content_hash
 from kg_construction.domain.schema import GraphSchema, SchemaLifecycleStatus
 from kg_construction.infrastructure.ontology.shacl import ShaclValidator
+from kg_construction.structured.modeling_policy import ModelingPolicy
 
 JsonDict = dict[str, object]
 

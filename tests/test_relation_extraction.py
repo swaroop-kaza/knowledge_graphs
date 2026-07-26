@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from kg_construction.application.registry import default_registry, research_registry
+from kg_construction.certification.registry import default_registry, research_registry
 from kg_construction.domain.models import SourceRecord
 from kg_construction.infrastructure.extractors.relations import (
     DependencyPatternRelationExtractor,

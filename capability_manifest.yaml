@@ -8,8 +8,8 @@ doctrine: mandatory_executable_release
 generated_by: scripts/generate_capability_manifest.py
 summary:
   techniques:
-    total: 105
-    mandatory: 105
+    total: 104
+    mandatory: 104
   dependencies:
     total: 6
     mandatory: 6
@@ -20,11 +20,11 @@ summary:
     total: 5
     mandatory: 5
   reports:
-    total: 16
-    mandatory: 16
+    total: 7
+    mandatory: 7
   notebooks:
-    total: 11
-    mandatory: 11
+    total: 0
+    mandatory: 0
 techniques:
 - name: alias_table_resolver
   category: resolution
@@ -56,16 +56,6 @@ techniques:
   - linux-cpu
   - linux-cuda
   owner: kg_construction.infrastructure.production.retry.BatchRetryPolicy
-- name: benchmark_runner
-  category: evaluation
-  method_type: evaluation
-  status: implemented
-  disposition: mandatory
-  profiles:
-  - darwin-arm64
-  - linux-cpu
-  - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.benchmark.BenchmarkRunner
 - name: chat_transcript_loader
   category: loader
   method_type: rules
@@ -85,7 +75,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.claim_evaluations.ClaimEvaluationSuite
+  owner: kg_construction.evaluation.claim_evaluations.ClaimEvaluationSuite
 - name: column_to_property_mapping
   category: mapper
   method_type: deterministic
@@ -125,7 +115,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.metrics.ConstructionMetricsEvaluator
+  owner: kg_construction.evaluation.metrics.ConstructionMetricsEvaluator
 - name: cross_encoder_resolver
   category: resolution
   method_type: ml
@@ -275,7 +265,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.application.unstructured_pipeline.UnstructuredPipeline
+  owner: kg_construction.unstructured.pipeline.UnstructuredPipeline
 - name: evidence_graph_builder
   category: graph_builder
   method_type: deterministic
@@ -445,7 +435,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.intended_use_metrics.IntendedUseMetricsEvaluator
+  owner: kg_construction.evaluation.intended_use_metrics.IntendedUseMetricsEvaluator
 - name: json_loader
   category: loader
   method_type: deterministic
@@ -495,7 +485,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.quality_gates.KnowledgeGraphQualityEvaluator
+  owner: kg_construction.evaluation.quality_gates.KnowledgeGraphQualityEvaluator
 - name: ladybug_exporter
   category: graph_store
   method_type: deterministic
@@ -555,7 +545,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.application.mandatory_unstructured_runtime.MandatoryUnstructuredRuntime
+  owner: kg_construction.unstructured.runtime.MandatoryUnstructuredRuntime
 - name: mandatory_mention_ensemble
   category: extractor
   method_type: hybrid
@@ -883,7 +873,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.infrastructure.evaluation.schema_quality.SchemaQualityEvaluator
+  owner: kg_construction.evaluation.schema_quality.SchemaQualityEvaluator
 - name: schema_quarantine_namespace
   category: schema
   method_type: human
@@ -923,7 +913,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.application.semantic_profiler.SemanticColumnProfiler
+  owner: kg_construction.structured.semantic_profiler.SemanticColumnProfiler
 - name: semantic_table_mapper
   category: mapper
   method_type: deterministic
@@ -933,7 +923,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.application.source_catalog.CatalogTableMapper
+  owner: kg_construction.structured.source_catalog.CatalogTableMapper
 - name: shacl_validator
   category: validation
   method_type: ontology
@@ -953,7 +943,7 @@ techniques:
   - darwin-arm64
   - linux-cpu
   - linux-cuda
-  owner: kg_construction.application.source_catalog.SourceCatalog
+  owner: kg_construction.structured.source_catalog.SourceCatalog
 - name: spacy_ner_extractor
   category: extractor
   method_type: nlp
@@ -1081,6 +1071,7 @@ dependencies:
   packages:
   - pydantic>=2.7
   - PyYAML>=6.0
+  - certifi>=2025.1.31
   - jsonpath-ng>=1.7,<2
   - openpyxl>=3.1
   - SQLAlchemy>=2.0
@@ -1116,11 +1107,28 @@ dependencies:
 - group: all
   kind: tooling
   disposition: mandatory
-  packages: []
+  packages:
+  - build>=1.2
+  - mypy>=1.10
+  - pytest>=8.0
+  - ruff>=0.5
+  - twine>=5.0
+  - types-PyYAML>=6.0
+  - vulture>=2.11
+  - jupyter>=1.1
+  - ipykernel>=6.29
+  - nbformat>=5.10
 - group: benchmark
   kind: tooling
   disposition: mandatory
-  packages: []
+  packages:
+  - build>=1.2
+  - mypy>=1.10
+  - pytest>=8.0
+  - ruff>=0.5
+  - twine>=5.0
+  - types-PyYAML>=6.0
+  - vulture>=2.11
 - group: dev
   kind: tooling
   disposition: mandatory
@@ -1135,7 +1143,14 @@ dependencies:
 - group: evaluation
   kind: tooling
   disposition: mandatory
-  packages: []
+  packages:
+  - build>=1.2
+  - mypy>=1.10
+  - pytest>=8.0
+  - ruff>=0.5
+  - twine>=5.0
+  - types-PyYAML>=6.0
+  - vulture>=2.11
 - group: notebook
   kind: tooling
   disposition: mandatory
@@ -1172,29 +1187,11 @@ stores:
 - name: rdf
   disposition: mandatory
 reports:
-- path: reports/README.md
-  disposition: mandatory
-- path: reports/benchmark_leaderboard.csv
-  disposition: mandatory
-- path: reports/benchmark_leaderboard.md
-  disposition: mandatory
-- path: reports/cross_source_identity_benchmark.csv
-  disposition: mandatory
-- path: reports/cross_source_identity_benchmark.json
-  disposition: mandatory
-- path: reports/cross_source_identity_benchmark.md
-  disposition: mandatory
 - path: reports/current_registry_matrix.csv
   disposition: mandatory
 - path: reports/current_registry_summary.json
   disposition: mandatory
 - path: reports/current_repo_capability_summary.md
-  disposition: mandatory
-- path: reports/gold_standard_benchmark_story.csv
-  disposition: mandatory
-- path: reports/gold_standard_benchmark_story.json
-  disposition: mandatory
-- path: reports/gold_standard_benchmark_story.md
   disposition: mandatory
 - path: reports/modelling_correctness.json
   disposition: mandatory
@@ -1204,26 +1201,4 @@ reports:
   disposition: mandatory
 - path: reports/schema_quality.md
   disposition: mandatory
-notebooks:
-- path: notebooks/01_data_loading_and_profiling.ipynb
-  disposition: mandatory
-- path: notebooks/02_structured_schema_mapping_rdf.ipynb
-  disposition: mandatory
-- path: notebooks/03_jsonpath_xml_semistructured_mapping.ipynb
-  disposition: mandatory
-- path: notebooks/04_text_extraction_gliner_ollama_labels.ipynb
-  disposition: mandatory
-- path: notebooks/05_evaluation_resolution_production_hardening.ipynb
-  disposition: mandatory
-- path: notebooks/06_graph_ml_capabilities.ipynb
-  disposition: mandatory
-- path: notebooks/07_standards_mapping_and_virtual_kg.ipynb
-  disposition: mandatory
-- path: notebooks/08_relation_extraction_and_entity_linking.ipynb
-  disposition: mandatory
-- path: notebooks/09_enterprise_events_and_observability.ipynb
-  disposition: mandatory
-- path: notebooks/10_graph_store_ingestion_and_exports.ipynb
-  disposition: mandatory
-- path: notebooks/11_gold_benchmarks_and_retrieval.ipynb
-  disposition: mandatory
+notebooks: []

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from kg_construction.application.workflow import ConstructionWorkflow
+from kg_construction.construction.workflow import DraftConstructionWorkflow
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
@@ -157,7 +157,7 @@ class ResolutionIntegrityTests(unittest.TestCase):
             source_name="memory://custom-resolver",
         )
 
-        result = ConstructionWorkflow(
+        result = DraftConstructionWorkflow(
             mappers=[_StaticMapper()],
             resolvers=[_EndpointBlindResolver()],
         ).run([source])
@@ -193,7 +193,7 @@ class ResolutionIntegrityTests(unittest.TestCase):
             )
         )
 
-        result = ConstructionWorkflow(
+        result = DraftConstructionWorkflow(
             mappers=[_StaticMapper()],
             resolvers=[_EndpointBlindResolver()],
             validators=[SchemaRegistryValidator(registry)],

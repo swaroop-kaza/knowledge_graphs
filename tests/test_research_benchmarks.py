@@ -9,23 +9,16 @@ from types import SimpleNamespace
 
 from scripts.generate_cross_source_identity_benchmark import generate_results
 
-from kg_construction.application.benchmark_runner import (
-    BenchmarkHardGateSettings,
-    EvaluationSettings,
-    TechniqueEvaluationConfig,
-    TechniqueEvaluationRunner,
-)
-from kg_construction.application.scoring import ScoringEngine
 from kg_construction.domain.models import (
     ConstructionBatch,
     EntityCandidate,
     RelationCandidate,
 )
-from kg_construction.infrastructure.evaluation.entity_resolution_metrics import (
+from kg_construction.evaluation.entity_resolution_metrics import (
     EntityResolutionMetrics,
     predicted_merge_pairs,
 )
-from kg_construction.infrastructure.evaluation.gold_standards import (
+from kg_construction.evaluation.gold_standards import (
     GoldBenchmarkEvaluator,
     GoldBenchmarkFixture,
     GoldEntityResolutionFixture,
@@ -34,10 +27,17 @@ from kg_construction.infrastructure.evaluation.gold_standards import (
 from kg_construction.infrastructure.reports.csv_report import CsvReportWriter
 from kg_construction.infrastructure.reports.json_report import JsonReportWriter
 from kg_construction.infrastructure.reports.markdown_report import MarkdownReportWriter
+from kg_construction.research.benchmark_runner import (
+    BenchmarkHardGateSettings,
+    EvaluationSettings,
+    TechniqueEvaluationConfig,
+    TechniqueEvaluationRunner,
+)
+from kg_construction.research.scoring import ScoringEngine
 
 
-class PublishableBenchmarkTests(unittest.TestCase):
-    def test_json_publication_omits_source_derived_artifacts_by_default(self) -> None:
+class ResearchBenchmarkTests(unittest.TestCase):
+    def test_json_report_omits_source_derived_artifacts_by_default(self) -> None:
         report = TechniqueEvaluationRunner().run(
             input_path="tests/fixtures/golden_benchmarks/text/input.txt",
             source_type="text",
@@ -134,7 +134,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
         self.assertEqual(false_positive.f1, 0.0)
         self.assertEqual(correct_negative.f1, 1.0)
 
-    def test_span_accuracy_has_a_separate_publication_gate(self) -> None:
+    def test_span_accuracy_has_a_separate_research_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             directory = Path(tmpdir)
             input_path = directory / "input.txt"
@@ -186,7 +186,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
         gates = {gate.gate: gate for gate in report.candidates[0].hard_gates}
         self.assertTrue(gates["entity_extraction_accuracy"].passed)
         self.assertFalse(gates["entity_span_accuracy"].passed)
-        self.assertFalse(report.candidates[0].publication_eligible)
+        self.assertFalse(report.candidates[0].research_gate_passed)
 
     def test_gold_entity_resolution_fixture_is_used_by_runner(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -300,10 +300,10 @@ class PublishableBenchmarkTests(unittest.TestCase):
             )
             self.assertTrue(gold_gate.passed)
             self.assertFalse(completeness_gate.passed)
-            self.assertFalse(candidate.publication_eligible)
+            self.assertFalse(candidate.research_gate_passed)
         self.assertEqual(report.recommendations.evaluated_gold_tasks, ["retrieval"])
         self.assertIsNone(
-            report.recommendations.production_safe_technique.technique_name
+            report.recommendations.threshold_passing_technique.technique_name
         )
 
     def test_partial_retrieval_predictions_include_missing_queries_as_zero(self) -> None:
@@ -360,7 +360,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
                 record_id_property="record_id",
             )
 
-    def test_partial_er_record_id_coverage_fails_publication_gate(self) -> None:
+    def test_partial_er_record_id_coverage_fails_research_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             directory = Path(tmpdir)
             input_path = directory / "input.csv"
@@ -415,7 +415,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
             if gate.gate == "entity_resolution_record_id_coverage"
         )
         self.assertFalse(coverage_gate.passed)
-        self.assertFalse(candidate.publication_eligible)
+        self.assertFalse(candidate.research_gate_passed)
 
     def test_manifest_source_inventory_binds_cross_source_runner_input(self) -> None:
         manifest_path = Path(
@@ -539,7 +539,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
             (score.final_score, score.final_score),
         )
 
-    def test_no_gold_override_remains_smoke_only_and_not_production_safe(self) -> None:
+    def test_no_gold_override_remains_smoke_only_and_fails_research_gate(self) -> None:
         config = TechniqueEvaluationConfig(
             hard_gates=BenchmarkHardGateSettings(require_gold_dataset=False)
         )
@@ -551,10 +551,10 @@ class PublishableBenchmarkTests(unittest.TestCase):
 
         candidate = report.candidates[0]
         self.assertTrue(all(gate.passed for gate in candidate.hard_gates))
-        self.assertFalse(candidate.publication_eligible)
+        self.assertFalse(candidate.research_gate_passed)
         self.assertIsNotNone(report.recommendations.best_single_technique.technique_name)
         self.assertIsNone(
-            report.recommendations.production_safe_technique.technique_name
+            report.recommendations.threshold_passing_technique.technique_name
         )
 
     def test_markdown_does_not_label_proxy_counts_as_score_confidence(self) -> None:
@@ -594,7 +594,7 @@ class PublishableBenchmarkTests(unittest.TestCase):
         self.assertEqual(llm_metadata["max_tokens"], 128)
         self.assertEqual(report.input_path, "<external>/private-input.txt")
 
-    def test_cross_source_identity_publication_is_honest_and_reproducible(self) -> None:
+    def test_cross_source_identity_report_is_honest_and_reproducible(self) -> None:
         first_rows, first_metadata = generate_results()
         second_rows, second_metadata = generate_results()
 

@@ -14,11 +14,8 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
-from kg_construction.application.benchmark_runner import TechniqueEvaluationConfig
-from kg_construction.application.config import DataToKGConfig
-from kg_construction.application.graph_ml import graph_ml_workflow_config_from_dict
-from kg_construction.application.hybrid_gliner import HybridGlinerPipelineConfig
-from kg_construction.infrastructure.evaluation import VersionedGraphEvaluationSuite
+from kg_construction.construction.config import DataToKGConfig
+from kg_construction.evaluation import VersionedGraphEvaluationSuite
 from kg_construction.infrastructure.extractors.relations import RelationTypingConfig
 from kg_construction.infrastructure.graph_stores.ingestion import (
     LadybugIngestionConfig,
@@ -28,6 +25,9 @@ from kg_construction.infrastructure.ontology.unstructured_governance import (
     GovernedUnstructuredSchema,
 )
 from kg_construction.infrastructure.production.retry import RetryPolicyConfig
+from kg_construction.research.benchmark_runner import TechniqueEvaluationConfig
+from kg_construction.research.graph_ml import graph_ml_workflow_config_from_dict
+from kg_construction.research.hybrid_gliner import HybridGlinerPipelineConfig
 
 JsonDict = dict[str, Any]
 CONFIG_DIR = Path("configs")
@@ -61,6 +61,7 @@ class GraphStoreBatchBenchmarkConfig(BaseModel):
 
 
 EXPECTED_CONFIGS = {
+    "convert_configurable.example.yaml",
     "data_to_kg_complete.example.yaml",
     "evaluation.example.yaml",
     "gliner_ollama_relation_typing.example.yaml",
@@ -112,7 +113,12 @@ def _load_yaml(path: Path) -> JsonDict:
 
 
 def _validate_known_config(filename: str, payload: JsonDict) -> None:
-    if filename == "data_to_kg_complete.example.yaml":
+    if filename == "convert_configurable.example.yaml":
+        config = DataToKGConfig.model_validate(payload)
+        _require_sections(filename, payload, "extraction", "evaluation_thresholds")
+        if config.extraction.runtime_profile not in {"deterministic", "model_backed"}:
+            raise ValueError("extraction.runtime_profile must be deterministic or model_backed")
+    elif filename == "data_to_kg_complete.example.yaml":
         DataToKGConfig.model_validate(payload)
         _require_sections(
             filename,

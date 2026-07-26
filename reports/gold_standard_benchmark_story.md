@@ -1,8 +1,15 @@
 # Gold-Standard Benchmark Story
 
-Generated: 2026-07-24
+[Reports index](README.md) · [Evaluation guide](../docs/evaluation_metrics.md) · [Research guide](../research/README.md)
 
-This report turns the tiny human-reviewed gold fixtures into a public correctness story. It is not a broad model leaderboard. It proves that the framework can run benchmark-grade checks for extraction, graph facts, identity resolution, and GraphRAG-style retrieval using deterministic local examples.
+| Metadata | Value |
+| --- | --- |
+| Generated | 2026-07-26 |
+| Scope | Tiny deterministic research fixtures |
+
+> **Research only.** These tiny deterministic fixtures are non-authoritative and cannot certify construction correctness or publication eligibility.
+
+This report demonstrates repeatable benchmark mechanics for extraction, graph facts, identity resolution, and GraphRAG-style retrieval. It is not a broad model leaderboard.
 
 Regenerate with:
 
@@ -20,7 +27,7 @@ make gold-benchmark-story
 | Entity resolution benchmark | `alias_table_resolver` | `tests/fixtures/gold_standards/entity_resolution_clusters.json` | 1.000 | 1.000 | 1.000 | 5 |
 | GraphRAG/retrieval benchmark | `lexical_graph_context_retriever_at_2` | `tests/fixtures/gold_standards/retrieval_cases.json` | 0.667 | 0.750 | 0.706 | 4 |
 
-## What Each Benchmark Proves
+## What Each Benchmark Checks
 
 ### NER span benchmark
 
@@ -77,17 +84,18 @@ make gold-benchmark-story
 
 ## How To Use This
 
-- Use this report as the small reproducible gold story for the repository.
+- Use this report as a small reproducible research regression fixture.
+- Use graph-bound evaluation suites and zero-skip certification for correctness and release decisions.
 - Use `reports/benchmark_leaderboard.md` for technique-ranking across text, CSV, JSON, and mixed fixtures.
 - Add larger public datasets later without changing the benchmark contract.
 - Keep these fixtures tiny so CI can verify them on every public release.
 
 ## References
 
-- CoNLL-2003 shared task: https://www.clips.uantwerpen.be/conll2003/ner/
-- SemEval-2010 Task 8 relation classification: https://aclanthology.org/S10-1006/
-- TACRED relation extraction dataset: https://nlp.stanford.edu/projects/tacred/
-- Splink entity resolution toolkit: https://moj-analytical-services.github.io/splink/
-- Microsoft GraphRAG: https://microsoft.github.io/graphrag/
-- BEIR retrieval benchmark: https://github.com/beir-cellar/beir
-- W3C RDF 1.1 Concepts: https://www.w3.org/TR/rdf11-concepts/
+- [CoNLL-2003 shared task paper](https://aclanthology.org/W03-0419/)
+- [SemEval-2010 Task 8 relation classification](https://aclanthology.org/S10-1006/)
+- [TACRED relation extraction dataset](https://nlp.stanford.edu/projects/tacred/)
+- [Splink entity resolution toolkit](https://moj-analytical-services.github.io/splink/)
+- [Microsoft GraphRAG](https://microsoft.github.io/graphrag/)
+- [BEIR retrieval benchmark](https://github.com/beir-cellar/beir)
+- [W3C RDF 1.1 Concepts](https://www.w3.org/TR/rdf11-concepts/)

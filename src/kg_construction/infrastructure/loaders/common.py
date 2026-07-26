@@ -13,7 +13,7 @@ JsonDict = dict[str, Any]
 
 
 class AdapterNotConfigured(RuntimeError):
-    """Raised when an optional adapter needs external configuration or dependencies."""
+    """Raised when a configured adapter is missing required runtime resources."""
 
 
 def attach_source_evidence(

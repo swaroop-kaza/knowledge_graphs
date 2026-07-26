@@ -1,5 +1,4 @@
 category,name,method_type,status,support_level,support_label,priority,input_types,adapter,tags,profiles
-evaluation,benchmark_runner,evaluation,implemented,mandatory,Mandatory,60,,BenchmarkRunner,,darwin-arm64|linux-cpu|linux-cuda
 evaluation,claim_evaluation_suite,evaluation,implemented,mandatory,Mandatory,60,,ClaimEvaluationSuite,,darwin-arm64|linux-cpu|linux-cuda
 evaluation,construction_metrics_evaluator,evaluation,implemented,mandatory,Mandatory,60,,ConstructionMetricsEvaluator,,darwin-arm64|linux-cpu|linux-cuda
 evaluation,intended_use_metrics_evaluator,evaluation,implemented,mandatory,Mandatory,60,,IntendedUseMetricsEvaluator,,darwin-arm64|linux-cpu|linux-cuda

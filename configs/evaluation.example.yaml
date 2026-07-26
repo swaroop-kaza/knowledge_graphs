@@ -3,8 +3,8 @@ evaluation:
   # even when the CLI leaves --techniques at its "applicable" default.
   force_all_techniques: true
   # Gold data is dataset-specific. Leaving it unset is deliberately fail-closed:
-  # reports can be smoke/ranking reports, but cannot pass publication hard gates.
-  # Set this to a reviewed GoldDatasetManifest for a publishable evaluation.
+  # reports can be smoke/ranking reports, but cannot pass research gold gates.
+  # Set this to a reviewed GoldDatasetManifest for a comparable evaluation.
   gold_dataset_path: null
   # Record observed runtime, throughput, memory, and graph-write measurements.
   # Deterministic fixed values are only useful in unit-test fixtures.
@@ -28,14 +28,14 @@ penalties:
   latency: 0.10
   human_review: 0.05
 
-production_thresholds:
+screening_thresholds:
   evidence_coverage: 0.95
   schema_validity: 0.95
   unsupported_extraction_rate: 0.02
   validation_failure_rate: 0.05
 
 # A candidate may still be ranked when a gate fails, but it is not marked as
-# publication-eligible. Set require_gold_dataset to false only for smoke tests.
+# research-gate-passing. Set require_gold_dataset to false only for smoke tests.
 hard_gates:
   require_gold_dataset: true
   maximum_dangling_edge_rate: 0.0
