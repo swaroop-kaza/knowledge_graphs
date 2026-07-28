@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.15"
       - name: Install the immutable dependency graph
@@ -56,7 +56,7 @@ jobs:
       MEMGRAPH_URI: bolt://localhost:7688
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.15"
       - name: Bootstrap exact Python artifacts
@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.15"
       - run: uv sync --frozen --all-groups
